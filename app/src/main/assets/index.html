@@ -170,6 +170,11 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .pos1{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .pos1 .sub{flex-basis:100%}
+.ev{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.ev .ring{width:40px;height:40px} .ev .ring b{width:31px;height:31px;font-size:12px}
+.ev>span>b{font-family:var(--display);font-size:16px} .ev small{color:var(--muted);font-family:var(--mono);font-size:11.5px}
+.evt{display:block;font-weight:600;font-size:14px;color:var(--accent)} .evt.ok{color:var(--good)} .evt.no{color:var(--bad)}
+.ev .sub{display:block}
 .pfk{padding-bottom:0}
 details.man{background:var(--sunk);border-color:transparent} details.man summary{font-size:14px;font-weight:500}
 .hbox{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
@@ -311,7 +316,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 16.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 17.
     </footer>
 </div>
 <script>
@@ -1214,7 +1219,7 @@ function fundModel(sym,c,w,ll){
   /* team, product, adoption: measurable proxies only */
   var dv=(c&&c.developer_data)||{},cm=(c&&c.community_data)||{},lk=(c&&c.links)||{},pil=[];
   function lvl(pts,max){return pts>=0.7*max?"Fort":pts>=0.4*max?"Moyen":"Faible"}
-  if(c&&!c.err){
+  if(c&&!c.err&&!c.lite){
     var repo=lk.repos_url&&lk.repos_url.github&&lk.repos_url.github.filter(Boolean)[0],site=lk.homepage&&lk.homepage.filter(Boolean)[0];
     var commits=+dv.commit_count_4_weeks||0,contrib=+dv.pull_request_contributors||0,stars=+dv.stars||0;
     var open=[site?"site officiel":"",lk.whitepaper?"livre blanc":"",repo?"code public":"",lk.twitter_screen_name?"compte X":""].filter(Boolean);
@@ -1374,6 +1379,91 @@ function addManual(ex,m){
       m.assets.forEach(function(y){if(y.a===x.a)o=y});
       if(o){o.qty+=x.qty;o.usd+=u;o.w+=" + saisi"}else m.assets.push({a:x.a,qty:x.qty,usd:u,w:"Saisi à la main"})});
     m.total+=sum;m.wallets.push(["Saisi à la main",sum]);return m})}
+/* ---------- portfolio review: long-term profile of each holding, balance of the whole, rule-based leads ---------- */
+var pfEval=null,pfEvalBusy=false,pfEvalErr="";
+var WRAP={BNSOL:"SOL",WBETH:"ETH",BETH:"ETH",STETH:"ETH",WBTC:"BTC",BTCB:"BTC"};
+function holdings(){
+  var by={},list=[],tot=0,expo=0;
+  EXS.forEach(function(x){var m=pf[x[0]];if(!m||m.err)return;
+    m.assets.forEach(function(a){if(!(a.usd>0))return;var o=by[a.a];if(!o){o=by[a.a]={a:a.a,usd:0,qty:0};list.push(o)}o.usd+=a.usd;o.qty+=a.qty;tot+=a.usd});
+    m.positions.forEach(function(p){if(p.mark&&!p.unit)expo+=p.size*p.mark})});
+  list.sort(function(a,b){return b.usd-a.usd});
+  return{list:list,tot:tot,expo:expo}}
+function advise(m,w){
+  if(!m||!m.items.length)return{k:"mid",t:"Non évalué",why:"données indisponibles pour ce jeton"};
+  var tr=m.items.filter(function(x){return x.label==="Tendance long terme"})[0],tp=tr?tr.pts:null,s=m.score;
+  if(s>=70){
+    if(tp!==null&&tp>=20&&s>=75&&w<15)return{k:"ok",t:"Conserver, renforcement envisageable",why:"profil solide et tendance long terme haussière"};
+    if(tp!==null&&tp<=8)return{k:"ok",t:"Conserver",why:"profil solide, mais tendance long terme encore baissière : aucun signal pour renforcer"};
+    return{k:"ok",t:"Conserver",why:"profil solide"}}
+  if(s>=50){
+    if(w>25)return{k:"mid",t:"Alléger pour déconcentrer",why:"profil moyen et "+fr(w,0)+" % du portefeuille"};
+    return{k:"mid",t:"Conserver sous surveillance",why:"profil moyen"+(tp!==null&&tp<=8?", tendance long terme baissière":"")}}
+  if(w>10)return{k:"no",t:"Alléger",why:"profil fragile et poids élevé ("+fr(w,0)+" %)"};
+  return{k:"no",t:"À réévaluer",why:"profil fragile"}}
+function evaluatePf(){
+  if(pfEvalBusy)return;
+  var H=holdings(),coins=H.list.filter(function(x){return!STABLE[x.a]&&x.usd>=20}).slice(0,12);
+  if(!coins.length){pfEvalErr="Aucune crypto à évaluer : connecte un compte ou ajoute des actifs.";renderPf();return}
+  pfEvalBusy=true;pfEvalErr="";renderPf();
+  var syms=[];coins.forEach(function(x){var b=(WRAP[x.a]||x.a).replace(/^(1000000|1000|1M)/,"").toLowerCase();if(syms.indexOf(b)<0)syms.push(b)});
+  var none=function(){return[]};
+  var pm=Promise.all([cg("coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1").catch(none),
+    cg("coins/markets?vs_currency=usd&symbols="+encodeURIComponent(syms.join(","))+"&include_tokens=top").catch(none)]).then(function(a){
+    var by={};(Array.isArray(a[0])?a[0]:[]).concat(Array.isArray(a[1])?a[1]:[]).forEach(function(r){
+      var sy=String(r&&r.symbol||"").toUpperCase(),o=by[sy];
+      if(sy&&(!o||(r.market_cap_rank||1e9)<(o.market_cap_rank||1e9)))by[sy]=r});
+    return by});
+  Promise.all([pm,klines("BTCUSDT","1w",300,4).catch(function(){return null})]).then(function(r){
+    var mk=r[0],btc=r[1];
+    return pool(coins,3,function(c){
+      var base=(WRAP[c.a]||c.a).replace(/^(1000000|1000|1M)/,"");
+      return resolve(base).then(function(x){return klines(x.full,"1w",300,4)}).catch(function(){return null}).then(function(k){
+        var row=mk[base],co=row?{lite:true,name:row.name,market_cap_rank:row.market_cap_rank,market_data:{market_cap:{usd:row.market_cap},
+          fully_diluted_valuation:{usd:row.fully_diluted_valuation},total_volume:{usd:row.total_volume},circulating_supply:row.circulating_supply,
+          total_supply:row.total_supply,max_supply:row.max_supply,ath:{usd:row.ath},ath_change_percentage:{usd:row.ath_change_percentage}}}:{err:"nocoin"};
+        return{h:c,as:base!==c.a?base:null,m:row||k?fundModel(base,co,k?[k,base==="BTC"?null:btc]:null,null):null}})
+    },function(){})
+  }).then(function(p){
+    var rows=p.out.sort(function(a,b){return b.h.usd-a.h.usd}),tot=H.tot||1,maj=0,stb=0,sw=0,ww=0,frag=0,fragN=[],down=0,leads=[];
+    H.list.forEach(function(x){var b=WRAP[x.a]||x.a;if(STABLE[x.a])stb+=x.usd;else if(b==="BTC"||b==="ETH")maj+=x.usd});
+    rows.forEach(function(r){r.w=r.h.usd/tot*100;r.adv=advise(r.m,r.w);
+      if(r.m&&r.m.items.length){sw+=r.m.score*r.h.usd;ww+=r.h.usd;
+        if(r.m.score<50){frag+=r.w;fragN.push(r.h.a)}
+        var tr=r.m.items.filter(function(x){return x.label==="Tendance long terme"})[0];if(tr&&tr.pts<=8)down+=r.w}});
+    var majP=maj/tot*100,stbP=stb/tot*100,altP=Math.max(0,100-majP-stbP),top=H.list[0];
+    if(top&&!STABLE[top.a]&&top.usd/tot>0.3)leads.push({k:"no",t:"Concentration : "+top.a+" pèse "+fr(top.usd/tot*100,0)+" % du portefeuille. Une seule mauvaise nouvelle sur ce jeton pèserait lourd"});
+    if(frag>=20)leads.push({k:"no",t:fr(frag,0)+" % du portefeuille sur des profils fragiles ("+fragN.join(", ")+") : positions à réévaluer en priorité"});
+    if(majP<15&&altP>50)leads.push({k:"mid",t:"BTC et ETH ne pèsent que "+fr(majP,0)+" % : le portefeuille dépend surtout d'altcoins, plus volatils"});
+    if(down>=50)leads.push({k:"mid",t:fr(down,0)+" % du portefeuille est sous ses moyennes long terme : renforcer maintenant revient à acheter une tendance baissière"});
+    if(stbP<5)leads.push({k:"mid",t:"Presque aucune réserve en stablecoins ("+fr(stbP,0)+" %) : pas de marge pour profiter d'une baisse ou absorber un appel de marge"});
+    else if(stbP>60)leads.push({k:"mid",t:fr(stbP,0)+" % en stablecoins : peu exposé au marché, ce qui est un choix prudent"});
+    if(H.expo>tot)leads.push({k:"no",t:"Tes positions futures représentent "+fr(H.expo/tot,1)+" fois la valeur du portefeuille : exposition élevée"});
+    if(!leads.length)leads.push({k:"ok",t:"Aucun déséquilibre majeur détecté par ces règles"});
+    pfEval={at:Date.now(),rows:rows,tot:tot,avg:ww?Math.round(sw/ww):null,maj:majP,alt:altP,stb:stbP,leads:leads};
+    pfEvalBusy=false;renderPf()
+  }).catch(function(e){pfEvalBusy=false;pfEvalErr=why(e);renderPf()})}
+function evalView(){
+  var h='<article class="card tr"><div class="trh"><span class="sym">Évaluation et pistes d\'action</span>'+(pfEval?'<span class="sub" style="margin-left:auto">à '+new Date(pfEval.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+"</span>":"")+"</div>";
+  if(pfEvalBusy)return h+'<div class="sub">Évaluation en cours, une minute environ…</div></article>';
+  if(pfEvalErr)h+='<div class="warn">'+esc(pfEvalErr)+"</div>";
+  var e=pfEval;
+  if(e){
+    h+='<div class="funnel plain"><div><b>'+(e.avg===null?"–":e.avg+"/100")+"</b><span>note moyenne</span></div><div><b>"+fr(e.maj,0)+" %</b><span>BTC et ETH</span></div><div><b>"+fr(e.alt,0)+" %</b><span>altcoins</span></div><div><b>"+fr(e.stb,0)+" %</b><span>stablecoins</span></div></div>"
+      +'<div class="alloc"><i class="c1" style="width:'+e.maj.toFixed(1)+'%"></i><i class="c0" style="width:'+e.alt.toFixed(1)+'%"></i><i class="c2" style="width:'+e.stb.toFixed(1)+'%"></i></div>'
+      +'<div><div class="cap">Pistes d\'action sur l\'ensemble</div><ul class="why">'+e.leads.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></div>"
+      +'<div><div class="cap">Crypto par crypto</div>'+e.rows.map(function(r){
+        var ok=r.m&&r.m.items.length,st=!ok?"":r.m.score>=70?"ready":r.m.score>=50?"watch":"wait";
+        return'<div class="ev"><span class="ring" data-st="'+st+'" style="--v:'+(ok?r.m.score:0)+'"><b>'+(ok?r.m.score:"–")+"</b></span><span><b>"+esc(r.h.a)+"</b> <small>"+fr(r.w,0)+" % · "+usd0(r.h.usd)+(r.as?" · évalué comme "+r.as:"")+"</small>"
+          +'<span class="evt '+r.adv.k+'">'+r.adv.t+'</span><span class="sub">'+esc(r.adv.why.charAt(0).toUpperCase()+r.adv.why.slice(1))+"</span></span></div>"}).join("")+"</div>"
+      +'<div class="sub">Ces pistes sortent d\'une grille fixe (taille, dilution, liquidité, tendance sur plusieurs années, poids dans le portefeuille). Elles ignorent ton prix d\'achat, ton horizon, tes objectifs et ta fiscalité : ce ne sont pas des conseils personnalisés.</div>'}
+  else h+='<div class="sub">Note chaque crypto de tes comptes sur sa solidité long terme, mesure l\'équilibre du portefeuille et propose des pistes d\'action.</div>';
+  return h+'<div class="acts"><button class="take" type="button" data-pfe="1">'+(e?"Réévaluer":"Évaluer mes cryptos")+"</button>"+(e?'<button class="ghost" type="button" data-pfc="1">Copier la demande d\'avis pour Claude</button>':"")+"</div></article>"}
+function evalPrompt(){
+  var e=pfEval;if(!e)return"";
+  return"Voici mon portefeuille crypto (poids en % de la valeur) : "+e.rows.map(function(r){return r.h.a+" "+fr(r.w,0)+" %"}).join(", ")+", stablecoins "+fr(e.stb,0)+" %. "
+    +"Donne-moi une revue argumentée avec des sources récentes : forces et risques de chaque ligne, équilibre global, et les options que j'ai (conserver, alléger, renforcer, rééquilibrer) avec leurs arguments pour et contre."}
+
 var LOADERS={binance:loadBinance,mexc:loadMexc,okx:loadOkx};
 function loadPf(ex){
   if(pfBusy[ex])return;var has=false;try{has=Android.hasKeys(ex)}catch(e){}
@@ -1391,7 +1481,7 @@ function renderPf(){
     h+='<article class="card tr"><div><div class="cap">Valeur totale estimée</div><div class="net">'+usd0(tot)+"</div></div>";
     if(parts.length>1&&tot>0)h+='<div class="alloc">'+parts.map(function(p,i){return'<i class="c'+i+'" style="width:'+(p[1]/tot*100).toFixed(1)+'%"></i>'}).join("")+"</div>"
       +'<div class="size">'+parts.map(function(p,i){return'<span><i class="dot c'+i+'"></i>'+p[0]+" <b>"+fr(p[1]/tot*100,0)+" %</b></span>"}).join("")+"</div>";
-    h+="</article>"}
+    h+="</article>"+evalView()}
   EXS.forEach(function(x){
     var ex=x[0],m=pf[ex],has=false;try{has=Android.hasKeys(ex)}catch(e){}
     h+='<article class="card tr"><div class="trh"><span class="sym">'+x[1]+'</span><span class="sub" style="margin-left:auto">'+(pfBusy[ex]?"Lecture en cours…":has?(m&&m.at?"à "+new Date(m.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"connecté"):"non connecté")+"</span></div>";
@@ -1436,6 +1526,10 @@ $("view-pf").addEventListener("submit",function(e){
   if(!ok){w.hidden=false;w.textContent="Enregistrement impossible sur ce téléphone.";return}
   loadPf(ex)});
 $("view-pf").addEventListener("click",function(e){
+  if(e.target.closest("[data-pfe]")){evaluatePf();return}
+  var pc=e.target.closest("[data-pfc]");
+  if(pc){var tx=evalPrompt(),okc=function(){pc.textContent="Copié, colle-le dans Claude"},koc=function(){pc.textContent=tx};
+    try{navigator.clipboard.writeText(tx).then(okc,koc)}catch(x2){koc()}return}
   var md=e.target.closest("[data-mdel]");
   if(md){var pr=md.dataset.mdel.split(":"),o=manual();if(o[pr[0]]){o[pr[0]].splice(+pr[1],1);saveManual(o);openMan=pr[0];loadPf(pr[0])}return}
   var sm=e.target.closest("details.man>summary");if(sm){var dd=sm.parentNode;openMan=dd.open?null:dd.dataset.man}
