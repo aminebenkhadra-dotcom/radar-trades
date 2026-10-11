@@ -44,6 +44,9 @@ final class Exchanges {
         switch (name) {
             case "spot": path = "/api/v3/account"; extra = "omitZeroBalances=true&"; break;
             case "fund": path = "/sapi/v1/asset/get-funding-asset"; method = "POST"; break;
+            case "wallets": path = "/sapi/v1/asset/wallet/balance"; break;
+            case "earnL": path = "/sapi/v1/simple-earn/locked/position"; extra = "size=100&"; break;
+            case "onchain": path = "/sapi/v1/onchain-yields/locked/position"; extra = "size=100&"; break;
             case "fut": host = "https://fapi.binance.com"; path = "/fapi/v2/account"; break;
             case "pos": host = "https://fapi.binance.com"; path = "/fapi/v2/positionRisk"; break;
             default: return new String[]{"400", "{\"msg\":\"Requête inconnue\"}"};

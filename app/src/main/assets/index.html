@@ -290,7 +290,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 11.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 12.
     </footer>
 </div>
 <script>
@@ -1178,17 +1178,30 @@ function apiMsg(e){
 function mkModel(){return{total:0,wallets:[],assets:[],positions:[],notes:[]}}
 function pushAssets(m,list){list.forEach(function(x){if(x.usd>=1||(!x.usd&&x.qty>0))m.assets.push(x)})}
 function loadBinance(){
-  return Promise.all([xapi("binance","spot"),soft(xapi("binance","fund")),soft(xapi("binance","fut")),soft(xapi("binance","pos")),pubPrices("bspot")]).then(function(a){
-    var m=mkModel(),P=a[4],spot=0,fund=0,fut=0;
-    pushAssets(m,(a[0].balances||[]).map(function(b){var q=(+b.free||0)+(+b.locked||0),u=usdOf(P,b.asset,q);spot+=u;return{a:b.asset,qty:q,usd:u,w:"Spot"}}));
-    m.wallets.push(["Spot",spot]);
-    if(Array.isArray(a[1])){pushAssets(m,a[1].map(function(b){var q=(+b.free||0)+(+b.locked||0)+(+b.freeze||0),u=usdOf(P,b.asset,q);fund+=u;return{a:b.asset,qty:q,usd:u,w:"Funding"}}));m.wallets.push(["Funding",fund])}
-    else m.notes.push("Portefeuille Funding non lu");
-    if(a[2]&&!a[2].__err){fut=+a[2].totalMarginBalance||0;m.wallets.push(["Futures",fut]);m.upnl=+a[2].totalUnrealizedProfit||0}
+  return Promise.all([xapi("binance","spot"),soft(xapi("binance","fund")),soft(xapi("binance","fut")),soft(xapi("binance","pos")),pubPrices("bspot"),
+    soft(xapi("binance","wallets")),soft(xapi("binance","earnL")),soft(xapi("binance","onchain"))]).then(function(a){
+    var m=mkModel(),P=a[4],by={},order=[],spot=0,fund=0,fut=0,earn=0;
+    /* one line per coin, whatever wallet holds it; "LD" spot tokens are Flexible Earn balances */
+    function put(asset,q,w){
+      if(!(q>0))return 0;var base=String(asset).toUpperCase();
+      if(base.indexOf("LD")===0&&base.length>3&&!P[base+"USDT"]){base=base.slice(2);w="Earn flexible"}
+      var u=usdOf(P,base,q),o=by[base];
+      if(!o){o=by[base]={a:base,qty:0,usd:0,ws:[]};order.push(o)}
+      o.qty+=q;o.usd+=u;if(o.ws.indexOf(w)<0)o.ws.push(w);return u}
+    (a[0].balances||[]).forEach(function(b){spot+=put(b.asset,(+b.free||0)+(+b.locked||0),"Spot")});
+    if(Array.isArray(a[1]))a[1].forEach(function(b){fund+=put(b.asset,(+b.free||0)+(+b.locked||0)+(+b.freeze||0),"Funding")});
+    [a[6],a[7]].forEach(function(e){if(e&&!e.__err&&Array.isArray(e.rows))e.rows.forEach(function(x){earn+=put(x.asset,+x.amount||0,"Earn bloqué")})});
+    if(a[2]&&!a[2].__err){fut=+a[2].totalMarginBalance||0;put("USDT",+a[2].totalWalletBalance||0,"Futures")}
     else m.notes.push("Compte Futures non lu");
     if(Array.isArray(a[3]))a[3].forEach(function(p){var q=+p.positionAmt;if(!q)return;
       m.positions.push({sym:p.symbol,dir:q>0?1:-1,size:Math.abs(q),entry:+p.entryPrice,mark:+p.markPrice,pnl:+p.unRealizedProfit,liq:+p.liquidationPrice,lev:p.leverage})});
-    m.total=spot+fund+fut;m.notes.push("Earn et marge non inclus");return m})}
+    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + ")}}));
+    var W=Array.isArray(a[5])?a[5]:null,btc=P.BTCUSDT||0,tot=0;
+    if(W&&btc){W.forEach(function(w){var v=(+w.balance||0)*btc;if(v>=1){m.wallets.push([w.walletName,v]);tot+=v}})}
+    if(tot>0)m.total=tot;
+    else{m.wallets=[["Spot et Earn flexible",spot],["Earn bloqué",earn],["Funding",fund],["Futures",fut]].filter(function(w){return w[1]>=1});
+      m.total=spot+earn+fund+fut;m.notes.push("Total reconstitué à partir des soldes lus ; certains produits Earn peuvent manquer")}
+    return m})}
 function loadMexc(){
   return Promise.all([xapi("mexc","spot"),soft(xapi("mexc","fut")),soft(xapi("mexc","pos")),pubPrices("mexc")]).then(function(a){
     var m=mkModel(),P=a[3],spot=0,fut=0;
