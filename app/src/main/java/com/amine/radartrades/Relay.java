@@ -12,12 +12,13 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Serves the bundled page and relays its data requests to Binance's and CoinGecko's public APIs. */
+/** Serves the bundled page and relays its data requests to Binance's, CoinGecko's and DefiLlama's public APIs. */
 final class Relay {
     static final String HOST = "radar.local";
     static final String HOME = "https://" + HOST + "/";
     private static final String BINANCE = "https://fapi.binance.com";
     private static final String COINGECKO = "https://api.coingecko.com/api/v3/";
+    private static final String LLAMA = "https://api.llama.fi/";
 
     private Relay() {}
 
@@ -27,6 +28,7 @@ final class Relay {
         String path = u.getPath() == null ? "/" : u.getPath();
         if (path.startsWith("/fapi/") || path.startsWith("/futures/data/")) return fetch(BINANCE + u.getEncodedPath(), u);
         if (path.startsWith("/cg/")) return fetch(COINGECKO + u.getEncodedPath().substring(4), u);
+        if (path.startsWith("/llama/")) return fetch(LLAMA + u.getEncodedPath().substring(7), u);
         try {
             return new WebResourceResponse("text/html", "utf-8", ctx.getAssets().open("index.html"));
         } catch (Exception e) {

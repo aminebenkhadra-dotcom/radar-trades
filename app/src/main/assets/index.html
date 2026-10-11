@@ -159,6 +159,12 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .grid label.chk{flex-direction:row;align-items:center;gap:10px;font-size:14px;color:var(--ink)}
 .grid label.chk input{width:20px;height:20px;flex:none;accent-color:var(--accent);padding:0}
 #al-badge{font-family:var(--mono);font-size:11px;color:var(--good);margin-left:8px;font-weight:600}
+.pil{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pil div{background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.pil span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pil b{font-family:var(--display);font-size:17px;color:var(--accent)}
+.pil .hi{border-color:var(--good);background:var(--good-soft)} .pil .hi b{color:var(--good)}
+.pil .lo b{color:var(--bad)}
 .askf{display:flex;gap:8px}
 .askf input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;text-transform:uppercase}
 .verdict{font-family:var(--display);font-weight:600;font-size:17px}
@@ -253,6 +259,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
       <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt</label>
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
+      <label class="wide">Me prévenir à partir de<select id="a-pct"><option value="90">90 % de préparation (plus tôt, plus d'alertes)</option><option value="95">95 % de préparation (presque prêt)</option><option value="100">100 % (setup prêt uniquement)</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
     </div>
@@ -275,14 +282,14 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 9.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 10.
     </footer>
 </div>
 <script>
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30};
+var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -405,7 +412,10 @@ function analyze(sym,d1,h4,h1){
   return r}
 function settle(r,sc){
   r.score=Math.max(0,Math.min(100,Math.round(sc)));
-  r.st=(r.score>=70&&r.dist<=0.5&&r.plan.rr>=1.5)?"ready":r.score>=50?"watch":"wait"}
+  r.st=(r.score>=70&&r.dist<=0.5&&r.plan.rr>=1.5)?"ready":r.score>=50?"watch":"wait";
+  /* how close the setup is to "ready": score against the 70 threshold, then distance to the entry zone */
+  var near=r.dist<=0.5?1:Math.max(0,1-(r.dist-0.5)/2);
+  r.pct=r.st==="ready"?100:Math.min(99,Math.round(100*Math.min(1,r.score/70)*(0.7+0.3*near)*(r.plan.rr>=1.5?1:0.8)))}
 
 /* order book snapshot: who is heavier near the price, and where the big resting orders sit */
 function bookStats(book,dir,p){
@@ -616,7 +626,7 @@ function card(r,n,force){
   var h='<article class="card"><button class="row" type="button" data-s="'+sy+'" aria-expanded="'+open+'">'
    +'<span class="ring" data-st="'+r.st+'" style="--v:'+r.score+'"><b>'+r.score+"</b></span>"
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
-   +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span></span>"
+   +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+(r.st!=="ready"&&r.pct?" · "+r.pct+" %":"")+"</span></span>"
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
    +"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
@@ -1005,16 +1015,28 @@ function fundamental(base){
     var c=((d&&d.coins)||[]).filter(function(x){return String(x.symbol).toUpperCase()===name})
       .sort(function(a,b){return(a.market_cap_rank||1e9)-(b.market_cap_rank||1e9)})[0];
     if(!c)throw{code:"nocoin"};
-    return cg("coins/"+encodeURIComponent(c.id)+"?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false")
+    return cg("coins/"+encodeURIComponent(c.id)+"?localization=false&tickers=false&community_data=true&developer_data=true&sparkline=false")
   }).catch(function(e){return{err:(e&&e.code)||"http"}});
   var pw=resolve(name).then(function(x){
     return Promise.all([klines(x.full,"1w",300,4),name==="BTC"?null:klines("BTCUSDT","1w",300,4).catch(function(){return null})])
   }).catch(function(){return null});
-  Promise.all([pc,pw]).then(function(a){
+  var pl=pc.then(function(c){return c&&c.id?llama(c.id,name):null}).catch(function(){return null});
+  Promise.all([pc,pw,pl]).then(function(a){
     fundBusy=false;
     if(a[0].err&&!a[1]){$("fund-out").innerHTML='<div class="empty">'+esc(name)+" est introuvable, ou les sources de données ne répondent pas. Vérifie le symbole et réessaie dans une minute.</div>";return}
-    fundRes=fundModel(name,a[0],a[1]);renderFund()})}
-function fundModel(sym,c,w){
+    fundRes=fundModel(name,a[0],a[1],a[2]);renderFund()})}
+/* on-chain usage from DefiLlama: value locked in the chain or in the protocol's contracts */
+var llamaCache=null;
+function llama(id,sym){
+  function j(path){return fetch("/llama/"+path).then(function(r){if(!r.ok)throw{code:"http"};return r.json()})}
+  if(!llamaCache)llamaCache=Promise.all([j("v2/chains").catch(function(){return null}),j("protocols").catch(function(){return null})]);
+  return llamaCache.then(function(a){
+    if(!a[0]&&!a[1]){llamaCache=null;return null}
+    var chain=0,proto=0,cat="";
+    (a[0]||[]).forEach(function(x){if(x&&(x.gecko_id===id||String(x.tokenSymbol||"").toUpperCase()===sym)&&+x.tvl>chain)chain=+x.tvl});
+    (a[1]||[]).forEach(function(x){if(x&&(x.gecko_id===id||String(x.symbol||"").toUpperCase()===sym)&&+x.tvl>0){proto+=+x.tvl;if(!cat&&x.category)cat=x.category}});
+    return{tvl:Math.max(chain,proto),kind:chain>=proto&&chain>0?"chain":"proto",cat:cat}})}
+function fundModel(sym,c,w,ll){
   var md=(c&&c.market_data)||{},it=[],m={sym:sym,name:c&&c.name||sym,cgErr:c&&c.err||null};
   function usd(o){return o&&isFinite(+o.usd)&&+o.usd>0?+o.usd:null}
   function add(label,pts,max,text){it.push({label:label,pts:pts,max:max,text:text,k:pts>=0.7*max?"ok":pts>=0.4*max?"mid":"no"})}
@@ -1046,6 +1068,29 @@ function fundModel(sym,c,w){
   if(m.dd!==null){var d=-m.dd;
     add("Tenue du prix",d<=30?10:d<=60?7:d<=85?4:1,10,fr(d,0)+" % sous son plus haut"+(m.ddLocal?" depuis sa cotation sur Binance Futures":" historique"));
     m.back=d<99.9?100/(100-d):null}
+  /* team, product, adoption: measurable proxies only */
+  var dv=(c&&c.developer_data)||{},cm=(c&&c.community_data)||{},lk=(c&&c.links)||{},pil=[];
+  function lvl(pts,max){return pts>=0.7*max?"Fort":pts>=0.4*max?"Moyen":"Faible"}
+  if(c&&!c.err){
+    var repo=lk.repos_url&&lk.repos_url.github&&lk.repos_url.github.filter(Boolean)[0],site=lk.homepage&&lk.homepage.filter(Boolean)[0];
+    var commits=+dv.commit_count_4_weeks||0,contrib=+dv.pull_request_contributors||0,stars=+dv.stars||0;
+    var open=[site?"site officiel":"",lk.whitepaper?"livre blanc":"",repo?"code public":"",lk.twitter_screen_name?"compte X":""].filter(Boolean);
+    var tp=!repo?2:commits>=100?15:commits>=30?11:commits>=5?6:commits>0?3:(contrib>=50||stars>=1000)?6:2;
+    add("Équipe",tp,15,!repo?"Aucun dépôt de code public référencé : activité de l'équipe invérifiable":
+      commits>0?commits+" modifications de code en 4 semaines"+(contrib?", "+fr(contrib,0)+" contributeurs":""):
+      "Dépôt public"+(stars?" ("+fr(stars,0)+" étoiles)":"")+", activité récente non mesurée");
+    add("Transparence",Math.round(open.length/4*5),5,open.length?"Publie : "+open.join(", "):"Ni site, ni livre blanc, ni code référencés");
+    pil.push(["Équipe",lvl(tp+Math.round(open.length/4*5),20)]);
+    var meme=m.cats.some(function(x){return/meme/i.test(x)}),tvl=ll&&ll.tvl>0?ll.tvl:0,pp=null;
+    if(meme){pp=2;add("Produit",2,15,"Memecoin : pas de produit, la valeur repose sur la communauté")}
+    else if(tvl&&m.mc){var tr=tvl/m.mc;pp=tr>=0.5?15:tr>=0.1?11:tr>=0.02?7:4;m.tvl=tvl;
+      add("Produit",pp,15,money(tvl)+" déposés "+(ll.kind==="chain"?"sur sa blockchain":"dans le protocole"+(ll.cat?" ("+ll.cat+")":""))+", soit "+fr(tr*100,0)+" % de la capitalisation")}
+    pil.push(["Produit",pp===null?"Non mesuré":lvl(pp,15)]);
+    var tw=+cm.twitter_followers||0,wl=+c.watchlist_portfolio_users||0,rd=+cm.reddit_subscribers||0,tg=+cm.telegram_channel_user_count||0,ap=null,parts=[];
+    if(tw)parts.push(fr(tw,0)+" abonnés sur X");if(rd)parts.push(fr(rd,0)+" sur Reddit");if(tg)parts.push(fr(tg,0)+" sur Telegram");if(wl)parts.push(fr(wl,0)+" suivis sur CoinGecko");
+    if(tw||wl){ap=Math.max(tw>=1e6?10:tw>=3e5?8:tw>=1e5?6:tw>=2e4?3:1,wl>=1e6?10:wl>=2e5?7:wl>=5e4?4:1);add("Adoption",ap,10,parts.join(", "))}
+    pil.push(["Adoption",ap===null?"Non mesuré":lvl(ap,10)])}
+  m.pillars=pil;
   var got=0,max=0;it.forEach(function(x){got+=x.pts;max+=x.max});
   m.items=it;m.score=max?Math.round(got/max*100):0;m.partial=max<80;
   m.verdict=m.score>=70?"Profil solide":m.score>=50?"Profil moyen":"Profil fragile ou spéculatif";
@@ -1064,14 +1109,21 @@ function renderFund(){
   if(m.circPct)tiles.push([fr(m.circPct,0)+" %","offre en circulation"]);
   if(m.dd!==null)tiles.push([sgn(m.dd,0)+" %","depuis le plus haut"]);
   if(tiles.length)h+='<div class="funnel plain" style="grid-template-columns:repeat('+Math.min(4,tiles.length)+',minmax(0,1fr))">'+tiles.map(function(t){return"<div><b>"+t[0]+"</b><span>"+t[1]+"</span></div>"}).join("")+"</div>";
+  if(m.pillars&&m.pillars.length)h+='<div class="pil">'+m.pillars.map(function(x){
+    return'<div class="'+(x[1]==="Fort"?"hi":x[1]==="Faible"?"lo":"")+'"><span>'+x[0]+"</span><b>"+x[1]+"</b></div>"}).join("")+"</div>";
   if(m.k)h+='<div><div class="cap">Prix hebdomadaire · moyenne 20 semaines (jaune) et 50 semaines (gris)</div><canvas id="fcv" aria-label="Prix hebdomadaire et moyennes mobiles"></canvas></div>';
   if(m.back&&m.back>1.05)h+='<div class="size"><span>Retour au plus haut '+(m.ath?"("+px(m.ath)+") ":"")+"= <b>×"+fr(m.back,1)+"</b> depuis le prix actuel. Repère théorique, pas une prévision.</span></div>";
   h+='<div><div class="cap">Grille de lecture</div><ul class="why">'+m.items.slice().sort(function(a,b){return ord[a.k]-ord[b.k]}).map(function(x){
     return'<li class="'+(x.k==="ok"?"":x.k)+'"><span><b>'+x.label+"</b> "+x.pts+"/"+x.max+" · "+esc(x.text)+"</span></li>"}).join("")+"</ul></div>";
   if(m.cats.length)h+='<div class="chips">'+m.cats.map(function(x){return"<span>"+esc(x)+"</span>"}).join("")+"</div>";
   if(m.desc)h+='<div class="sub">'+esc(m.desc)+"… (description CoinGecko, en anglais)</div>";
-  h+='<div class="sub">Cette note mesure la taille, la dilution, la liquidité, l\'ancienneté et la tenue du prix. Elle ne juge ni l\'équipe, ni le produit, ni l\'adoption réelle du projet.</div></div></article>';
-  $("fund-out").innerHTML=h;drawWeekly()}
+  h+='<div class="sub">Équipe, produit et adoption sont jugés sur des indices mesurables : activité du code, valeur déposée, taille de la communauté. L\'appli ne sait pas qui sont les fondateurs, ni si le produit est bon ou la communauté réelle. Pour un avis argumenté, copie la demande ci-dessous et colle-la dans Claude.</div>'
+    +'<button class="ghost" type="button" id="ask-claude">Copier la demande d\'analyse pour Claude</button></div></article>';
+  $("fund-out").innerHTML=h;drawWeekly();
+  $("ask-claude").addEventListener("click",function(){
+    var b=this,t="Fais-moi une analyse fondamentale de "+m.name+" ("+m.sym+") avec des sources récentes : qui est l'équipe et quel est son historique, que fait réellement le produit et qui l'utilise, quels sont les revenus ou l'usage mesurable, la concurrence, les risques, et ton avis argumenté sur le potentiel à long terme.";
+    var ok=function(){b.textContent="Copié, colle-le dans Claude"},ko=function(){b.textContent=t};
+    try{navigator.clipboard.writeText(t).then(ok,ko)}catch(e){ko()}})}
 function drawWeekly(){
   var m=fundRes,cv=$("fcv");if(!m||!m.k||!cv||!cv.clientWidth)return;
   var css=getComputedStyle(document.documentElement);function tk(v){return css.getPropertyValue(v).trim()}
@@ -1105,6 +1157,8 @@ $("a-10").checked=!!S.a10;$("a-50").checked=!!S.a50;$("a-min").value=String(S.am
 $("a-10").addEventListener("change",function(){S.a10=this.checked;saveSettings();applyWatch()});
 $("a-50").addEventListener("change",function(){S.a50=this.checked;saveSettings();applyWatch()});
 $("a-min").addEventListener("change",function(){S.amin=+this.value||30;saveSettings();applyWatch()});
+$("a-pct").value=String(S.apct||95);
+$("a-pct").addEventListener("change",function(){S.apct=+this.value||95;saveSettings();alertStatus()});
 $("a-test").addEventListener("click",function(){try{Android.test()}catch(e){}});
 $("a-bat").addEventListener("click",function(){try{Android.askBattery()}catch(e){}});
 $("alerts").addEventListener("toggle",alertStatus);
@@ -1120,13 +1174,15 @@ window.bgScan=function(t10,t50){
     var seen={},now=Date.now(),n=0,k;
     try{seen=JSON.parse(localStorage.getItem("radar-alerted")||"{}")||{}}catch(e){}
     for(k in seen)if(now-seen[k]>4*36e5)delete seen[k];
+    var thr=+S.apct||95;
     st.results.forEach(function(r){
-      if(r.st!=="ready"||!r.plan)return;
-      n++;var id=r.sym+(r.dir>0?"L":"S");if(seen[id])return;seen[id]=now;
-      try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt · score "+r.score,
+      if(!r.plan||!(r.pct>=thr))return;
+      var rdy=r.st==="ready";n++;
+      var id=r.sym+(r.dir>0?"L":"S")+(rdy?"r":"n");if(seen[id])return;seen[id]=now;
+      try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · score "+r.score,
         "Entrée "+px(r.plan.entry)+" · Stop "+px(r.plan.sl)+" · TP1 "+px(r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
-    end(n?n+(n>1?" setups prêts":" setup prêt"):"aucun setup prêt")};
+    end(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
   scan(m)};
 
 /* ---------- boot ---------- */
