@@ -171,6 +171,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .pos1{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .pos1 .sub{flex-basis:100%}
 .pfk{padding-bottom:0}
+details.man{background:var(--sunk);border-color:transparent} details.man summary{font-size:14px;font-weight:500}
 .askf{display:flex;gap:8px}
 .askf input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;text-transform:uppercase}
 .verdict{font-family:var(--display);font-weight:600;font-size:17px}
@@ -290,7 +291,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 12.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 13.
     </footer>
 </div>
 <script>
@@ -1149,6 +1150,7 @@ $("one-form").addEventListener("submit",function(e){e.preventDefault();var v=cle
 $("fund-form").addEventListener("submit",function(e){e.preventDefault();var v=cleanSym($("fund-sym").value);$("fund-sym").value=v;$("fund-sym").blur();fundamental(v)});
 
 /* ---------- portfolio: read-only balances from the user's exchange accounts ---------- */
+var openMan=null;
 var CANPF=!!(window.Android&&typeof Android.api==="function"),apiSeq=0,apiWait={},pf={},pfBusy={};
 var EXS=[["binance","Binance",false],["mexc","MEXC",false],["okx","OKX",true]],STABLE={USDT:1,USDC:1,FDUSD:1,BUSD:1,TUSD:1,DAI:1,USDP:1,USD1:1,USDE:1};
 window.onApi=function(id,status,body){
@@ -1226,12 +1228,25 @@ function loadOkx(){
     if(Array.isArray(a[3]))a[3].forEach(function(p){var q=+p.pos;if(!q)return;
       m.positions.push({sym:p.instId,dir:p.posSide==="short"||(p.posSide==="net"&&q<0)?-1:1,size:Math.abs(q),unit:"contrats",entry:+p.avgPx,mark:+p.markPx,pnl:+p.upl,liq:+p.liqPx,lev:p.lever})});
     return m})}
+/* holdings the exchange API does not expose (MEXC Earn, for instance), typed in by the user */
+function manual(){try{var o=JSON.parse(localStorage.getItem("radar-manual")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return{}}}
+function saveManual(o){try{localStorage.setItem("radar-manual",JSON.stringify(o))}catch(e){}}
+function addManual(ex,m){
+  var list=manual()[ex]||[];m.manual=list;
+  if(!list.length)return Promise.resolve(m);
+  return Promise.all([pubPrices("bspot"),ex==="mexc"?pubPrices("mexc"):{}]).then(function(pp){
+    var P=pp[1],k,sum=0;for(k in pp[0])P[k]=pp[0][k];
+    list.forEach(function(x){
+      var u=usdOf(P,x.a,x.qty),o=null;sum+=u;
+      m.assets.forEach(function(y){if(y.a===x.a)o=y});
+      if(o){o.qty+=x.qty;o.usd+=u;o.w+=" + saisi"}else m.assets.push({a:x.a,qty:x.qty,usd:u,w:"Saisi à la main"})});
+    m.total+=sum;m.wallets.push(["Saisi à la main",sum]);return m})}
 var LOADERS={binance:loadBinance,mexc:loadMexc,okx:loadOkx};
 function loadPf(ex){
   if(pfBusy[ex])return;var has=false;try{has=Android.hasKeys(ex)}catch(e){}
   if(!has){delete pf[ex];renderPf();return}
   pfBusy[ex]=true;renderPf();
-  LOADERS[ex]().then(function(m){m.at=Date.now();pf[ex]=m},function(e){pf[ex]={err:apiMsg(e)}}).then(function(){pfBusy[ex]=false;renderPf()})}
+  LOADERS[ex]().then(function(m){return addManual(ex,m)}).then(function(m){m.at=Date.now();pf[ex]=m},function(e){pf[ex]={err:apiMsg(e)}}).then(function(){pfBusy[ex]=false;renderPf()})}
 function loadAllPf(){if(CANPF)EXS.forEach(function(x){loadPf(x[0])});else renderPf()}
 function usd0(v){return fr(v,v>=1000?0:2)+" $"}
 function renderPf(){
@@ -1263,12 +1278,24 @@ function renderPf(){
         return'<div class="pos1"><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+"</span><b>"+esc(p.sym)+"</b>"+(p.lev?"<span>x"+esc(p.lev)+"</span>":"")
           +(isFinite(p.pnl)?'<b class="'+(p.pnl>=0?"pos":"neg")+'" style="margin-left:auto">'+sgn(p.pnl,2)+" $</b>":"")
           +'<div class="sub">Taille '+fr(p.size,p.size>=100?0:3)+(p.unit?" "+p.unit:"")+" · entrée "+px(p.entry)+(p.mark?" · prix "+px(p.mark):"")+(p.liq>0?" · liquidation "+px(p.liq):"")+"</div></div>"}).join("")+"</div>";
-      if(m.notes.length)h+='<div class="sub">'+m.notes.join(" · ")+"</div>"}
+      if(m.notes.length)h+='<div class="sub">'+m.notes.join(" · ")+"</div>";
+      var ml=m.manual||[];
+      h+='<details class="set man"'+(openMan===ex?" open":"")+' data-man="'+ex+'"><summary>Ajouter un actif à la main'+(ml.length?" ("+ml.length+")":"")+"</summary>"
+        +ml.map(function(x,i){return'<div class="pos1"><b>'+esc(x.a)+"</b><span>"+fr(x.qty,x.qty>=100?0:x.qty>=1?3:6)+'</span><button class="ghost danger" type="button" style="margin-left:auto" data-mdel="'+ex+":"+i+'">Retirer</button></div>'}).join("")
+        +'<form class="grid pfm" data-ex="'+ex+'"><label>Crypto<input name="a" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="USDT"></label>'
+        +'<label>Quantité<input name="q" inputmode="decimal" autocomplete="off"></label>'
+        +'<label class="wide"><button class="take" type="submit">Ajouter au total</button></label><div class="warn wide" hidden></div>'
+        +'<div class="sub wide">Pour ce que la plateforme ne transmet pas, comme Earn sur MEXC. À corriger toi-même quand tu déplaces ces fonds.</div></form></details>'}
     if(has)h+='<div class="acts"><button class="ghost" type="button" data-pfr="'+ex+'">Actualiser</button><button class="ghost danger" type="button" data-pfx="'+ex+'">Déconnecter</button></div>';
     h+="</article>"});
   h+='<div class="sub">Utilise uniquement des clés API <b>en lecture seule</b>, sans droit de trading ni de retrait : sur la plateforme, crée une clé et ne coche que « lecture ». Les clés sont chiffrées et restent sur ce téléphone ; l\'appli ne peut envoyer que des demandes de consultation. Les valeurs sont des estimations au dernier prix.</div>';
   el.innerHTML=h}
 $("view-pf").addEventListener("submit",function(e){
+  var fm=e.target.closest("form.pfm");
+  if(fm){e.preventDefault();
+    var a2=cleanSym(fm.elements.a.value),q2=num(fm.elements.q.value),w2=fm.querySelector(".warn"),o=manual();
+    if(!a2||!(q2>0)){w2.hidden=false;w2.textContent="Indique la crypto et une quantité supérieure à zéro.";return}
+    (o[fm.dataset.ex]=o[fm.dataset.ex]||[]).push({a:a2,qty:q2});saveManual(o);openMan=fm.dataset.ex;loadPf(fm.dataset.ex);return}
   var f=e.target.closest("form.pfk");if(!f)return;e.preventDefault();
   var ex=f.dataset.ex,k=f.elements.k.value.trim(),s2=f.elements.s.value.trim(),p=f.elements.p?f.elements.p.value.trim():"",w=f.querySelector(".warn"),ok=false;
   if(!k||!s2||(f.elements.p&&!p)){w.hidden=false;w.textContent="Remplis tous les champs.";return}
@@ -1276,6 +1303,9 @@ $("view-pf").addEventListener("submit",function(e){
   if(!ok){w.hidden=false;w.textContent="Enregistrement impossible sur ce téléphone.";return}
   loadPf(ex)});
 $("view-pf").addEventListener("click",function(e){
+  var md=e.target.closest("[data-mdel]");
+  if(md){var pr=md.dataset.mdel.split(":"),o=manual();if(o[pr[0]]){o[pr[0]].splice(+pr[1],1);saveManual(o);openMan=pr[0];loadPf(pr[0])}return}
+  var sm=e.target.closest("details.man>summary");if(sm){var dd=sm.parentNode;openMan=dd.open?null:dd.dataset.man}
   var r=e.target.closest("[data-pfr]"),x=e.target.closest("[data-pfx]");
   if(r)loadPf(r.dataset.pfr);
   if(x){if(!armed["p"+x.dataset.pfx]){armed["p"+x.dataset.pfx]=1;x.textContent="Confirmer : effacer les clés";return}
