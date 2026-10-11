@@ -150,6 +150,12 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .sqb{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
 .sqb i{display:block;height:100%;background:var(--accent)}
 .sq b{font-size:12.5px;color:var(--muted)} .sq b.hot{color:var(--accent)}
+.sqt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sqc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.sqc>b{font-family:var(--display);font-size:22px;line-height:1.1}
+.sqc.up>b{color:var(--good)} .sqc.dn>b{color:var(--bad)} .sqc.low>b{color:var(--muted)}
+.sqc.up .sqb i{background:var(--good)} .sqc.dn .sqb i{background:var(--bad)}
+.sqc.up.hot{border-color:var(--good);background:var(--good-soft)} .sqc.dn.hot{border-color:var(--bad);background:var(--bad-soft)}
 #heat-cv{width:100%;height:400px;display:block;background:var(--sunk);border-radius:10px}
 .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
 .legend i{flex:1;height:8px;border-radius:4px;background:linear-gradient(to right,rgb(26,18,60),rgb(98,36,140) 35%,rgb(205,60,110) 65%,rgb(242,182,60) 85%,rgb(255,244,200))}
@@ -214,7 +220,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     <canvas id="heat-cv" aria-label="Carte des zones de liquidation estimées dans le temps"></canvas>
     <div class="legend"><span>peu de liquidations</span><i></i><span>beaucoup</span></div>
     <div class="zones" id="heat-z"></div>
-    <p class="sub" style="margin:0">Estimation maison, pas une donnée de Binance : chaque bougie est supposée ouvrir des longs et des shorts à levier 10x, 25x, 50x et 100x, pondérés par son volume. Une zone s'éteint quand le prix la traverse. La ligne claire est le prix.</p>
+    <p class="sub" style="margin:0">Estimation maison, pas une donnée de Binance : chaque bougie est supposée ouvrir des longs et des shorts à levier 10x, 25x, 50x et 100x, pondérés par son volume. Une zone s'éteint quand le prix la traverse. La ligne claire est le prix. Les bandes verte et rouge marquent la zone la plus proche où un short squeeze ou un long squeeze pourrait se déclencher ; plus la bande est épaisse, plus le risque est élevé.</p>
   </section>
 
   <details class="set">
@@ -234,7 +240,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 classent les contrats par volume échangé sur 24 h. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Version 5.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 classent les contrats par volume échangé sur 24 h. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Version 6.
     </footer>
 </div>
 <script>
@@ -800,7 +806,7 @@ function squeezeView(sq){
 /* ---------- estimated liquidation heatmap ----------
    Not exchange data: every past candle is assumed to open longs and shorts at 10x-100x, weighted by its volume.
    Each implied liquidation level stays lit, fading with age, until price trades through it. */
-var hsym="BTC",hper="15m",hmodel=null,hbusy=false,hstamp=0;
+var hsym="BTC",hper="15m",hmodel=null,hbusy=false,hstamp=0,hsq=null;
 function heatModel(k){
   var n=k.length,lo=Infinity,hi=-Infinity,i,j;
   k.forEach(function(c){if(c.l<lo)lo=c.l;if(c.h>hi)hi=c.h});
@@ -855,7 +861,28 @@ function drawHeat(){
   var lastX=-99,prev=null;
   m.k.forEach(function(c,i){var dd=new Date(c.t),key=dd.toDateString(),xx=(i+0.5)/n*pw;
     if(prev!==null&&key!==prev&&xx-lastX>54&&xx<pw-30){g.fillText(dd.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"}),xx,H-5);lastX=xx}
-    prev=key})}
+    prev=key});
+  if(hsq&&hsq.m===m){
+    [[m.above[0],hsq.up,"--good","▲ Short squeeze"],[m.below[0],hsq.dn,"--bad","▼ Long squeeze"]].forEach(function(q){
+      var z=q[0];if(!z)return;
+      var yy=y(z.p),colr=tk(q[2]),lvl=q[1]>=60?2:q[1]>=35?1:0,txt=q[3]+" · "+sqLevel(q[1])+" · "+px(z.p);
+      g.globalAlpha=0.14+0.1*lvl;g.fillStyle=colr;g.fillRect(0,yy-5-2*lvl,pw,10+4*lvl);g.globalAlpha=1;
+      g.strokeStyle=colr;g.lineWidth=1+0.8*lvl;g.setLineDash([7,4]);g.beginPath();g.moveTo(0,yy);g.lineTo(pw,yy);g.stroke();g.setLineDash([]);
+      g.font="600 11px "+(tk("--body")||"sans-serif");g.textBaseline="middle";
+      var tw=g.measureText(txt).width+14,ty=Math.max(12,Math.min(ph-12,yy+(q[2]==="--good"?-15:15)));
+      g.globalAlpha=0.88;g.fillStyle=tk("--bg");g.fillRect(6,ty-10,tw,20);g.globalAlpha=1;
+      g.strokeStyle=colr;g.lineWidth=1;g.strokeRect(6.5,ty-9.5,tw-1,19);g.fillStyle=colr;g.fillText(txt,13,ty)})}}
+function heatSqView(sq,m){
+  function tile(cls,title,v,w,z){
+    return'<div class="sqc '+cls+(v>=60?" hot":v<35?" low":"")+'"><div class="cap">'+title+"</div><b>"+sqLevel(v)+'</b><div class="sqb"><i style="width:'+Math.max(3,v)+'%"></i></div>'
+      +'<div class="sub">'+(z?"Zone visée "+px(z.p)+" ("+sgn((z.p-m.price)/m.price*100,1)+" %)":"Pas de zone nette")+"</div>"
+      +(w.length?'<div class="sub">'+esc(w.join(" · "))+"</div>":"")+"</div>"}
+  var d=sq.d,raw=[];
+  if(d.fund!==null&&d.fund!==undefined)raw.push("Funding <b>"+(d.fund>0?"+":"")+fr(d.fund*100,3)+" %</b>");
+  if(d.ls!==null&&d.ls!==undefined)raw.push("Ratio long/short <b>"+fr(d.ls,2)+"</b>");
+  if(d.oi!==null&&d.oi!==undefined)raw.push("Positions ouvertes 24 h <b>"+sgn(d.oi,1)+" %</b>");
+  return'<div class="sqt">'+tile("up","▲ Short squeeze · hausse brutale",sq.up,sq.wu,m.above[0])+tile("dn","▼ Long squeeze · chute brutale",sq.dn,sq.wd,m.below[0])+"</div>"
+    +(raw.length?'<div class="size" style="margin-top:8px">'+raw.map(function(x){return"<span>"+x+"</span>"}).join("")+"</div>":"")}
 function heatZones(){
   var m=hmodel,el=$("heat-z");if(!m){el.innerHTML="";return}
   var mx=0;m.above.concat(m.below).forEach(function(z){if(z.n>mx)mx=z.n});
@@ -868,13 +895,13 @@ function loadHeat(force){
   if(!force&&Date.now()-hstamp<60e3)return;
   var sym=hsym,per=hper;hbusy=true;
   $("heat-h").textContent=sym+" · liquidations estimées";$("heat-st").textContent="Chargement…";
-  if(hmodel&&hmodel.sym!==sym+per){hmodel=null;drawHeat();heatZones();$("heat-sq").innerHTML=""}
+  if(hmodel&&hmodel.sym!==sym+per){hmodel=null;hsq=null;drawHeat();heatZones();$("heat-sq").innerHTML=""}
   klines(sym+"USDT",per,500,100).then(function(k){
     hbusy=false;if(sym!==hsym||per!==hper){loadHeat(true);return}
     hmodel=heatModel(k);hmodel.sym=sym+per;hstamp=Date.now();
     $("heat-st").textContent="Mis à jour à "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
     drawHeat();heatZones();
-    var mdl=hmodel;squeezeData(sym+"USDT").then(function(d){if(hmodel===mdl)$("heat-sq").innerHTML=squeezeView(squeeze(d,mdl))},function(){});
+    var mdl=hmodel;squeezeData(sym+"USDT").then(function(d){if(hmodel!==mdl)return;hsq=squeeze(d,mdl);hsq.m=mdl;$("heat-sq").innerHTML=heatSqView(hsq,mdl);drawHeat()},function(){});
   },function(e){hbusy=false;$("heat-st").textContent=why(e)})}
 setInterval(function(){loadHeat(false)},15000);
 $("heat-p").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;hper=b.dataset.p;
