@@ -181,6 +181,13 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .hbox.warn .hdot{background:var(--accent)} .hbox.warn .hrow b{color:var(--accent)}
 .hbox.exit .hdot{background:var(--bad)} .hbox.exit .hrow b{color:var(--bad)}
 .hbox .ghost{padding:5px 10px;font-size:12px}
+.be{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:9px 12px;font-size:13.5px}
+.be:empty{display:none}
+.lamp{width:14px;height:14px;border-radius:50%;background:var(--line);flex:none}
+.betxt{flex:1;min-width:0} .betxt>b{font-family:var(--display);font-size:15px;margin-right:8px} .betxt span{color:var(--muted)} .betxt span b{color:var(--ink);font-family:var(--mono)}
+.be.soon .lamp{background:var(--accent)} .be.soon .betxt>b{color:var(--accent)}
+.be.go{border-color:var(--good);background:var(--good-soft)} .be.go .lamp{background:var(--good);box-shadow:0 0 0 4px var(--good-soft)} .be.go .betxt>b{color:var(--good)}
+.be.done .lamp{background:var(--good)} .be.done .betxt>b{color:var(--good)}
 .askf{display:flex;gap:8px}
 .askf input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;text-transform:uppercase}
 .verdict{font-family:var(--display);font-weight:600;font-size:17px}
@@ -301,7 +308,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 14.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 15.
     </footer>
 </div>
 <script>
@@ -711,9 +718,27 @@ function num(v){v=parseFloat(String(v).replace(/\s/g,"").replace(",","."));retur
 function sgn(v,d){return(v>=0?"+":"−")+fr(Math.abs(v),d)}
 function pnl(t,price){
   var gross=t.dir*(price-t.entry)*t.qty,fee=(+S.fee||0)/100*(t.entry+price)*t.qty;
-  return{gross:gross,fee:fee,net:gross-fee,risk:Math.abs(t.entry-t.sl)*t.qty}}
+  return{gross:gross,fee:fee,net:gross-fee,risk:(t.r0||Math.abs(t.entry-t.sl))*t.qty}}
+/* price at which closing the trade pays back entry and exit fees exactly */
+function bePrice(t){var f=(+S.fee||0)/100;return t.dir>0?t.entry*(1+f)/(1-f):t.entry*(1-f)/(1+f)}
+/* green light to move the stop to net break-even: one full risk unit of profit, and room for normal noise */
+function beState(t,price){
+  var be=bePrice(t),dir=t.dir,r0=t.r0||Math.abs(t.entry-t.sl),h=health[t.id],a1=h&&h.atr||0;
+  var goPx=dir>0?Math.max(t.entry+r0,be+a1):Math.min(t.entry-r0,be-a1);
+  if((t.sl-be)*dir>=-be*1e-6)return{st:"done",be:be};
+  if(price===undefined)return{st:"wait",be:be,goPx:goPx};
+  var rNow=r0?(price-t.entry)*dir/r0:0;
+  return{st:(price-goPx)*dir>=0?"go":rNow>=0.6?"soon":"wait",be:be,goPx:goPx}}
+function paintBE(t,price){
+  var el=$("be-"+t.id);if(!el)return;var b=beState(t,price),k=b.st+"|"+px(b.be)+"|"+(b.goPx?px(b.goPx):"");
+  if(el.dataset.k===k)return;el.dataset.k=k;el.className="be "+b.st;
+  var txt=b.st==="done"?"<b>Trade sécurisé</b><span>Ton stop est déjà au break-even net ou mieux.</span>":
+    b.st==="go"?"<b>Feu vert</b><span>Tu peux placer ton stop à <b>"+px(b.be)+"</b>, le break-even net de frais.</span>":
+    b.st==="soon"?"<b>Bientôt</b><span>Feu vert à partir de "+px(b.goPx)+". Break-even net : "+px(b.be)+".</span>":
+    "<b>Pas encore</b><span>Feu vert à partir de "+px(b.goPx)+". Break-even net : "+px(b.be)+".</span>";
+  el.innerHTML='<span class="lamp"></span><span class="betxt">'+txt+"</span>"+(b.st==="go"?'<button class="ghost" type="button" data-be="'+t.id+'">J\'ai déplacé mon stop</button>':"")}
 function addTrade(o){
-  o.id=Date.now().toString(36)+Math.floor(Math.random()*1e4);o.t=Date.now();
+  o.id=Date.now().toString(36)+Math.floor(Math.random()*1e4);o.t=Date.now();o.r0=Math.abs(o.entry-o.sl);
   T.unshift(o);saveTrades();renderTrades();tick()}
 function takeSetup(r){
   var q=sizing(r).qty;q=q>=100?Math.round(q):q>=1?Math.round(q*100)/100:Math.round(q*1e4)/1e4;
@@ -740,7 +765,7 @@ function renderTrades(){
   if(!op.length)h+='<div class="empty">Aucun trade suivi. Dans l\'onglet Scanner, ouvre un setup et appuie sur « J\'ai pris ce trade ».</div>';
   h+=op.map(function(t){var id=t.id;
     return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="sub" style="margin-left:auto">depuis le '+when(t.t)+"</span></div>"
-      +'<div id="hl-'+id+'"></div>'
+      +'<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
       +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(t.sl)+'</span><span id="px-'+id+'">–</span><span>TP '+px(t.tp)+"</span></div></div>"
       +'<div class="warn" id="al-'+id+'" hidden></div>'
@@ -768,7 +793,7 @@ function totals(){
   a.textContent=ok?sgn(sum,2)+" $":"–";a.className=ok?(sum>=0?"pos":"neg"):"";
   b.textContent=sgn(done,2)+" $";b.className=done>=0?"pos":"neg"}
 function paint(t){
-  var p=lastPx[t.full],n=$("net-"+t.id);if(!n||p===undefined)return;
+  var p=lastPx[t.full],n=$("net-"+t.id);paintBE(t,p);if(!n||p===undefined)return;
   var v=pnl(t,p),acc=+S.account||0;
   n.textContent=sgn(v.net,2)+" $";n.className="net "+(v.net>=0?"pos":"neg");
   $("sub-"+t.id).textContent=(acc?sgn(v.net/acc*100,2)+" % du compte · ":"")+(v.risk?sgn(v.net/v.risk,2)+" R · ":"")+"brut "+sgn(v.gross,2)+" $ · frais −"+fr(v.fee,2)+" $";
@@ -793,6 +818,8 @@ document.addEventListener("visibilitychange",tick);
 
 document.querySelector(".tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setView(b.dataset.v)});
 $("view-trades").addEventListener("click",function(e){
+  var bb=e.target.closest("[data-be]");
+  if(bb){var tb=trade(bb.dataset.be);if(tb){if(!tb.r0)tb.r0=Math.abs(tb.entry-tb.sl);tb.sl=+bePrice(tb).toPrecision(6);saveTrades();renderTrades()}return}
   var hc=e.target.closest("[data-hc]");if(hc){var th=trade(hc.dataset.hc);if(th)runHealth(th,true);return}
   var b=e.target.closest("[data-close],[data-del],[data-wipe]");if(!b)return;
   var id=b.dataset.close||b.dataset.del,t=id&&trade(id);
@@ -805,7 +832,10 @@ $("view-trades").addEventListener("click",function(e){
 $("view-trades").addEventListener("change",function(e){
   var el=e.target,t=el.dataset&&el.dataset.id&&trade(el.dataset.id);if(!t)return;
   var v=num(el.value);if(!(v>0)){el.value=t[el.dataset.f];return}
-  t[el.dataset.f]=v;saveTrades();
+  if(!t.r0)t.r0=Math.abs(t.entry-t.sl);
+  t[el.dataset.f]=v;
+  if((el.dataset.f==="sl"||el.dataset.f==="entry")&&(t.sl-bePrice(t))*t.dir<0)t.r0=Math.abs(t.entry-t.sl);
+  saveTrades();
   if(el.dataset.f==="sl"||el.dataset.f==="tp")renderTrades();else{paint(t);totals()}});
 $("view-trades").addEventListener("submit",function(e){
   e.preventDefault();
@@ -833,8 +863,8 @@ function checkTrade(t){
     var eng=analyze(t.sym,d1,h4,h1);
     if(eng.plan&&eng.dir===-dir&&eng.score>=50)add(-3,"no","Le scanner propose maintenant un "+(dir>0?"short":"long")+" sur cette crypto (score "+eng.score+")");
     else if(eng.plan&&eng.dir===dir)add(1,"ok","Le scanner voit toujours un setup "+(dir>0?"long":"short"));
-    var risk=Math.abs(t.entry-t.sl),rNow=risk?(price-t.entry)*dir/risk:0,left=risk?(price-t.sl)*dir/risk:1;
-    if(rNow>=1)add(1,"ok","Trade à "+sgn(rNow,1)+" R : tu peux remonter ton stop à ton prix d'entrée");
+    var risk=t.r0||Math.abs(t.entry-t.sl),rNow=risk?(price-t.entry)*dir/risk:0,left=risk?(price-t.sl)*dir/risk:1;
+    if(rNow>=1)add(1,"ok","Trade à "+sgn(rNow,1)+" R de gain");
     if(left<0.25)add(-1,"no",left<=0?"Prix déjà au-delà de ton stop":"Prix à "+fr(Math.abs(price-t.sl)/price*100,1)+" % de ton stop");
     if(Date.now()-t.t>48*36e5&&rNow<0.5)add(-1,"mid","Ouvert depuis "+Math.round((Date.now()-t.t)/864e5)+" jours sans avancer");
     var r1=rsi(h1.map(function(x){return x.c})),r15=null;
@@ -854,7 +884,7 @@ function checkTrade(t){
     var ord={no:0,mid:1,ok:2};it.sort(function(x,y){return ord[x.k]-ord[y.k]});
     /* both trends against the trade, or the 4H flip confirmed by an opposite setup, outweigh any supporting detail */
     var hard=b4===-dir&&(bd===-dir||(eng.plan&&eng.dir===-dir&&eng.score>=50));
-    return{v:hard||sc<=-4?"exit":sc<0?"warn":"ok",sc:sc,items:it,at:Date.now(),price:price}})}
+    return{v:hard||sc<=-4?"exit":sc<0?"warn":"ok",sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1)}})}
 var HLAB={ok:"Toujours valide",warn:"Fragile, à surveiller",exit:"Sortie à envisager"};
 function paintHealth(t){
   var el=$("hl-"+t.id);if(!el)return;var h=health[t.id];
@@ -867,7 +897,7 @@ function runHealth(t,force){
   if(healthBusy[t.id])return Promise.resolve();
   var h=health[t.id];if(!force&&h&&!h.err&&Date.now()-h.at<5*60e3)return Promise.resolve();
   healthBusy[t.id]=true;paintHealth(t);
-  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t)})}
+  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full])})}
 function checkDue(){
   if(view!=="trades"||document.hidden)return;
   var op=openTrades(),i=0;(function next(){if(i<op.length)runHealth(op[i++],false).then(next)})()}
@@ -1421,7 +1451,11 @@ window.bgScan=function(t10,t50){
       checkTrade(t).then(function(h){
         if(h.v==="exit"){bad++;if(prev[t.id]!=="exit"){
           try{Android.notify(t.sym+" · "+(t.dir>0?"long":"short")+" : sortie à envisager",h.items.filter(function(x){return x.k==="no"}).slice(0,3).map(function(x){return x.t}).join(" · "),"h"+t.id,"trades")}catch(e){}}}
-        prev[t.id]=h.v;next()},function(){next()})})()}
+        prev[t.id]=h.v;
+        health[t.id]=h;var b=beState(t,h.price);
+        if(b.st==="go"&&!prev["be"+t.id]){prev["be"+t.id]=1;
+          try{Android.notify(t.sym+" · feu vert break-even","Tu peux placer ton stop à "+px(b.be)+" (break-even net de frais) pour sécuriser le trade.","be"+t.id,"trades")}catch(e){}}
+        next()},function(){next()})})()}
   if(!m)return trades("");
   if(busy)return end("scan déjà en cours");
   onScanDone=function(){
