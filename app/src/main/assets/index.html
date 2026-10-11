@@ -156,6 +156,15 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .sqc.up>b{color:var(--good)} .sqc.dn>b{color:var(--bad)} .sqc.low>b{color:var(--muted)}
 .sqc.up .sqb i{background:var(--good)} .sqc.dn .sqb i{background:var(--bad)}
 .sqc.up.hot{border-color:var(--good);background:var(--good-soft)} .sqc.dn.hot{border-color:var(--bad);background:var(--bad-soft)}
+.askf{display:flex;gap:8px}
+.askf input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;text-transform:uppercase}
+.verdict{font-family:var(--display);font-weight:600;font-size:17px}
+.verdict.ready{color:var(--good)} .verdict.watch{color:var(--accent)}
+.ring.big{width:64px;height:64px;flex:none} .ring.big b{width:50px;height:50px;font-size:18px}
+#fcv{width:100%;height:200px;display:block;background:var(--sunk);border-radius:10px;margin-top:6px}
+.funnel.plain div{background:var(--sunk);border-color:transparent} .funnel.plain div:last-child b{color:inherit}
+.funnel.plain b{font-size:15px}
+.why li span b{font-weight:600}
 #heat-cv{width:100%;height:400px;display:block;background:var(--sunk);border-radius:10px}
 .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
 .legend i{flex:1;height:8px;border-radius:4px;background:linear-gradient(to right,rgb(26,18,60),rgb(98,36,140) 35%,rgb(205,60,110) 65%,rgb(242,182,60) 85%,rgb(255,244,200))}
@@ -196,6 +205,8 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     <button type="button" role="tab" data-v="all" aria-selected="true">Tous</button>
     <button type="button" role="tab" data-v="10" aria-selected="false">Top 10</button>
     <button type="button" role="tab" data-v="50" aria-selected="false">Top 50</button>
+    <button type="button" role="tab" data-v="one" aria-selected="false">Analyser</button>
+    <button type="button" role="tab" data-v="fund" aria-selected="false">Fondamental</button>
     <button type="button" role="tab" data-v="trades" aria-selected="false">Mes trades<b id="tcount"></b></button>
     <button type="button" role="tab" data-v="hbtc" aria-selected="false">Heatmap BTC</button>
     <button type="button" role="tab" data-v="heth" aria-selected="false">Heatmap ETH</button>
@@ -213,6 +224,16 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
   <div class="stack" id="next"></div>
   </section>
   <section class="view" id="view-trades" hidden></section>
+  <section class="view" id="view-one" hidden>
+    <h2 style="margin:0">Potentiel de trade d'une crypto</h2>
+    <form class="askf" id="one-form"><input id="one-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Symbole, par exemple SOL" aria-label="Symbole de la crypto"><button class="take" type="submit">Analyser</button></form>
+    <div class="stack" id="one-out"><div class="empty">Saisis le symbole d'une crypto cotée sur Binance Futures pour obtenir son setup, son score et son plan.</div></div>
+  </section>
+  <section class="view" id="view-fund" hidden>
+    <h2 style="margin:0">Profil long terme d'une crypto</h2>
+    <form class="askf" id="fund-form"><input id="fund-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Symbole, par exemple ETH" aria-label="Symbole de la crypto"><button class="take" type="submit">Analyser</button></form>
+    <div class="stack" id="fund-out"><div class="empty">Saisis un symbole pour voir sa capitalisation, sa dilution, sa tendance sur plusieurs années et une note de solidité.</div></div>
+  </section>
   <section class="view" id="view-heat" hidden>
     <div class="trh"><h2 id="heat-h" style="margin:0">BTC · liquidations estimées</h2><span class="sub" id="heat-st" style="margin-left:auto"></span></div>
     <div class="filters" id="heat-p"><button type="button" data-p="15m" aria-pressed="true">5 jours</button><button type="button" data-p="1h" aria-pressed="false">3 semaines</button></div>
@@ -240,7 +261,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 classent les contrats par volume échangé sur 24 h. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Version 6.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 classent les contrats par volume échangé sur 24 h. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 7.
     </footer>
 </div>
 <script>
@@ -560,17 +581,17 @@ function render(){
 function cardNone(r,n){
   var sy=esc(r.sym),last=r.why&&r.why.length?r.why[r.why.length-1].t:"";
   return'<article class="card"><div class="row"><span class="ring"><b>–</b></span>'
-   +'<span><span class="sym"><span class="rank">N°'+n+"</span>"+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
+   +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill none">Neutre</span><span class="st">Pas de trade</span></span>'
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":r.b4<0?"dn":"")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
    +(last?"<span>"+esc(last)+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")+"</span></div></article>"}
 function arrow(b){return b>0?"▲":b<0?"▼":"–"}
-function card(r,n){
+function card(r,n,force){
   if(!r.plan)return cardNone(r,n);
-  var open=openSym===r.sym,dirL=r.dir>0?"long":"short",sy=esc(r.sym);
+  var open=force||openSym===r.sym,dirL=r.dir>0?"long":"short",sy=esc(r.sym);
   var h='<article class="card"><button class="row" type="button" data-s="'+sy+'" aria-expanded="'+open+'">'
    +'<span class="ring" data-st="'+r.st+'" style="--v:'+r.score+'"><b>'+r.score+"</b></span>"
-   +'<span><span class="sym"><span class="rank">N°'+n+"</span>"+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
+   +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span></span>"
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
    +"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
@@ -603,11 +624,11 @@ function bookView(r){
   h+="<span>Spread <b>"+fr(b.spread,3)+" %</b></span>";
   if(r.fund!==undefined)h+="<span>Funding <b>"+(r.fund>0?"+":"")+fr(r.fund*100,3)+" %</b></span>";
   return h+"</div></div>"}
-function find(s){for(var i=0;i<results.length;i++)if(results[i].sym===s)return results[i];return null}
+function find(s){if(view==="one")return oneRes&&oneRes.sym===s?oneRes:null;for(var i=0;i<results.length;i++)if(results[i].sym===s)return results[i];return null}
 
 /* ---------- chart ---------- */
 function draw(r){
-  var cv=$("cv");if(!cv)return;var css=getComputedStyle(document.documentElement);
+  var cv=document.querySelector("section.view:not([hidden]) canvas#cv");if(!cv)return;var css=getComputedStyle(document.documentElement);
   function tk(n){return css.getPropertyValue(n).trim()}
   var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
   var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
@@ -646,13 +667,15 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:+r.plan.entry.toPrecision(6),qty:q,sl:+r.plan.sl.toPrecision(6),tp:+r.plan.tp1.toPrecision(6)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("scan").hidden=view==="trades";$("scan").textContent=view==="heat"?"Actualiser":"Scanner";
+  $("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("scan").hidden=view!=="scan"&&view!=="heat";$("scan").textContent=view==="heat"?"Actualiser":"Scanner";
   if(isScan){mode=v;useStore(v);var f=results.slice().sort(rank)[0];openSym=f&&f.plan?f.sym:null;statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
+  else if(view==="one"){statusLine();renderOne()}
+  else if(view==="fund"){statusLine();drawWeekly()}
   else{statusLine();renderTrades();tick()}}
 function when(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 
@@ -747,15 +770,15 @@ $("app").addEventListener("click",function(e){
     var ok=function(){c.textContent="Copié"},ko=function(){c.textContent=t};
     try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
-  var rr=find(s);if(!rr||!rr.plan)return;openSym=openSym===s?null:s;render()});
+  var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
 $("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else scan(mode)});
 [["account","f-account"],["risk","f-risk"],["lev","f-lev"],["margin","f-margin"],["minvol","f-minvol"],["fee","f-fee"],["exclude","f-exclude"]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
   el.addEventListener("change",function(){
     if(f[0]==="exclude"){S.exclude=el.value.toUpperCase().replace(/[^A-Z0-9,; ]/g,"");el.value=S.exclude}
     else{var v=parseFloat(String(el.value).replace(",","."));if(!(v>=0)||(v===0&&f[0]!=="minvol"&&f[0]!=="fee"))v=DEF[f[0]];S[f[0]]=v;el.value=v}
-    saveSettings();if(view==="trades"){openTrades().forEach(paint);totals()}else render()})});
-window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(openSym){var r=find(openSym);if(r)draw(r)}});
+    saveSettings();if(view==="trades"){openTrades().forEach(paint);totals()}else if(view==="one")renderOne();else render()})});
+window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(view==="fund")drawWeekly();if(view==="one"&&oneRes&&oneRes.plan)draw(oneRes);if(openSym){var r=find(openSym);if(r)draw(r)}});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render)}catch(e){}
 
 /* ---------- squeeze risk: crowded side (funding, account ratio), rising open interest, nearby liquidation pools ---------- */
@@ -906,6 +929,135 @@ function loadHeat(force){
 setInterval(function(){loadHeat(false)},15000);
 $("heat-p").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;hper=b.dataset.p;
   [].forEach.call($("heat-p").children,function(x){x.setAttribute("aria-pressed",x===b)});loadHeat(true)});
+
+/* ---------- single-symbol trade analysis ---------- */
+var oneRes=null,oneBusy=false;
+function cleanSym(v){return String(v).toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/USDT$/,"")}
+/* find the Binance contract for a ticker (PEPE trades as 1000PEPEUSDT) and return its daily candles */
+function resolve(base){
+  var c=[base+"USDT","1000"+base+"USDT","1000000"+base+"USDT","1M"+base+"USDT"];
+  function go(i){if(i>=c.length)return Promise.reject({code:"nosym"});
+    return klines(c[i],"1d",90,20).then(function(k){return{full:c[i],d1:k}},function(e){
+      if(e&&(e.code==="net"||e.code==="rate"||e.code==="geo"))throw e;return go(i+1)})}
+  return go(0)}
+function analyzeOne(base){
+  if(oneBusy||!base)return;
+  oneBusy=true;oneRes=null;$("one-out").innerHTML='<div class="empty">Analyse de '+esc(base)+" en cours…</div>";
+  var nul=function(){return null};
+  resolve(base).then(function(x){
+    var q="symbol="+encodeURIComponent(x.full);
+    return Promise.all([klines(x.full,"4h",200,60),klines(x.full,"1h",200,60),get("ticker/24hr?"+q,true).catch(nul),get("premiumIndex?"+q,true).catch(nul)]).then(function(k){
+      var r=analyze(x.full.replace(/USDT$/,""),x.d1,k[0],k[1]);r.full=x.full;
+      if(k[2]&&isFinite(+k[2].quoteVolume))r.vol=+k[2].quoteVolume;
+      if(k[3]&&isFinite(+k[3].lastFundingRate))r.fund=+k[3].lastFundingRate;
+      if(!r.plan)return r;
+      return Promise.all([klines(x.full,"15m",500,40).catch(nul),get("depth?"+q+"&limit=1000").catch(nul),squeezeData(x.full,r.fund).catch(nul)])
+        .then(function(e){enrich(r,e[0],e[1],e[2]);return r})})
+  }).then(function(r){oneBusy=false;oneRes=r;renderOne()},function(e){
+    oneBusy=false;$("one-out").innerHTML='<div class="empty">'+(e&&e.code==="nosym"?esc(base)+" n'a pas de contrat USDT sur Binance Futures. Vérifie le symbole.":e&&e.code==="short"?"Historique trop court pour analyser "+esc(base)+".":why(e))+"</div>"})}
+function renderOne(){
+  var r=oneRes;if(!r)return;
+  var v=!r.plan?"Pas de trade exploitable pour l'instant":r.st==="ready"?"Setup "+(r.dir>0?"long":"short")+" prêt, conditions réunies":
+    r.st==="watch"?"Setup "+(r.dir>0?"long":"short")+" à surveiller, conditions incomplètes":"Setup "+(r.dir>0?"long":"short")+" trop tôt, attendre";
+  var h='<div class="verdict '+(r.plan?r.st:"")+'">'+v+"</div>";
+  if(r.plan)h+=card(r,0,true);
+  else h+=cardNone(r,0)+'<article class="card"><div class="detail" style="border-top:0">'+gauges(r)
+    +'<ul class="why">'+r.why.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></div></article>";
+  $("one-out").innerHTML=h;if(r.plan)draw(r)}
+
+/* ---------- long-term profile: CoinGecko fundamentals + Binance weekly structure ---------- */
+var fundBusy=false,fundRes=null;
+function cg(path){return fetch("/cg/"+path).then(function(r){if(r.status===429)throw{code:"rate"};if(!r.ok)throw{code:"http"};return r.json()})}
+function money(v){return v>=1e9?fr(v/1e9,v>=1e11?0:1)+" Md$":v>=1e6?fr(v/1e6,0)+" M$":fr(v/1e3,0)+" k$"}
+function fundamental(base){
+  if(fundBusy||!base)return;
+  fundBusy=true;fundRes=null;$("fund-out").innerHTML='<div class="empty">Recherche de '+esc(base)+" en cours…</div>";
+  var name=base.replace(/^(1000000|1000|1M)/,"");
+  var pc=cg("search?query="+encodeURIComponent(name)).then(function(d){
+    var c=((d&&d.coins)||[]).filter(function(x){return String(x.symbol).toUpperCase()===name})
+      .sort(function(a,b){return(a.market_cap_rank||1e9)-(b.market_cap_rank||1e9)})[0];
+    if(!c)throw{code:"nocoin"};
+    return cg("coins/"+encodeURIComponent(c.id)+"?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false")
+  }).catch(function(e){return{err:(e&&e.code)||"http"}});
+  var pw=resolve(name).then(function(x){
+    return Promise.all([klines(x.full,"1w",300,4),name==="BTC"?null:klines("BTCUSDT","1w",300,4).catch(function(){return null})])
+  }).catch(function(){return null});
+  Promise.all([pc,pw]).then(function(a){
+    fundBusy=false;
+    if(a[0].err&&!a[1]){$("fund-out").innerHTML='<div class="empty">'+esc(name)+" est introuvable, ou les sources de données ne répondent pas. Vérifie le symbole et réessaie dans une minute.</div>";return}
+    fundRes=fundModel(name,a[0],a[1]);renderFund()})}
+function fundModel(sym,c,w){
+  var md=(c&&c.market_data)||{},it=[],m={sym:sym,name:c&&c.name||sym,cgErr:c&&c.err||null};
+  function usd(o){return o&&isFinite(+o.usd)&&+o.usd>0?+o.usd:null}
+  function add(label,pts,max,text){it.push({label:label,pts:pts,max:max,text:text,k:pts>=0.7*max?"ok":pts>=0.4*max?"mid":"no"})}
+  m.rank=c&&c.market_cap_rank||null;m.mc=usd(md.market_cap);m.fdv=usd(md.fully_diluted_valuation);m.volu=usd(md.total_volume);
+  m.circ=+md.circulating_supply||null;m.max=+md.max_supply||null;m.total=+md.total_supply||null;m.ath=usd(md.ath);
+  m.dd=md.ath_change_percentage&&isFinite(+md.ath_change_percentage.usd)?+md.ath_change_percentage.usd:null;
+  m.cats=((c&&c.categories)||[]).filter(Boolean).slice(0,4);
+  m.desc=c&&c.description&&c.description.en?String(c.description.en).replace(/<[^>]*>/g,"").replace(/\s+/g," ").trim().slice(0,300):"";
+  var born=c&&c.genesis_date?Date.parse(c.genesis_date):null;
+  if(m.rank)add("Taille",m.rank<=10?20:m.rank<=50?16:m.rank<=100?12:m.rank<=300?7:3,20,"Rang n°"+m.rank+" par capitalisation"+(m.mc?" ("+money(m.mc)+")":""));
+  var cap=m.max||m.total,dil=m.fdv&&m.mc?m.fdv/m.mc:cap&&m.circ?cap/m.circ:null;
+  if(dil){m.circPct=Math.min(100,100/dil);
+    add("Dilution",dil<=1.1?20:dil<=1.5?14:dil<=2.5?8:2,20,fr(m.circPct,0)+" % de l'offre déjà en circulation"+(dil>1.1?" : le reste arrivera sur le marché":"")+(m.max?"":" (offre sans plafond)"))}
+  if(m.volu&&m.mc){var tv=m.volu/m.mc*100;add("Liquidité",tv>=5?10:tv>=2?7:tv>=0.5?4:1,10,"Volume 24 h égal à "+fr(tv,1)+" % de la capitalisation")}
+  var k=w&&w[0],btc=w&&w[1];
+  if(!born&&k&&k.length)born=k[0].t;
+  if(born){var age=(Date.now()-born)/31557600000;
+    add("Ancienneté",age>=5?10:age>=3?7:age>=1?4:1,10,(c&&c.genesis_date?"Existe depuis ":"Cotée sur Binance Futures depuis ")+(age>=1?fr(age,1)+" ans":Math.round(age*12)+" mois"))}
+  if(k&&k.length){
+    var cl=k.map(function(x){return x.c}),n=cl.length,p=cl[n-1];m.price=p;m.k=k;
+    if(n>=30){var e20=ema(cl,20),e50=ema(cl,Math.min(50,n-1));m.e20=e20;m.e50=e50;
+      var a=e20[n-1],b=e50[n-1],pts=p>a&&a>b?20:p>b?12:p>a?8:3;
+      add("Tendance long terme",pts,20,pts===20?"Prix au-dessus de ses moyennes 20 et 50 semaines, orientées à la hausse":pts===12?"Prix au-dessus de sa moyenne 50 semaines, mais tendance hésitante":pts===8?"Rebond en cours sous la moyenne 50 semaines":"Prix sous ses moyennes 20 et 50 semaines")}
+    else add("Tendance long terme",5,20,"Historique trop court ("+n+" semaines) pour juger la tendance");
+    if(btc&&btc.length>=13&&n>=13){var span=Math.min(52,n-1,btc.length-1),ps=p/cl[n-1-span]-1,pb=btc[btc.length-1].c/btc[btc.length-1-span].c-1,df=(ps-pb)*100;
+      m.perf=ps*100;
+      add("Force face au BTC",df>=20?10:df>=-20?6:2,10,(df>=0?"Fait mieux":"Fait moins bien")+" que le BTC de "+fr(Math.abs(df),0)+" points sur "+span+" semaines ("+sgn(ps*100,0)+" % contre "+sgn(pb*100,0)+" %)")}
+    if(m.dd===null){var hi=Math.max.apply(null,k.map(function(x){return x.h}));m.dd=(p/hi-1)*100;m.ath=hi;m.ddLocal=true}}
+  if(m.dd!==null){var d=-m.dd;
+    add("Tenue du prix",d<=30?10:d<=60?7:d<=85?4:1,10,fr(d,0)+" % sous son plus haut"+(m.ddLocal?" depuis sa cotation sur Binance Futures":" historique"));
+    m.back=d<99.9?100/(100-d):null}
+  var got=0,max=0;it.forEach(function(x){got+=x.pts;max+=x.max});
+  m.items=it;m.score=max?Math.round(got/max*100):0;m.partial=max<80;
+  m.verdict=m.score>=70?"Profil solide":m.score>=50?"Profil moyen":"Profil fragile ou spéculatif";
+  return m}
+function renderFund(){
+  var m=fundRes;if(!m)return;
+  var st=m.score>=70?"ready":m.score>=50?"watch":"wait",ord={ok:0,mid:1,no:2};
+  var h='<article class="card"><div class="detail" style="border-top:0">'
+   +'<div class="trh"><span class="ring big" data-st="'+st+'" style="--v:'+m.score+'"><b>'+m.score+"</b></span>"
+   +'<span><span class="sym">'+esc(m.name)+" <small>"+esc(m.sym)+'</small></span><span class="verdict '+st+'" style="display:block">'+m.verdict+"</span>"
+   +'<span class="sub">'+(m.rank?"Rang n°"+m.rank+" · ":"")+(m.price?"Prix "+px(m.price):"")+"</span></span></div>";
+  if(m.partial)h+='<div class="warn">Note partielle : '+(m.cgErr==="rate"?"la source des données fondamentales limite les requêtes, réessaie dans une minute.":m.cgErr?"données fondamentales indisponibles pour ce symbole, seule la structure de prix est notée.":"historique de prix insuffisant sur Binance.")+"</div>";
+  var tiles=[];
+  if(m.mc)tiles.push([money(m.mc),"capitalisation"]);
+  if(m.fdv)tiles.push([money(m.fdv),"valorisation diluée"]);
+  if(m.circPct)tiles.push([fr(m.circPct,0)+" %","offre en circulation"]);
+  if(m.dd!==null)tiles.push([sgn(m.dd,0)+" %","depuis le plus haut"]);
+  if(tiles.length)h+='<div class="funnel plain" style="grid-template-columns:repeat('+Math.min(4,tiles.length)+',minmax(0,1fr))">'+tiles.map(function(t){return"<div><b>"+t[0]+"</b><span>"+t[1]+"</span></div>"}).join("")+"</div>";
+  if(m.k)h+='<div><div class="cap">Prix hebdomadaire · moyenne 20 semaines (jaune) et 50 semaines (gris)</div><canvas id="fcv" aria-label="Prix hebdomadaire et moyennes mobiles"></canvas></div>';
+  if(m.back&&m.back>1.05)h+='<div class="size"><span>Retour au plus haut '+(m.ath?"("+px(m.ath)+") ":"")+"= <b>×"+fr(m.back,1)+"</b> depuis le prix actuel. Repère théorique, pas une prévision.</span></div>";
+  h+='<div><div class="cap">Grille de lecture</div><ul class="why">'+m.items.slice().sort(function(a,b){return ord[a.k]-ord[b.k]}).map(function(x){
+    return'<li class="'+(x.k==="ok"?"":x.k)+'"><span><b>'+x.label+"</b> "+x.pts+"/"+x.max+" · "+esc(x.text)+"</span></li>"}).join("")+"</ul></div>";
+  if(m.cats.length)h+='<div class="chips">'+m.cats.map(function(x){return"<span>"+esc(x)+"</span>"}).join("")+"</div>";
+  if(m.desc)h+='<div class="sub">'+esc(m.desc)+"… (description CoinGecko, en anglais)</div>";
+  h+='<div class="sub">Cette note mesure la taille, la dilution, la liquidité, l\'ancienneté et la tenue du prix. Elle ne juge ni l\'équipe, ni le produit, ni l\'adoption réelle du projet.</div></div></article>';
+  $("fund-out").innerHTML=h;drawWeekly()}
+function drawWeekly(){
+  var m=fundRes,cv=$("fcv");if(!m||!m.k||!cv||!cv.clientWidth)return;
+  var css=getComputedStyle(document.documentElement);function tk(v){return css.getPropertyValue(v).trim()}
+  var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
+  var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
+  var cl=m.k.map(function(x){return x.c}),n=cl.length,lo=Math.min.apply(null,cl),hi=Math.max.apply(null,cl),pad=(hi-lo)*0.08||1;lo-=pad;hi+=pad;
+  var AX=64,pw=W-AX;function y(v){return H-6-(v-lo)/(hi-lo)*(H-12)}function x(i){return n>1?i/(n-1)*pw:0}
+  function line(arr,colr,lw){if(!arr)return;g.strokeStyle=colr;g.lineWidth=lw;g.beginPath();arr.forEach(function(v,i){if(i)g.lineTo(x(i),y(v));else g.moveTo(x(i),y(v))});g.stroke()}
+  line(m.e50,tk("--muted"),1.2);line(m.e20,tk("--accent"),1.4);line(cl,tk("--ink"),1.8);
+  g.font="500 10.5px "+(tk("--mono")||"monospace");g.textBaseline="middle";g.fillStyle=tk("--muted");
+  [lo+pad,(lo+hi)/2,hi-pad].forEach(function(v){g.fillText(px(v),pw+6,y(v))})}
+
+$("one-form").addEventListener("submit",function(e){e.preventDefault();var v=cleanSym($("one-sym").value);$("one-sym").value=v;$("one-sym").blur();analyzeOne(v)});
+$("fund-form").addEventListener("submit",function(e){e.preventDefault();var v=cleanSym($("fund-sym").value);$("fund-sym").value=v;$("fund-sym").blur();fundamental(v)});
 
 /* ---------- boot ---------- */
 ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");

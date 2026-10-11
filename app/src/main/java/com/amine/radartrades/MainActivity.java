@@ -16,11 +16,12 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Shows the bundled scanner page and relays its /fapi/ and /futures/data/ requests to Binance's public market-data API. */
+/** Shows the bundled scanner page and relays its /fapi/ and /futures/data/ requests to Binance's public market-data API and /cg/ requests to CoinGecko's public API. */
 public class MainActivity extends Activity {
     private static final String HOST = "radar.local";
     private static final String HOME = "https://" + HOST + "/";
     private static final String BINANCE = "https://fapi.binance.com";
+    private static final String COINGECKO = "https://api.coingecko.com/api/v3/";
 
     private WebView web;
 
@@ -38,7 +39,8 @@ public class MainActivity extends Activity {
                 Uri u = request.getUrl();
                 if (!HOST.equals(u.getHost())) return null;
                 String path = u.getPath() == null ? "/" : u.getPath();
-                if (path.startsWith("/fapi/") || path.startsWith("/futures/data/")) return relay(u);
+                if (path.startsWith("/fapi/") || path.startsWith("/futures/data/")) return relay(BINANCE + u.getEncodedPath(), u);
+                if (path.startsWith("/cg/")) return relay(COINGECKO + u.getEncodedPath().substring(4), u);
                 return page();
             }
         });
@@ -54,11 +56,11 @@ public class MainActivity extends Activity {
         }
     }
 
-    private WebResourceResponse relay(Uri u) {
+    private WebResourceResponse relay(String target, Uri u) {
         HttpURLConnection c = null;
         try {
             String q = u.getEncodedQuery();
-            URL url = new URL(BINANCE + u.getEncodedPath() + (q == null ? "" : "?" + q));
+            URL url = new URL(target + (q == null ? "" : "?" + q));
             c = (HttpURLConnection) url.openConnection();
             c.setConnectTimeout(15000);
             c.setReadTimeout(30000);
