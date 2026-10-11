@@ -40,6 +40,18 @@ public class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return Relay.handle(getApplicationContext(), request);
             }
+
+            /** Links to news articles open in the phone's browser, never inside the app. */
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                if (Relay.HOST.equals(u.getHost())) return false;
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, u));
+                } catch (Exception ignored) {
+                }
+                return true;
+            }
         });
         setContentView(web);
         String tab = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_TAB);

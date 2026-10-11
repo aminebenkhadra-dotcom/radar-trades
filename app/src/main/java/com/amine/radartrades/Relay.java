@@ -30,6 +30,10 @@ final class Relay {
         if (path.startsWith("/cg/")) return fetch(COINGECKO + u.getEncodedPath().substring(4), u);
         if (path.startsWith("/bspot/api/v3/ticker/")) return fetch("https://api.binance.com/" + u.getEncodedPath().substring(7), u);
         if (path.startsWith("/mexc/api/v3/ticker/")) return fetch("https://api.mexc.com/" + u.getEncodedPath().substring(6), u);
+        if (path.startsWith("/news/")) {
+            String feed = feed(path.substring(6));
+            return feed == null ? reply(404, "Not Found", "text/plain", new ByteArrayInputStream(new byte[0])) : get(feed, "*/*", "text/plain");
+        }
         if (path.startsWith("/llama/")) return fetch(LLAMA + u.getEncodedPath().substring(7), u);
         try {
             return new WebResourceResponse("text/html", "utf-8", ctx.getAssets().open("index.html"));
@@ -38,24 +42,42 @@ final class Relay {
         }
     }
 
+    /** The only news and sentiment sources the page can read. */
+    private static String feed(String key) {
+        switch (key) {
+            case "cryptoast": return "https://cryptoast.fr/feed/";
+            case "jdc": return "https://journalducoin.com/feed/";
+            case "cointribune": return "https://www.cointribune.com/feed/";
+            case "cointelegraph": return "https://cointelegraph.com/rss";
+            case "coindesk": return "https://www.coindesk.com/arc/outboundfeeds/rss/";
+            case "fng": return "https://api.alternative.me/fng/?limit=30";
+            default: return null;
+        }
+    }
+
     private static WebResourceResponse fetch(String target, Uri u) {
+        String q = u.getEncodedQuery();
+        return get(target + (q == null ? "" : "?" + q), "application/json", "application/json");
+    }
+
+    private static WebResourceResponse get(String address, String accept, String mime) {
         HttpURLConnection c = null;
         try {
-            String q = u.getEncodedQuery();
-            URL url = new URL(target + (q == null ? "" : "?" + q));
+            URL url = new URL(address);
             c = (HttpURLConnection) url.openConnection();
             c.setConnectTimeout(15000);
             c.setReadTimeout(30000);
-            c.setRequestProperty("Accept", "application/json");
+            c.setRequestProperty("Accept", accept);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) RadarTrades");
             int code = c.getResponseCode();
             InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
             if (in == null) in = new ByteArrayInputStream(new byte[0]);
             if (code >= 300 && code < 400) code = 502;
             String reason = c.getResponseMessage();
-            return reply(code, reason == null || reason.isEmpty() ? "Status" : reason, "application/json", in);
+            return reply(code, reason == null || reason.isEmpty() ? "Status" : reason, mime, in);
         } catch (Exception e) {
             if (c != null) c.disconnect();
-            return reply(502, "Bad Gateway", "application/json", new ByteArrayInputStream("{}".getBytes()));
+            return reply(502, "Bad Gateway", mime, new ByteArrayInputStream("{}".getBytes()));
         }
     }
 

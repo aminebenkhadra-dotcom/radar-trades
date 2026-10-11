@@ -176,6 +176,10 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .evt{display:block;font-weight:600;font-size:14px;color:var(--accent)} .evt.ok{color:var(--good)} .evt.no{color:var(--bad)}
 .ev .sub{display:block}
 #rcv{width:100%;height:200px;display:block;background:var(--sunk);border-radius:10px;margin-top:6px}
+.nw{display:flex;flex-direction:column;gap:5px;padding:10px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none}
+.nw>b{font-size:15px;font-weight:600;line-height:1.3}
+.nwh{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fgt{background:linear-gradient(to right,var(--bad-soft) 0 40%,var(--line) 40% 60%,var(--good-soft) 60% 100%)}
 .pfk{padding-bottom:0}
 details.man{background:var(--sunk);border-color:transparent} details.man summary{font-size:14px;font-weight:500}
 .hbox{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
@@ -249,6 +253,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="one" aria-selected="false">Analyser</button>
     <button type="button" role="tab" data-v="fund" aria-selected="false">Fondamental</button>
     <button type="button" role="tab" data-v="trades" aria-selected="false">Mes trades<b id="tcount"></b></button>
+    <button type="button" role="tab" data-v="news" aria-selected="false">Actus</button>
     <button type="button" role="tab" data-v="res" aria-selected="false">Résultats</button>
     <button type="button" role="tab" data-v="pf" aria-selected="false">Portefeuille</button>
     <button type="button" role="tab" data-v="hbtc" aria-selected="false">Heatmap BTC</button>
@@ -267,6 +272,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div class="stack" id="next"></div>
   </section>
   <section class="view" id="view-trades" hidden></section>
+  <section class="view" id="view-news" hidden></section>
   <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
   <section class="view" id="view-one" hidden>
@@ -319,7 +325,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 18.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 19.
     </footer>
 </div>
 <script>
@@ -756,13 +762,14 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:+r.plan.entry.toPrecision(6),qty:q,sl:+r.plan.sl.toPrecision(6),tp:+r.plan.tp1.toPrecision(6)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("scan").hidden=view!=="scan"&&view!=="heat";$("scan").textContent=view==="heat"?"Actualiser":"Scanner";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);var f=results.slice().sort(rank)[0];openSym=f&&f.plan?f.sym:null;statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
+  else if(view==="news"){statusLine();loadNews(false)}
   else if(view==="res"){statusLine();loadRes()}
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
@@ -957,7 +964,7 @@ $("app").addEventListener("click",function(e){
     try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
   var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
-$("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else scan(mode)});
+$("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else scan(mode)});
 [["account","f-account"],["risk","f-risk"],["lev","f-lev"],["margin","f-margin"],["minvol","f-minvol"],["fee","f-fee"],["exclude","f-exclude"]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
   el.addEventListener("change",function(){
@@ -1641,6 +1648,86 @@ $("view-res").addEventListener("click",function(e){
   if(b.dataset.rs)resSrc=b.dataset.rs;else resDays=+b.dataset.rd;
   loadRes()});
 
+/* ---------- market news: recent headlines ranked by keywords that usually move crypto, plus market mood ---------- */
+var FEEDS=[["cryptoast","Cryptoast","fr"],["jdc","Journal du Coin","fr"],["cointribune","Cointribune","fr"],["cointelegraph","Cointelegraph","en"],["coindesk","CoinDesk","en"]];
+var NAMES={BTC:"bitcoin",ETH:"ethereum|ether",SOL:"solana",XRP:"xrp|ripple",BNB:"bnb",ADA:"cardano",DOGE:"dogecoin",AVAX:"avalanche",LINK:"chainlink",DOT:"polkadot",
+  TRX:"tron",LTC:"litecoin",SUI:"sui",INJ:"injective",FET:"fetch\\.ai|superintelligence alliance",ONDO:"ondo",NEAR:"near protocol",APT:"aptos",ARB:"arbitrum",OP:"optimism",
+  HYPE:"hyperliquid",UNI:"uniswap",AAVE:"aave",TON:"toncoin",PEPE:"pepe",SHIB:"shiba",PIXEL:"pixels",JST:"just \\(jst\\)|justlend"};
+var TOPICS=[
+  ["Sécurité",3,/hack|pirat|exploit|faille|vol de|volé|stolen|drain|phishing|rug ?pull|unauthorized|compromis/i],
+  ["Régulation",3,/\bsec\b|cftc|régul|regul|interdi|\bban\b|bans |lawsuit|procès|plainte|sanction|mica|loi |législat|congress|sénat|senate|justice/i],
+  ["Macro",3,/\bfed\b|fomc|taux directeur|rate cut|rate hike|baisse des taux|hausse des taux|inflation|\bcpi\b|\bbce\b|récession|recession|tarif|tariff|shutdown|treasury yield|pétrole|oil /i],
+  ["Marché",3,/liquidation|crash|effondre|krach|plunge|chute de|depeg|dépeg|halving|capitulation|sell-?off/i],
+  ["Institutionnels",2,/\betf\b|blackrock|fidelity|strategy|microstrategy|trésorerie|treasury|institutionnel|institutional|nasdaq|banque centrale|central bank/i],
+  ["Plateformes",2,/binance|coinbase|kraken|\bokx\b|bybit|mexc|listing|delist|retire de la cote|tether|usdt|usdc|stablecoin/i]];
+var NOISE=/analyse technique|price prediction|prédiction|objectif de prix|chatgpt|comment acheter|how to buy|sponsor|communiqué|press release|airdrop guide|top \d+ /i;
+var news=null,newsBusy=false,newsAt=0;
+function txt(node,tag){var e=node.getElementsByTagName(tag)[0];return e?(e.textContent||"").trim():""}
+function clean(h){return String(h).replace(/<[^>]*>/g," ").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&#8217;|&rsquo;/g,"'").replace(/&#\d+;|&[a-z]+;/g," ").replace(/\s+/g," ").trim()}
+function myCoins(){
+  var seen={},out=[];
+  function add(a){a=(WRAP[a]||String(a)).toUpperCase().replace(/^(1000000|1000|1M)/,"");if(a&&!STABLE[a]&&!seen[a]){seen[a]=1;out.push(a)}}
+  openTrades().forEach(function(t){add(t.sym)});
+  EXS.forEach(function(x){var m=pf[x[0]];if(m&&!m.err)m.assets.forEach(function(a){if(a.usd>=20)add(a.a)})});
+  try{(JSON.parse(localStorage.getItem("radar-coins")||"[]")||[]).forEach(add)}catch(e){}
+  try{localStorage.setItem("radar-coins",JSON.stringify(out.slice(0,40)))}catch(e){}
+  return out}
+function rate(it,mine){
+  var s=it.title+" "+it.desc,score=0,tag="";
+  TOPICS.forEach(function(t){if(t[2].test(s)){if(t[1]>score||!tag)tag=t[0];score=Math.max(score,t[1])+(score?1:0)}});
+  if(/bitcoin|\bbtc\b|ethereum|\beth\b/i.test(it.title))score+=1;
+  if(NOISE.test(it.title))score-=3;
+  it.mine=mine.filter(function(c){return new RegExp("\\b("+c.replace(/[^A-Z0-9]/g,"")+(NAMES[c]?"|"+NAMES[c]:"")+")\\b",c.length<3?"":"i").test(it.title)});
+  if(it.mine.length)score+=2;
+  it.score=score;it.tag=tag||"Actualité"}
+function loadNews(force){
+  if(newsBusy||(!force&&news&&Date.now()-newsAt<10*60e3)){renderNews();return}
+  newsBusy=true;renderNews();
+  var mine=myCoins(),nul=function(){return null};
+  var feeds=Promise.all(FEEDS.map(function(f){
+    return fetch("/news/"+f[0]).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(x){
+      var doc=new DOMParser().parseFromString(x,"text/xml"),items=doc.getElementsByTagName("item"),out=[];
+      for(var i=0;i<items.length&&i<25;i++){var n=items[i],t=Date.parse(txt(n,"pubDate"));
+        var it={title:clean(txt(n,"title")),link:txt(n,"link"),t:isFinite(t)?t:0,desc:clean(txt(n,"description")).slice(0,220),src:f[1],lang:f[2]};
+        if(it.title&&/^https?:\/\//.test(it.link))out.push(it)}
+      return out}).catch(function(){return null})}));
+  var mood=fetch("/news/fng").then(function(r){return r.json()}).catch(nul),glob=cg("global").catch(nul);
+  Promise.all([feeds,mood,glob]).then(function(a){
+    var all=[],dead=[],seen={},from=Date.now()-72*36e5;
+    a[0].forEach(function(l,i){if(!l){dead.push(FEEDS[i][1]);return}
+      l.forEach(function(it){var k=it.title.toLowerCase().slice(0,60);if(it.t<from||seen[k])return;seen[k]=1;rate(it,mine);all.push(it)})});
+    all.sort(function(x,y){return y.t-x.t});
+    var fg=a[1]&&Array.isArray(a[1].data)?a[1].data.map(function(d){return{v:+d.value,c:d.value_classification}}).filter(function(d){return isFinite(d.v)}):[];
+    var g=a[2]&&a[2].data||null;
+    news={items:all,dead:dead,fg:fg,chg:g&&isFinite(+g.market_cap_change_percentage_24h_usd)?+g.market_cap_change_percentage_24h_usd:null,
+      dom:g&&g.market_cap_percentage&&isFinite(+g.market_cap_percentage.btc)?+g.market_cap_percentage.btc:null,mine:mine};
+    newsAt=Date.now();newsBusy=false;renderNews()})}
+var FGL={"Extreme Fear":"Peur extrême","Fear":"Peur","Neutral":"Neutre","Greed":"Avidité","Extreme Greed":"Avidité extrême"};
+function ago(t){var m=Math.round((Date.now()-t)/6e4);return m<60?"il y a "+Math.max(1,m)+" min":m<1440?"il y a "+Math.round(m/60)+" h":"il y a "+Math.round(m/1440)+" j"}
+function newsRow(it){
+  return'<a class="nw" href="'+esc(it.link)+'"><span class="nwh"><span class="pill '+(it.score>=3?"short":"none")+'">'+esc(it.tag)+"</span>"
+    +it.mine.map(function(c){return'<span class="pill long">'+esc(c)+"</span>"}).join("")+'<span class="sub">'+esc(it.src)+(it.lang==="en"?" · en anglais":"")+" · "+ago(it.t)+"</span></span>"
+    +"<b>"+esc(it.title)+"</b>"+(it.desc&&it.score>=3?'<span class="sub">'+esc(it.desc)+"…</span>":"")+"</a>"}
+function renderNews(){
+  var el=$("view-news"),n=news,h='<div class="trh"><h2 style="margin:0">Actus qui peuvent bouger le marché</h2><span class="sub" style="margin-left:auto">'+(newsBusy?"Chargement…":n?"à "+new Date(newsAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"")+"</span></div>";
+  if(!n){el.innerHTML=h+'<div class="empty">'+(newsBusy?"Lecture des sources…":"Aucune actualité chargée.")+"</div>";return}
+  var fg=n.fg[0],tiles=[];
+  if(fg)tiles.push('<div><b class="'+(fg.v>=60?"pos":fg.v<=40?"neg":"")+'">'+fg.v+"/100</b><span>"+(FGL[fg.c]||fg.c)+'</span><div class="track fgt"><i style="left:'+fg.v+'%"></i></div></div>');
+  if(n.chg!==null)tiles.push('<div><b class="'+(n.chg>=0?"pos":"neg")+'">'+sgn(n.chg,1)+" %</b><span>marché crypto sur 24 h</span></div>");
+  if(n.dom!==null)tiles.push("<div><b>"+fr(n.dom,1)+" %</b><span>part du Bitcoin</span></div>");
+  if(tiles.length)h+='<div class="funnel plain" style="grid-template-columns:repeat('+tiles.length+',minmax(0,1fr))">'+tiles.join("")+"</div>";
+  if(fg&&n.fg.length>7)h+='<div class="sub">Indice peur et avidité : '+fg.v+" aujourd'hui, "+n.fg[7].v+" il y a une semaine"+(n.fg.length>=30?", "+n.fg[29].v+" il y a un mois":"")+".</div>";
+  var hot=n.items.filter(function(x){return x.score>=3}).sort(function(a,b){return b.score-a.score||b.t-a.t}).slice(0,8);
+  var mine=n.items.filter(function(x){return x.mine.length&&hot.indexOf(x)<0}).slice(0,6);
+  var rest=n.items.filter(function(x){return hot.indexOf(x)<0&&mine.indexOf(x)<0&&x.score>-2}).slice(0,14);
+  if(!n.items.length)h+='<div class="empty">Aucune source n\'a répondu. Vérifie ta connexion et appuie sur Actualiser.</div>';
+  if(hot.length)h+='<article class="card tr"><div class="cap">À fort impact potentiel</div>'+hot.map(newsRow).join("")+"</article>";
+  if(mine.length)h+='<article class="card tr"><div class="cap">Sur tes cryptos'+(n.mine.length?" ("+n.mine.slice(0,8).join(", ")+")":"")+"</div>"+mine.map(newsRow).join("")+"</article>";
+  if(rest.length)h+='<article class="card tr"><div class="cap">Fil récent</div>'+rest.map(newsRow).join("")+"</article>";
+  h+='<div class="sub">Classement par mots-clés (piratage, régulation, banques centrales, ETF, plateformes…), pas par une lecture du contenu : un titre peut être mal classé, et l\'appli ne dit pas si une nouvelle est haussière ou baissière.'
+    +(n.dead.length?" Sources sans réponse : "+n.dead.join(", ")+".":"")+" Touche un titre pour ouvrir l'article dans ton navigateur.</div>";
+  el.innerHTML=h}
+
 /* ---------- background alerts ---------- */
 function alertStatus(){
   var on=S.a10||S.a50||S.atr,st=$("a-st"),t;
@@ -1712,7 +1799,7 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|res|one|fund|pf|hbtc|heth)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|hbtc|heth)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
