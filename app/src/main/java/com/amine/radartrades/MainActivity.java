@@ -17,6 +17,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONObject;
+
 /** Shows the scanner page and lets it switch the background watch on and off. */
 public class MainActivity extends Activity {
     static final String PREFS = "watch";
@@ -121,6 +123,37 @@ public class MainActivity extends Activity {
                 WatchService.alert(getApplicationContext(), "Radar Trades · test",
                         "Les alertes fonctionnent. Tu recevras ce type de message quand un setup est prêt.", "test", "all");
             });
+        }
+
+        @JavascriptInterface
+        public boolean saveKeys(String exchange, String apiKey, String secret, String pass) {
+            if (exchange == null || apiKey == null || secret == null) return false;
+            return Vault.put(getApplicationContext(), exchange, apiKey.trim(), secret.trim(), pass == null ? "" : pass.trim());
+        }
+
+        @JavascriptInterface
+        public boolean hasKeys(String exchange) {
+            return exchange != null && Vault.has(getApplicationContext(), exchange);
+        }
+
+        @JavascriptInterface
+        public void clearKeys(String exchange) {
+            if (exchange != null) Vault.clear(getApplicationContext(), exchange);
+        }
+
+        /** Runs one of the fixed read-only account queries and hands the answer back to the page. */
+        @JavascriptInterface
+        public void api(final int id, final String exchange, final String name) {
+            new Thread(() -> {
+                final String[] r = Exchanges.call(getApplicationContext(), String.valueOf(exchange), String.valueOf(name));
+                final String status = r[0].matches("\\d{1,3}") ? r[0] : "0";
+                runOnUiThread(() -> {
+                    if (web != null) {
+                        web.evaluateJavascript("window.onApi&&window.onApi(" + id + "," + status + ","
+                                + JSONObject.quote(r[1]) + ")", null);
+                    }
+                });
+            }).start();
         }
 
         @JavascriptInterface

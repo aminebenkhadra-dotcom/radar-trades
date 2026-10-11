@@ -28,6 +28,8 @@ final class Relay {
         String path = u.getPath() == null ? "/" : u.getPath();
         if (path.startsWith("/fapi/") || path.startsWith("/futures/data/")) return fetch(BINANCE + u.getEncodedPath(), u);
         if (path.startsWith("/cg/")) return fetch(COINGECKO + u.getEncodedPath().substring(4), u);
+        if (path.startsWith("/bspot/api/v3/ticker/")) return fetch("https://api.binance.com/" + u.getEncodedPath().substring(7), u);
+        if (path.startsWith("/mexc/api/v3/ticker/")) return fetch("https://api.mexc.com/" + u.getEncodedPath().substring(6), u);
         if (path.startsWith("/llama/")) return fetch(LLAMA + u.getEncodedPath().substring(7), u);
         try {
             return new WebResourceResponse("text/html", "utf-8", ctx.getAssets().open("index.html"));
