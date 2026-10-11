@@ -172,6 +172,15 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .pos1 .sub{flex-basis:100%}
 .pfk{padding-bottom:0}
 details.man{background:var(--sunk);border-color:transparent} details.man summary{font-size:14px;font-weight:500}
+.hbox{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.hbox.ok{border-color:var(--good);background:var(--good-soft)} .hbox.warn{border-color:var(--accent);background:var(--accent-soft)} .hbox.exit{border-color:var(--bad);background:var(--bad-soft)}
+.hrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hrow b{font-family:var(--display);font-size:17px}
+.hdot{width:12px;height:12px;border-radius:50%;background:var(--muted);flex:none}
+.hbox.ok .hdot{background:var(--good)} .hbox.ok .hrow b{color:var(--good)}
+.hbox.warn .hdot{background:var(--accent)} .hbox.warn .hrow b{color:var(--accent)}
+.hbox.exit .hdot{background:var(--bad)} .hbox.exit .hrow b{color:var(--bad)}
+.hbox .ghost{padding:5px 10px;font-size:12px}
 .askf{display:flex;gap:8px}
 .askf input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;text-transform:uppercase}
 .verdict{font-family:var(--display);font-weight:600;font-size:17px}
@@ -267,6 +276,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt</label>
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt</label>
+      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter si un de mes trades ouverts passe en « Sortie à envisager »</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <label class="wide">Me prévenir à partir de<select id="a-pct"><option value="90">90 % de préparation (plus tôt, plus d'alertes)</option><option value="95">95 % de préparation (presque prêt)</option><option value="100">100 % (setup prêt uniquement)</option></select></label>
       <div class="wide sub" id="a-st"></div>
@@ -291,14 +301,14 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 13.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 14.
     </footer>
 </div>
 <script>
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95};
+var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -720,7 +730,7 @@ function setView(v){
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
   else if(view==="fund"){statusLine();drawWeekly()}
-  else{statusLine();renderTrades();tick()}}
+  else{statusLine();renderTrades();tick();checkDue()}}
 function when(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 
 function renderTrades(){
@@ -730,6 +740,7 @@ function renderTrades(){
   if(!op.length)h+='<div class="empty">Aucun trade suivi. Dans l\'onglet Scanner, ouvre un setup et appuie sur « J\'ai pris ce trade ».</div>';
   h+=op.map(function(t){var id=t.id;
     return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="sub" style="margin-left:auto">depuis le '+when(t.t)+"</span></div>"
+      +'<div id="hl-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
       +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(t.sl)+'</span><span id="px-'+id+'">–</span><span>TP '+px(t.tp)+"</span></div></div>"
       +'<div class="warn" id="al-'+id+'" hidden></div>'
@@ -748,7 +759,7 @@ function renderTrades(){
     return'<article class="card"><div class="row done"><span><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="px">'+(t.dir>0?"Long":"Short")+" · "+px(t.entry)+" → "+px(t.exit)+" · "+when(t.tc)+'</span></span><span class="net sm '+(t.net>=0?"pos":"neg")+'">'+sgn(t.net,2)+" $</span></div></article>"}).join("")
     +'<button class="ghost danger" type="button" data-wipe="1">Effacer l\'historique</button>';
   $("view-trades").innerHTML=h;armed={};
-  op.forEach(paint);totals()}
+  op.forEach(paint);op.forEach(paintHealth);totals()}
 function totals(){
   var op=openTrades(),sum=0,ok=op.length>0;
   op.forEach(function(t){var p=lastPx[t.full];if(p===undefined)ok=false;else sum+=pnl(t,p).net});
@@ -782,6 +793,7 @@ document.addEventListener("visibilitychange",tick);
 
 document.querySelector(".tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setView(b.dataset.v)});
 $("view-trades").addEventListener("click",function(e){
+  var hc=e.target.closest("[data-hc]");if(hc){var th=trade(hc.dataset.hc);if(th)runHealth(th,true);return}
   var b=e.target.closest("[data-close],[data-del],[data-wipe]");if(!b)return;
   var id=b.dataset.close||b.dataset.del,t=id&&trade(id);
   if(b.dataset.wipe){if(!armed.w){armed.w=1;b.textContent="Confirmer l'effacement";return}T=T.filter(function(x){return!x.closed});saveTrades();renderTrades();return}
@@ -803,6 +815,63 @@ $("view-trades").addEventListener("submit",function(e){
     (o.dir>0?!(o.sl<o.entry&&o.tp>o.entry):!(o.sl>o.entry&&o.tp<o.entry))?"Pour un "+(o.dir>0?"long, le stop doit être sous l'entrée et l'objectif au-dessus.":"short, le stop doit être au-dessus de l'entrée et l'objectif en dessous."):"";
   if(bad){err.hidden=false;err.textContent=bad;return}
   addTrade(o)});
+
+/* ---------- trade health: does the reason for an open trade still hold? ---------- */
+var health={},healthBusy={};
+function checkTrade(t){
+  var full=t.full,q="symbol="+encodeURIComponent(full),nul=function(){return null};
+  return Promise.all([klines(full,"1d",90,20),klines(full,"4h",200,60),klines(full,"1h",200,60),
+    klines(full,"15m",500,40).catch(nul),get("depth?"+q+"&limit=1000",true).catch(nul),squeezeData(full).catch(nul)]).then(function(a){
+    var d1=a[0],h4=a[1],h1=a[2],m15=a[3],dir=t.dir,price=h1[h1.length-1].c,it=[],sc=0;
+    function add(pts,k,text){sc+=pts;it.push({k:k,t:text})}
+    var side=dir>0?"haussière":"baissière",b4=bias(h4),bd=bias(d1);
+    if(b4===dir)add(2,"ok","Tendance 4H toujours "+side);
+    else if(b4===0)add(-1,"mid","Tendance 4H devenue neutre");
+    else add(-3,"no","Tendance 4H retournée contre ton trade");
+    if(bd===dir)add(1,"ok","Tendance 1J dans ton sens");
+    else if(bd===-dir)add(-2,"no","Tendance 1J contre ton trade");
+    var eng=analyze(t.sym,d1,h4,h1);
+    if(eng.plan&&eng.dir===-dir&&eng.score>=50)add(-3,"no","Le scanner propose maintenant un "+(dir>0?"short":"long")+" sur cette crypto (score "+eng.score+")");
+    else if(eng.plan&&eng.dir===dir)add(1,"ok","Le scanner voit toujours un setup "+(dir>0?"long":"short"));
+    var risk=Math.abs(t.entry-t.sl),rNow=risk?(price-t.entry)*dir/risk:0,left=risk?(price-t.sl)*dir/risk:1;
+    if(rNow>=1)add(1,"ok","Trade à "+sgn(rNow,1)+" R : tu peux remonter ton stop à ton prix d'entrée");
+    if(left<0.25)add(-1,"no",left<=0?"Prix déjà au-delà de ton stop":"Prix à "+fr(Math.abs(price-t.sl)/price*100,1)+" % de ton stop");
+    if(Date.now()-t.t>48*36e5&&rNow<0.5)add(-1,"mid","Ouvert depuis "+Math.round((Date.now()-t.t)/864e5)+" jours sans avancer");
+    var r1=rsi(h1.map(function(x){return x.c})),r15=null;
+    if(m15&&m15.length>30){var rs=rsiSeries(m15.map(function(x){return x.c}));r15=rs[rs.length-1]}
+    var weak=dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55));
+    if(weak)add(-1,"no","Élan contre toi : RSI 1H à "+Math.round(r1)+(r15===null?"":", 15 min à "+Math.round(r15)));
+    var p={entry:t.entry,sl:t.sl,tp1:t.tp},bk=bookStats(a[4],dir,p);
+    if(bk){var share=dir>0?bk.bid:100-bk.bid;
+      if(share>=55)add(1,"ok","Carnet : "+Math.round(share)+" % "+(dir>0?"d'acheteurs":"de vendeurs")+" près du prix");
+      else if(share<=45)add(-1,"no","Carnet contre toi : "+Math.round(share)+" % "+(dir>0?"d'acheteurs":"de vendeurs")+" seulement")}
+    var hm=m15&&m15.length>=100?heatModel(m15):null,sq=squeeze(a[5],hm),ag=dir>0?sq.dn:sq.up,fo=dir>0?sq.up:sq.dn;
+    if(ag>=60)add(-2,"no","Risque élevé de "+(dir>0?"long":"short")+" squeeze contre ton trade");
+    else if(ag>=35)add(-1,"mid","Risque modéré de "+(dir>0?"long":"short")+" squeeze");
+    if(fo>=60)add(1,"ok","Potentiel de "+(dir>0?"short":"long")+" squeeze dans ton sens");
+    if(hm){var z=(dir>0?hm.below:hm.above).filter(function(x){return dir>0?(x.p>t.sl&&x.p<price):(x.p<t.sl&&x.p>price)})[0];
+      if(z)add(0,"mid","Zone de liquidation vers "+px(z.p)+" avant ton stop : mèche possible")}
+    var ord={no:0,mid:1,ok:2};it.sort(function(x,y){return ord[x.k]-ord[y.k]});
+    /* both trends against the trade, or the 4H flip confirmed by an opposite setup, outweigh any supporting detail */
+    var hard=b4===-dir&&(bd===-dir||(eng.plan&&eng.dir===-dir&&eng.score>=50));
+    return{v:hard||sc<=-4?"exit":sc<0?"warn":"ok",sc:sc,items:it,at:Date.now(),price:price}})}
+var HLAB={ok:"Toujours valide",warn:"Fragile, à surveiller",exit:"Sortie à envisager"};
+function paintHealth(t){
+  var el=$("hl-"+t.id);if(!el)return;var h=health[t.id];
+  if(!h){el.innerHTML='<div class="hbox"><div class="hrow"><span class="sub">'+(healthBusy[t.id]?"Vérification du trade en cours…":"Trade pas encore vérifié")+"</span></div></div>";return}
+  if(h.err){el.innerHTML='<div class="hbox"><div class="hrow"><span class="sub">Vérification impossible : '+esc(h.err)+'</span><button class="ghost" type="button" data-hc="'+t.id+'" style="margin-left:auto">Revérifier</button></div></div>';return}
+  el.innerHTML='<div class="hbox '+h.v+'"><div class="hrow"><span class="hdot"></span><b>'+HLAB[h.v]+'</b><span class="sub">vérifié à '+new Date(h.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+'</span>'
+    +'<button class="ghost" type="button" data-hc="'+t.id+'" style="margin-left:auto">'+(healthBusy[t.id]?"…":"Revérifier")+"</button></div>"
+    +'<ul class="why">'+h.items.slice(0,7).map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></div>"}
+function runHealth(t,force){
+  if(healthBusy[t.id])return Promise.resolve();
+  var h=health[t.id];if(!force&&h&&!h.err&&Date.now()-h.at<5*60e3)return Promise.resolve();
+  healthBusy[t.id]=true;paintHealth(t);
+  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t)})}
+function checkDue(){
+  if(view!=="trades"||document.hidden)return;
+  var op=openTrades(),i=0;(function next(){if(i<op.length)runHealth(op[i++],false).then(next)})()}
+setInterval(checkDue,60000);
 
 /* ---------- events ---------- */
 $("app").addEventListener("click",function(e){
@@ -1313,7 +1382,7 @@ $("view-pf").addEventListener("click",function(e){
 
 /* ---------- background alerts ---------- */
 function alertStatus(){
-  var on=S.a10||S.a50,st=$("a-st"),t;
+  var on=S.a10||S.a50||S.atr,st=$("a-st"),t;
   $("al-badge").textContent=NATIVE&&on?"actives":"";
   if(!NATIVE)t="Les alertes demandent la dernière version de l'application : réinstalle l'APK.";
   else if(!on)t="Coche une liste pour lancer la surveillance. Android affichera une notification permanente tant qu'elle tourne.";
@@ -1323,11 +1392,13 @@ function alertStatus(){
     try{if(!Android.batteryFree())t+=" · appuie sur « Autoriser en veille » pour que les contrôles continuent écran éteint"}catch(e){}}
   st.textContent=t;$("a-bat").hidden=!NATIVE;$("a-test").hidden=!NATIVE}
 function applyWatch(){
-  if(NATIVE){try{if(S.a10||S.a50)Android.startWatch(!!S.a10,!!S.a50,+S.amin||30);else Android.stopWatch()}catch(e){}}
+  if(NATIVE){try{if(S.a10||S.a50||S.atr)Android.startWatch(!!S.a10,!!S.a50,+S.amin||30);else Android.stopWatch()}catch(e){}}
   alertStatus()}
 $("a-10").checked=!!S.a10;$("a-50").checked=!!S.a50;$("a-min").value=String(S.amin||30);
 $("a-10").addEventListener("change",function(){S.a10=this.checked;saveSettings();applyWatch()});
 $("a-50").addEventListener("change",function(){S.a50=this.checked;saveSettings();applyWatch()});
+$("a-tr").checked=!!S.atr;
+$("a-tr").addEventListener("change",function(){S.atr=this.checked;saveSettings();applyWatch()});
 $("a-min").addEventListener("change",function(){S.amin=+this.value||30;saveSettings();applyWatch()});
 $("a-pct").value=String(S.apct||95);
 $("a-pct").addEventListener("change",function(){S.apct=+this.value||95;saveSettings();alertStatus()});
@@ -1338,11 +1409,23 @@ $("alerts").addEventListener("toggle",alertStatus);
 window.bgScan=function(t10,t50){
   var m=t50?"50":t10?"10":null,start=Date.now();
   function end(msg){try{Android.done(msg)}catch(e){}}
-  if(!m)return end("aucune liste surveillée");
+  S=loadSettings();T=loadTrades();
+  /* then re-check the open trades and warn once when one turns to "exit" */
+  function trades(msg){
+    var op=S.atr?openTrades():[];if(!op.length)return end(msg);
+    var prev={},i=0,bad=0;try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
+    (function next(){
+      if(i>=op.length){try{localStorage.setItem("radar-health",JSON.stringify(prev))}catch(e){}
+        return end((msg?msg+" · ":"")+op.length+(op.length>1?" trades vérifiés":" trade vérifié")+(bad?", "+bad+" à risque":""))}
+      var t=op[i++];
+      checkTrade(t).then(function(h){
+        if(h.v==="exit"){bad++;if(prev[t.id]!=="exit"){
+          try{Android.notify(t.sym+" · "+(t.dir>0?"long":"short")+" : sortie à envisager",h.items.filter(function(x){return x.k==="no"}).slice(0,3).map(function(x){return x.t}).join(" · "),"h"+t.id,"trades")}catch(e){}}}
+        prev[t.id]=h.v;next()},function(){next()})})()}
+  if(!m)return trades("");
   if(busy)return end("scan déjà en cours");
-  S=loadSettings();
   onScanDone=function(){
-    var st=stores[m];if(!st||st.stamp<start)return end("contrôle impossible (réseau ou Binance)");
+    var st=stores[m];if(!st||st.stamp<start)return trades("contrôle impossible (réseau ou Binance)");
     var seen={},now=Date.now(),n=0,k;
     try{seen=JSON.parse(localStorage.getItem("radar-alerted")||"{}")||{}}catch(e){}
     for(k in seen)if(now-seen[k]>4*36e5)delete seen[k];
@@ -1354,7 +1437,7 @@ window.bgScan=function(t10,t50){
       try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · score "+r.score,
         "Entrée "+px(r.plan.entry)+" · Stop "+px(r.plan.sl)+" · TP1 "+px(r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
-    end(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
+    trades(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
   scan(m)};
 
 /* ---------- boot ---------- */
@@ -1368,7 +1451,7 @@ document.addEventListener("visibilitychange",function(){
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
 loadStores();
 banner("");$("tcount").textContent=openTrades().length||"";alertStatus();
-if(!BG){var h0=location.hash.slice(1);setView(/^(all|10|50)$/.test(h0)?h0:"all")}
+if(!BG){var h0=location.hash.slice(1);setView(/^(all|10|50|trades)$/.test(h0)?h0:"all")}
 })();
 </script>
 </body>
