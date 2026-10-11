@@ -383,7 +383,7 @@ function card(r,n){
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'
      +'<dl class="plan"><div class="e"><dt>Entrée</dt><dd>'+px(p.entry)+'</dd></div><div class="s"><dt>Stop</dt><dd>'+px(p.sl)+'</dd></div>'
      +'<div class="t"><dt>TP1 · '+fr(p.rr,1)+'R</dt><dd>'+px(p.tp1)+'</dd></div><div class="t"><dt>TP2 · '+fr(p.rr2,1)+"R</dt><dd>"+px(p.tp2)+"</dd></div></dl>"
-     +'<div><div class="cap">Taille pour '+fr(+S.risk,1)+" % de risque, levier x"+esc(S.lev)+'</div><div class="size"><span>Quantité <b>'+fr(z.qty,z.qty>=100?0:z.qty>=1?2:4)+" "+sy+"</b></span><span>Position <b>"+fr(z.notional,0)+" $</b></span><span>Marge <b>"+fr(z.m,0)+" %</b></span><span>Risque <b>"+fr(z.risk,2)+" $</b></span></div></div>"
+     +'<div><div class="cap">À saisir sur Binance · '+fr(+S.risk,1)+" % de risque, levier x"+esc(S.lev)+'</div><div class="size"><span>Quantité <b>'+fr(z.qty,z.qty>=100?0:z.qty>=1?2:4)+" "+sy+"</b></span><span>Position <b>"+fr(z.notional,0)+" $</b></span><span>Marge à saisir <b>"+fr(z.notional/(+S.lev||1),2)+" USDT</b> ("+fr(z.m,0)+" %)</span><span>Perte au stop <b>"+fr(z.risk,2)+" $</b></span></div></div>"
      +z.w.map(function(w){return'<div class="warn">'+esc(w)+"</div>"}).join("")
      +'<ul class="why">'+r.why.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul>"
      +'<button class="copy" type="button" data-copy="'+sy+'">Copier le plan</button></div>'}
@@ -413,7 +413,7 @@ function draw(r){
 $("app").addEventListener("click",function(e){
   var c=e.target.closest("[data-copy]");
   if(c){var r=find(c.dataset.copy);if(!r)return;var p=r.plan,z=sizing(r);
-    var t=r.sym+"USDT "+(r.dir>0?"LONG":"SHORT")+" | Entrée "+px(p.entry)+" | Stop "+px(p.sl)+" | TP1 "+px(p.tp1)+" | TP2 "+px(p.tp2)+" | R:R "+fr(p.rr,1)+" | Qté "+fr(z.qty,4)+" | Levier x"+S.lev;
+    var t=r.sym+"USDT "+(r.dir>0?"LONG":"SHORT")+" | Entrée "+px(p.entry)+" | Stop "+px(p.sl)+" | TP1 "+px(p.tp1)+" | TP2 "+px(p.tp2)+" | R:R "+fr(p.rr,1)+" | Qté "+fr(z.qty,4)+" | Marge "+fr(z.notional/(+S.lev||1),2)+" USDT | Levier x"+S.lev;
     var ok=function(){c.textContent="Copié"},ko=function(){c.textContent=t};
     try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
