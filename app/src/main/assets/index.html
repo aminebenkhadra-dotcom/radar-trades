@@ -156,6 +156,9 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .sqc.up>b{color:var(--good)} .sqc.dn>b{color:var(--bad)} .sqc.low>b{color:var(--muted)}
 .sqc.up .sqb i{background:var(--good)} .sqc.dn .sqb i{background:var(--bad)}
 .sqc.up.hot{border-color:var(--good);background:var(--good-soft)} .sqc.dn.hot{border-color:var(--bad);background:var(--bad-soft)}
+.grid label.chk{flex-direction:row;align-items:center;gap:10px;font-size:14px;color:var(--ink)}
+.grid label.chk input{width:20px;height:20px;flex:none;accent-color:var(--accent);padding:0}
+#al-badge{font-family:var(--mono);font-size:11px;color:var(--good);margin-left:8px;font-weight:600}
 .askf{display:flex;gap:8px}
 .askf input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:15px;text-transform:uppercase}
 .verdict{font-family:var(--display);font-weight:600;font-size:17px}
@@ -244,6 +247,17 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     <p class="sub" style="margin:0">Estimation maison, pas une donnée de Binance : chaque bougie est supposée ouvrir des longs et des shorts à levier 10x, 25x, 50x et 100x, pondérés par son volume. Une zone s'éteint quand le prix la traverse. La ligne claire est le prix. Les bandes verte et rouge marquent la zone la plus proche où un short squeeze ou un long squeeze pourrait se déclencher ; plus la bande est épaisse, plus le risque est élevé.</p>
   </section>
 
+  <details class="set" id="alerts">
+    <summary>Alertes en arrière-plan<b id="al-badge"></b></summary>
+    <div class="grid">
+      <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt</label>
+      <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt</label>
+      <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
+      <div class="wide sub" id="a-st"></div>
+      <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
+    </div>
+  </details>
+
   <details class="set">
     <summary>Réglages</summary>
     <div class="grid">
@@ -261,17 +275,18 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 8.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 9.
     </footer>
 </div>
 <script>
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:""};
+var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
-var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={};
+var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
+var BG=/[?&]bg=1/.test(location.search), NATIVE=!!(window.Android&&typeof Android.startWatch==="function");
 function key(m){return m==="all"?"radar-last":"radar-last-"+m}
 function useStore(m){var st=stores[m]||{};results=st.results||[];funnel=st.funnel||null;stamp=st.stamp||null;live=!!st.live}
 
@@ -556,7 +571,8 @@ function statusLine(){
   else setStatus("Binance Futures USDT")}
 function finish(){
   busy=false;$("scan").disabled=false;$("app").classList.remove("scanning");$("bar").hidden=true;
-  statusLine();render()}
+  statusLine();render();
+  if(onScanDone){var cb=onScanDone;onScanDone=null;cb()}}
 
 /* ---------- formatting ---------- */
 function fr(v,d){return Number(v).toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d})}
@@ -1071,11 +1087,60 @@ function drawWeekly(){
 $("one-form").addEventListener("submit",function(e){e.preventDefault();var v=cleanSym($("one-sym").value);$("one-sym").value=v;$("one-sym").blur();analyzeOne(v)});
 $("fund-form").addEventListener("submit",function(e){e.preventDefault();var v=cleanSym($("fund-sym").value);$("fund-sym").value=v;$("fund-sym").blur();fundamental(v)});
 
+/* ---------- background alerts ---------- */
+function alertStatus(){
+  var on=S.a10||S.a50,st=$("a-st"),t;
+  $("al-badge").textContent=NATIVE&&on?"actives":"";
+  if(!NATIVE)t="Les alertes demandent la dernière version de l'application : réinstalle l'APK.";
+  else if(!on)t="Coche une liste pour lancer la surveillance. Android affichera une notification permanente tant qu'elle tourne.";
+  else{var last="";try{last=Android.lastCheck()}catch(e){}
+    t="Surveillance active"+(last?" · dernier contrôle "+last:" · premier contrôle en cours");
+    try{if(!Android.canNotify())t+=" · notifications bloquées : autorise-les pour Radar Trades dans les paramètres Android"}catch(e){}
+    try{if(!Android.batteryFree())t+=" · appuie sur « Autoriser en veille » pour que les contrôles continuent écran éteint"}catch(e){}}
+  st.textContent=t;$("a-bat").hidden=!NATIVE;$("a-test").hidden=!NATIVE}
+function applyWatch(){
+  if(NATIVE){try{if(S.a10||S.a50)Android.startWatch(!!S.a10,!!S.a50,+S.amin||30);else Android.stopWatch()}catch(e){}}
+  alertStatus()}
+$("a-10").checked=!!S.a10;$("a-50").checked=!!S.a50;$("a-min").value=String(S.amin||30);
+$("a-10").addEventListener("change",function(){S.a10=this.checked;saveSettings();applyWatch()});
+$("a-50").addEventListener("change",function(){S.a50=this.checked;saveSettings();applyWatch()});
+$("a-min").addEventListener("change",function(){S.amin=+this.value||30;saveSettings();applyWatch()});
+$("a-test").addEventListener("click",function(){try{Android.test()}catch(e){}});
+$("a-bat").addEventListener("click",function(){try{Android.askBattery()}catch(e){}});
+$("alerts").addEventListener("toggle",alertStatus);
+/* called by the watch service inside its hidden copy of this page */
+window.bgScan=function(t10,t50){
+  var m=t50?"50":t10?"10":null,start=Date.now();
+  function end(msg){try{Android.done(msg)}catch(e){}}
+  if(!m)return end("aucune liste surveillée");
+  if(busy)return end("scan déjà en cours");
+  S=loadSettings();
+  onScanDone=function(){
+    var st=stores[m];if(!st||st.stamp<start)return end("contrôle impossible (réseau ou Binance)");
+    var seen={},now=Date.now(),n=0,k;
+    try{seen=JSON.parse(localStorage.getItem("radar-alerted")||"{}")||{}}catch(e){}
+    for(k in seen)if(now-seen[k]>4*36e5)delete seen[k];
+    st.results.forEach(function(r){
+      if(r.st!=="ready"||!r.plan)return;
+      n++;var id=r.sym+(r.dir>0?"L":"S");if(seen[id])return;seen[id]=now;
+      try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt · score "+r.score,
+        "Entrée "+px(r.plan.entry)+" · Stop "+px(r.plan.sl)+" · TP1 "+px(r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
+    try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
+    end(n?n+(n>1?" setups prêts":" setup prêt"):"aucun setup prêt")};
+  scan(m)};
+
 /* ---------- boot ---------- */
-["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
-  if(last&&last.results&&last.results.length&&last.stamp)stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}});
-banner("");$("tcount").textContent=openTrades().length||"";
-setView("all");
+function loadStores(){
+  ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
+    if(last&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
+      stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
+window.openTab=function(v){if(/^(all|10|50|trades|one|fund|hbtc|heth)$/.test(v))setView(v)};
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden||BG)return;loadStores();alertStatus();
+  if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
+loadStores();
+banner("");$("tcount").textContent=openTrades().length||"";alertStatus();
+if(!BG){var h0=location.hash.slice(1);setView(/^(all|10|50)$/.test(h0)?h0:"all")}
 })();
 </script>
 </body>

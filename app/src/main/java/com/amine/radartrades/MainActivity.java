@@ -1,27 +1,26 @@
 package com.amine.radartrades;
 
 import android.app.Activity;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.provider.Settings;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-
-/** Shows the bundled scanner page and relays its /fapi/ and /futures/data/ requests to Binance's public market-data API and /cg/ requests to CoinGecko's public API. */
+/** Shows the scanner page and lets it switch the background watch on and off. */
 public class MainActivity extends Activity {
-    private static final String HOST = "radar.local";
-    private static final String HOME = "https://" + HOST + "/";
-    private static final String BINANCE = "https://fapi.binance.com";
-    private static final String COINGECKO = "https://api.coingecko.com/api/v3/";
+    static final String PREFS = "watch";
+    static final String EXTRA_TAB = "tab";
 
     private WebView web;
 
@@ -33,54 +32,101 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        web.addJavascriptInterface(new Bridge(), "Android");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                Uri u = request.getUrl();
-                if (!HOST.equals(u.getHost())) return null;
-                String path = u.getPath() == null ? "/" : u.getPath();
-                if (path.startsWith("/fapi/") || path.startsWith("/futures/data/")) return relay(BINANCE + u.getEncodedPath(), u);
-                if (path.startsWith("/cg/")) return relay(COINGECKO + u.getEncodedPath().substring(4), u);
-                return page();
+                return Relay.handle(getApplicationContext(), request);
             }
         });
         setContentView(web);
-        web.loadUrl(HOME);
+        String tab = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_TAB);
+        web.loadUrl(Relay.HOME + (tab == null ? "" : "#" + tab));
+
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (p.getBoolean("on", false)) startWatchService();
     }
 
-    private WebResourceResponse page() {
-        try {
-            return new WebResourceResponse("text/html", "utf-8", getAssets().open("index.html"));
-        } catch (Exception e) {
-            return reply(404, "Not Found", "text/plain", new ByteArrayInputStream(new byte[0]));
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String tab = intent == null ? null : intent.getStringExtra(EXTRA_TAB);
+        if (tab != null && web != null && tab.matches("[a-z0-9]{1,8}")) {
+            web.evaluateJavascript("window.openTab&&window.openTab('" + tab + "')", null);
         }
     }
 
-    private WebResourceResponse relay(String target, Uri u) {
-        HttpURLConnection c = null;
+    private void startWatchService() {
         try {
-            String q = u.getEncodedQuery();
-            URL url = new URL(target + (q == null ? "" : "?" + q));
-            c = (HttpURLConnection) url.openConnection();
-            c.setConnectTimeout(15000);
-            c.setReadTimeout(30000);
-            c.setRequestProperty("Accept", "application/json");
-            int code = c.getResponseCode();
-            InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
-            if (in == null) in = new ByteArrayInputStream(new byte[0]);
-            if (code >= 300 && code < 400) code = 502;
-            String reason = c.getResponseMessage();
-            return reply(code, reason == null || reason.isEmpty() ? "Status" : reason, "application/json", in);
-        } catch (Exception e) {
-            if (c != null) c.disconnect();
-            return reply(502, "Bad Gateway", "application/json", new ByteArrayInputStream("{}".getBytes()));
+            startForegroundService(new Intent(this, WatchService.class));
+        } catch (Exception ignored) {
+            // The system can refuse a background start; the watch resumes next time the app is opened.
         }
     }
 
-    private static WebResourceResponse reply(int code, String reason, String mime, InputStream body) {
-        Map<String, String> h = new HashMap<>();
-        h.put("Cache-Control", "no-store");
-        return new WebResourceResponse(mime, "utf-8", code, reason, h, body);
+    private final class Bridge {
+        @JavascriptInterface
+        public void startWatch(boolean top10, boolean top50, int minutes) {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putBoolean("on", true).putBoolean("top10", top10).putBoolean("top50", top50)
+                    .putInt("minutes", Math.max(15, minutes)).apply();
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && !canNotify()) {
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
+                }
+                stopService(new Intent(MainActivity.this, WatchService.class));
+                startWatchService();
+            });
+        }
+
+        @JavascriptInterface
+        public void stopWatch() {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("on", false).apply();
+            runOnUiThread(() -> stopService(new Intent(MainActivity.this, WatchService.class)));
+        }
+
+        @JavascriptInterface
+        public boolean canNotify() {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            return nm != null && nm.areNotificationsEnabled();
+        }
+
+        @JavascriptInterface
+        public boolean batteryFree() {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            return pm != null && pm.isIgnoringBatteryOptimizations(getPackageName());
+        }
+
+        @JavascriptInterface
+        public void askBattery() {
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            Uri.parse("package:" + getPackageName())));
+                } catch (Exception e) {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void test() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && !canNotify()) {
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
+                }
+                WatchService.alert(getApplicationContext(), "Radar Trades · test",
+                        "Les alertes fonctionnent. Tu recevras ce type de message quand un setup est prêt.", "test", "all");
+            });
+        }
+
+        @JavascriptInterface
+        public String lastCheck() {
+            return getSharedPreferences(PREFS, MODE_PRIVATE).getString("last", "");
+        }
     }
 
     @Override
