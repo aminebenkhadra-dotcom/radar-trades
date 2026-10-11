@@ -1,0 +1,36 @@
+plugins { id 'com.android.application' }
+
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+def ksFile = rootProject.file('radar.keystore')
+
+android {
+    namespace 'com.amine.radartrades'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.amine.radartrades'
+        minSdk 26
+        targetSdk 34
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+    }
+    signingConfigs {
+        release {
+            storeFile ksFile
+            storePassword System.getenv('KS_PASS') ?: 'radartrades'
+            keyAlias 'radar'
+            keyPassword System.getenv('KS_PASS') ?: 'radartrades'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+}
