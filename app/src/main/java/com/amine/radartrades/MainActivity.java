@@ -16,7 +16,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Shows the bundled scanner page and relays its /fapi/ requests to Binance's public market-data API. */
+/** Shows the bundled scanner page and relays its /fapi/ and /futures/data/ requests to Binance's public market-data API. */
 public class MainActivity extends Activity {
     private static final String HOST = "radar.local";
     private static final String HOME = "https://" + HOST + "/";
@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
                 Uri u = request.getUrl();
                 if (!HOST.equals(u.getHost())) return null;
                 String path = u.getPath() == null ? "/" : u.getPath();
-                if (path.startsWith("/fapi/")) return relay(u);
+                if (path.startsWith("/fapi/") || path.startsWith("/futures/data/")) return relay(u);
                 return page();
             }
         });

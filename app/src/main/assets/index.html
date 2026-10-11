@@ -145,6 +145,11 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .raill{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:6px}
 .funnel.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .funnel.two div:last-child{border-color:var(--line)} .funnel.two div:last-child b{color:inherit}
+.sq{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13.5px;margin-top:8px}
+.sq small{display:block;color:var(--muted);font-size:11px}
+.sqb{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.sqb i{display:block;height:100%;background:var(--accent)}
+.sq b{font-size:12.5px;color:var(--muted)} .sq b.hot{color:var(--accent)}
 #heat-cv{width:100%;height:400px;display:block;background:var(--sunk);border-radius:10px}
 .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
 .legend i{flex:1;height:8px;border-radius:4px;background:linear-gradient(to right,rgb(26,18,60),rgb(98,36,140) 35%,rgb(205,60,110) 65%,rgb(242,182,60) 85%,rgb(255,244,200))}
@@ -205,6 +210,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
   <section class="view" id="view-heat" hidden>
     <div class="trh"><h2 id="heat-h" style="margin:0">BTC · liquidations estimées</h2><span class="sub" id="heat-st" style="margin-left:auto"></span></div>
     <div class="filters" id="heat-p"><button type="button" data-p="15m" aria-pressed="true">5 jours</button><button type="button" data-p="1h" aria-pressed="false">3 semaines</button></div>
+    <div id="heat-sq"></div>
     <canvas id="heat-cv" aria-label="Carte des zones de liquidation estimées dans le temps"></canvas>
     <div class="legend"><span>peu de liquidations</span><i></i><span>beaucoup</span></div>
     <div class="zones" id="heat-z"></div>
@@ -228,7 +234,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 classent les contrats par volume échangé sur 24 h. Version 4.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 classent les contrats par volume échangé sur 24 h. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Version 5.
     </footer>
 </div>
 <script>
@@ -386,7 +392,7 @@ function bookStats(book,dir,p){
   return s}
 
 /* second pass on the finalists: 15-minute RSI trigger and order book */
-function enrich(r,m15,book){
+function enrich(r,m15,book,sqd){
   var sc=r.base,dir=r.dir;
   if(m15&&m15.length>30){
     var rs=rsiSeries(m15.map(function(x){return x.c})),n=rs.length,now=rs[n-1],prev=rs[n-2],win=rs.slice(-8);
@@ -404,8 +410,18 @@ function enrich(r,m15,book){
     if(b.block){sc-=5;r.why.push({t:"Mur "+(dir>0?"vendeur":"acheteur")+" à "+px(b.block.p)+" ("+usd(b.block.n)+") avant TP1",k:"no"})}
     if(b.guard)r.why.push({t:"Mur "+(dir>0?"acheteur":"vendeur")+" à "+px(b.guard.p)+" ("+usd(b.guard.n)+") devant le stop",k:"ok"})}
   else r.why.push({t:"Carnet d'ordres indisponible",k:"mid"});
-  if(r.fund!==undefined&&(dir>0?r.fund>=0.0005:r.fund<=-0.0005))
-    r.why.push({t:"Funding élevé ("+fr(r.fund*100,3)+" %) : beaucoup de "+(dir>0?"longs":"shorts")+" déjà en place",k:"no"});
+  var hm=m15&&m15.length>=100?heatModel(m15):null,p=r.plan;
+  r.sq=squeeze(sqd||{fund:r.fund===undefined?null:r.fund,ls:null,oi:null},hm);
+  var against=dir>0?r.sq.dn:r.sq.up,forIt=dir>0?r.sq.up:r.sq.dn,nA=dir>0?"long squeeze":"short squeeze",nF=dir>0?"short squeeze":"long squeeze";
+  var wA=(dir>0?r.sq.wd:r.sq.wu).join(", "),wF=(dir>0?r.sq.wu:r.sq.wd).join(", ");
+  if(against>=60){sc-=8;r.why.push({t:"Risque élevé de "+nA+" contre le trade"+(wA?" ("+wA+")":""),k:"no"})}
+  else if(against>=35){sc-=3;r.why.push({t:"Risque modéré de "+nA+(wA?" ("+wA+")":""),k:"mid"})}
+  if(forIt>=60){sc+=5;r.why.push({t:"Potentiel de "+nF+" dans le sens du trade"+(wF?" ("+wF+")":""),k:"ok"})}
+  if(hm){
+    var own=(dir>0?hm.below:hm.above).filter(function(z){return dir>0?(z.p>p.sl&&z.p<p.entry):(z.p<p.sl&&z.p>p.entry)})[0];
+    if(own)r.why.push({t:"Zone de liquidation de "+(dir>0?"longs":"shorts")+" vers "+px(own.p)+", entre l'entrée et le stop : mèche possible",k:"no"});
+    var mag=(dir>0?hm.above:hm.below).filter(function(z){var g=(z.p-r.price)/r.price*dir;return g>0&&g<0.15})[0];
+    if(mag)r.why.push({t:"Aimant possible : liquidations de "+(dir>0?"shorts":"longs")+" vers "+px(mag.p)+" ("+sgn((mag.p-r.price)/r.price*100,1)+" %)",k:"mid"})}
   settle(r,sc)}
 
 /* ---------- live data: Binance public market data, relayed by the app ---------- */
@@ -484,10 +500,11 @@ function scan(m){
     if(top){none=p2.out.filter(function(r){return!r.plan});none.forEach(function(r){delete r.h4})}
     f.setups=good.length;
     return pool(good.slice(0,15),4,function(r){
-      return Promise.all([klines(r.full,"15m",120,40).catch(function(){return null}),
-        get("depth?symbol="+encodeURIComponent(r.full)+"&limit=1000").catch(function(){return null})])
-        .then(function(k){enrich(r,k[0],k[1]);return r})
-    },function(d,t){progress("Étape 3/3 : carnets d'ordres",d,t,80,100)}).then(function(p3){
+      return Promise.all([klines(r.full,"15m",500,40).catch(function(){return null}),
+        get("depth?symbol="+encodeURIComponent(r.full)+"&limit=1000").catch(function(){return null}),
+        squeezeData(r.full,r.fund).catch(function(){return null})])
+        .then(function(k){enrich(r,k[0],k[1],k[2]);return r})
+    },function(d,t){progress("Étape 3/3 : carnets et squeeze",d,t,80,100)}).then(function(p3){
       return top?good.sort(rank).concat(none.sort(function(a,b){return(b.vol||0)-(a.vol||0)})):p3.out.sort(rank).slice(0,15)})
   }).then(function(list){
     f.tiles=top?[[f.n,"analysés"],[f.trend,"en tendance 1J"],[f.setups,"setups"],[list.filter(function(r){return r.st==="ready"}).length,"prêts"]]
@@ -550,7 +567,7 @@ function card(r,n){
    +'<span><span class="sym"><span class="rank">N°'+n+"</span>"+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span></span>"
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan,z=sizing(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'
@@ -559,7 +576,7 @@ function card(r,n){
      +'<div><div class="cap">À saisir sur Binance · '+fr(+S.risk,1)+" % de risque, levier x"+esc(S.lev)+'</div><div class="size"><span>Quantité <b>'+fr(z.qty,z.qty>=100?0:z.qty>=1?2:4)+" "+sy+"</b></span><span>Position <b>"+fr(z.notional,0)+" $</b></span><span>Marge à saisir <b>"+fr(z.notional/(+S.lev||1),2)+" USDT</b> ("+fr(z.m,0)+" %)</span><span>Perte au stop <b>"+fr(z.risk,2)+" $</b></span></div></div>"
      +'<div class="size"><span>Gain à TP1 <b class="pos">+'+fr(z.qty*Math.abs(p.tp1-p.entry),2)+' $</b></span><span>Gain à TP2 <b class="pos">+'+fr(z.qty*Math.abs(p.tp2-p.entry),2)+" $</b></span></div>"
      +z.w.map(function(w){return'<div class="warn">'+esc(w)+"</div>"}).join("")
-     +gauges(r)+bookView(r)
+     +gauges(r)+bookView(r)+squeezeView(r.sq)
      +'<ul class="why">'+r.why.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul>"
      +'<div class="acts"><button class="take" type="button" data-take="'+sy+'"'+(openTrades().some(function(t){return t.sym===r.sym})?" disabled>Déjà dans Mes trades":">J'ai pris ce trade")+'</button><button class="copy" type="button" data-copy="'+sy+'">Copier le plan</button></div></div>'}
   return h+"</article>"}
@@ -735,6 +752,51 @@ $("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);el
 window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(openSym){var r=find(openSym);if(r)draw(r)}});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render)}catch(e){}
 
+/* ---------- squeeze risk: crowded side (funding, account ratio), rising open interest, nearby liquidation pools ---------- */
+function gdata(path){return fetch("/futures/data/"+path).then(function(r){if(!r.ok)throw{code:"http"};return r.json()})}
+function squeezeData(full,fund){
+  var q="symbol="+encodeURIComponent(full),nul=function(){return null};
+  return Promise.all([
+    gdata("globalLongShortAccountRatio?"+q+"&period=1h&limit=1").catch(nul),
+    gdata("openInterestHist?"+q+"&period=1h&limit=25").catch(nul),
+    fund!==undefined?fund:get("premiumIndex?"+q,true).then(function(d){return+d.lastFundingRate}).catch(nul)
+  ]).then(function(a){
+    var ls=Array.isArray(a[0])&&a[0].length?+a[0][a[0].length-1].longShortRatio:NaN,oi=null;
+    if(Array.isArray(a[1])&&a[1].length>12){var f=+a[1][0].sumOpenInterest,l=+a[1][a[1].length-1].sumOpenInterest;if(f>0&&isFinite(l))oi=(l-f)/f*100}
+    return{ls:isFinite(ls)?ls:null,oi:oi,fund:a[2]===null||!isFinite(a[2])?null:a[2]}})}
+/* share of unswept estimated liquidations sitting within 3 % above (shorts) and below (longs) the price */
+function nearLiq(m){
+  var s=0,l=0,b,p;
+  for(b=0;b<m.B;b++){p=m.lo+(b+0.5)*m.step;
+    if(p>m.price&&p<=m.price*1.03)s+=m.liveS[b];
+    if(p<m.price&&p>=m.price*0.97)l+=m.liveL[b]}
+  return{s:s,l:l,tot:s+l}}
+function squeeze(d,m){
+  var up=0,dn=0,wu=[],wd=[];
+  if(d&&d.fund!==null){var fp=d.fund*100,ft="funding "+(fp>0?"+":"")+fr(fp,3)+" %";
+    if(fp<=-0.03){up+=30;wu.push(ft)}else if(fp<=-0.01){up+=15;wu.push(ft)}
+    if(fp>=0.05){dn+=30;wd.push(ft)}else if(fp>=0.02){dn+=15;wd.push(ft)}}
+  if(d&&d.ls!==null){var lt="ratio long/short "+fr(d.ls,2);
+    if(d.ls<=0.6){up+=30;wu.push(lt)}else if(d.ls<=0.85){up+=18;wu.push(lt)}
+    if(d.ls>=3){dn+=30;wd.push(lt)}else if(d.ls>=2){dn+=18;wd.push(lt)}}
+  if(d&&d.oi!==null&&d.oi>=8){var ot="positions ouvertes +"+fr(d.oi,0)+" % en 24 h";up+=15;dn+=15;wu.push(ot);wd.push(ot)}
+  if(m){var n=nearLiq(m);if(n.tot>0){var sh=n.s/n.tot;
+    if(sh>=0.6){up+=Math.round(25*Math.min(1,(sh-0.5)/0.35));wu.push("liquidations de shorts à moins de 3 %")}
+    if(sh<=0.4){dn+=Math.round(25*Math.min(1,(0.5-sh)/0.35));wd.push("liquidations de longs à moins de 3 %")}}}
+  return{up:Math.min(100,up),dn:Math.min(100,dn),wu:wu,wd:wd,d:d||{}}}
+function sqLevel(v){return v>=60?"Élevé":v>=35?"Modéré":"Faible"}
+function squeezeView(sq){
+  if(!sq)return"";
+  function line(name,hint,v,w){
+    return'<div class="sq"><span>'+name+" <small>"+hint+'</small></span><span class="sqb"><i style="width:'+Math.max(3,v)+'%"></i></span><b class="'+(v>=60?"hot":"")+'">'+sqLevel(v)+"</b></div>"
+      +(w.length?'<div class="sub">'+esc(w.join(" · "))+"</div>":"")}
+  var d=sq.d,raw=[];
+  if(d.fund!==null&&d.fund!==undefined)raw.push("Funding <b>"+(d.fund>0?"+":"")+fr(d.fund*100,3)+" %</b>");
+  if(d.ls!==null&&d.ls!==undefined)raw.push("Ratio long/short <b>"+fr(d.ls,2)+"</b>");
+  if(d.oi!==null&&d.oi!==undefined)raw.push("Positions ouvertes 24 h <b>"+sgn(d.oi,1)+" %</b>");
+  return'<div><div class="cap">Risque de squeeze</div>'+line("Short squeeze","hausse brutale",sq.up,sq.wu)+line("Long squeeze","chute brutale",sq.dn,sq.wd)
+    +(raw.length?'<div class="size" style="margin-top:6px">'+raw.map(function(x){return"<span>"+x+"</span>"}).join("")+"</div>":"")+"</div>"}
+
 /* ---------- estimated liquidation heatmap ----------
    Not exchange data: every past candle is assumed to open longs and shorts at 10x-100x, weighted by its volume.
    Each implied liquidation level stays lit, fading with age, until price trades through it. */
@@ -763,7 +825,7 @@ function heatModel(k){
     var keep=[];out.forEach(function(z){if(keep.length<3&&!keep.some(function(o){return Math.abs(o.b-z.b)<5}))keep.push(z)});
     return keep}
   var price=k[n-1].c;
-  return{k:k,n:n,B:B,lo:lo,hi:hi,grid:grid,cap:vals.length?vals[Math.floor(vals.length*0.97)]:1,price:price,
+  return{k:k,n:n,B:B,lo:lo,hi:hi,step:step,liveL:liveL,liveS:liveS,grid:grid,cap:vals.length?vals[Math.floor(vals.length*0.97)]:1,price:price,
     above:peaks(liveS).filter(function(z){return z.p>price}).sort(function(a,b){return a.p-b.p}),
     below:peaks(liveL).filter(function(z){return z.p<price}).sort(function(a,b){return b.p-a.p})}}
 var RAMP=[[0,26,18,60],[0.35,98,36,140],[0.65,205,60,110],[0.85,242,182,60],[1,255,244,200]];
@@ -806,12 +868,13 @@ function loadHeat(force){
   if(!force&&Date.now()-hstamp<60e3)return;
   var sym=hsym,per=hper;hbusy=true;
   $("heat-h").textContent=sym+" · liquidations estimées";$("heat-st").textContent="Chargement…";
-  if(hmodel&&hmodel.sym!==sym+per){hmodel=null;drawHeat();heatZones()}
+  if(hmodel&&hmodel.sym!==sym+per){hmodel=null;drawHeat();heatZones();$("heat-sq").innerHTML=""}
   klines(sym+"USDT",per,500,100).then(function(k){
     hbusy=false;if(sym!==hsym||per!==hper){loadHeat(true);return}
     hmodel=heatModel(k);hmodel.sym=sym+per;hstamp=Date.now();
     $("heat-st").textContent="Mis à jour à "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
-    drawHeat();heatZones()
+    drawHeat();heatZones();
+    var mdl=hmodel;squeezeData(sym+"USDT").then(function(d){if(hmodel===mdl)$("heat-sq").innerHTML=squeezeView(squeeze(d,mdl))},function(){});
   },function(e){hbusy=false;$("heat-st").textContent=why(e)})}
 setInterval(function(){loadHeat(false)},15000);
 $("heat-p").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;hper=b.dataset.p;
