@@ -41,6 +41,17 @@ final class Exchanges {
 
     private static String[] binance(String[] cred, String name) throws Exception {
         String host = "https://api.binance.com", path, method = "GET", extra = "";
+        if (name.startsWith("inc:")) {
+            // realised results of the futures account: inc:<type>:<days>
+            String[] p = name.split(":");
+            boolean type = p.length == 3 && (p[1].equals("REALIZED_PNL") || p[1].equals("COMMISSION") || p[1].equals("FUNDING_FEE"));
+            boolean days = p.length == 3 && (p[2].equals("7") || p[2].equals("30") || p[2].equals("90"));
+            if (!type || !days) return new String[]{"400", "{\"msg\":\"Requête inconnue\"}"};
+            long start = System.currentTimeMillis() - Long.parseLong(p[2]) * 86400000L;
+            String q = "incomeType=" + p[1] + "&startTime=" + start + "&limit=1000&recvWindow=10000&timestamp=" + System.currentTimeMillis();
+            return http("GET", "https://fapi.binance.com/fapi/v1/income?" + q + "&signature=" + hex(hmac(cred[1], q)),
+                    new String[]{"X-MBX-APIKEY", cred[0]});
+        }
         switch (name) {
             case "spot": path = "/api/v3/account"; extra = "omitZeroBalances=true&"; break;
             case "fund": path = "/sapi/v1/asset/get-funding-asset"; method = "POST"; break;

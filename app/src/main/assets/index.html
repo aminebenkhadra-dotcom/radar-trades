@@ -175,6 +175,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .ev>span>b{font-family:var(--display);font-size:16px} .ev small{color:var(--muted);font-family:var(--mono);font-size:11.5px}
 .evt{display:block;font-weight:600;font-size:14px;color:var(--accent)} .evt.ok{color:var(--good)} .evt.no{color:var(--bad)}
 .ev .sub{display:block}
+#rcv{width:100%;height:200px;display:block;background:var(--sunk);border-radius:10px;margin-top:6px}
 .pfk{padding-bottom:0}
 details.man{background:var(--sunk);border-color:transparent} details.man summary{font-size:14px;font-weight:500}
 .hbox{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
@@ -248,6 +249,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="one" aria-selected="false">Analyser</button>
     <button type="button" role="tab" data-v="fund" aria-selected="false">Fondamental</button>
     <button type="button" role="tab" data-v="trades" aria-selected="false">Mes trades<b id="tcount"></b></button>
+    <button type="button" role="tab" data-v="res" aria-selected="false">Résultats</button>
     <button type="button" role="tab" data-v="pf" aria-selected="false">Portefeuille</button>
     <button type="button" role="tab" data-v="hbtc" aria-selected="false">Heatmap BTC</button>
     <button type="button" role="tab" data-v="heth" aria-selected="false">Heatmap ETH</button>
@@ -265,6 +267,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div class="stack" id="next"></div>
   </section>
   <section class="view" id="view-trades" hidden></section>
+  <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
   <section class="view" id="view-one" hidden>
     <h2 style="margin:0">Potentiel de trade d'une crypto</h2>
@@ -316,7 +319,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros
     (tendance 4H, zones sur corps de bougies, order blocks, RSI 4H/1H et divergences), puis lit le RSI 15 min et le carnet d'ordres des 15 meilleurs.
     TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant.
-    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 17.
+    Le score classe des configurations selon ces règles. Il ne prédit pas le marché et ne remplace pas ta propre analyse. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 18.
     </footer>
 </div>
 <script>
@@ -753,13 +756,14 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:+r.plan.entry.toPrecision(6),qty:q,sl:+r.plan.sl.toPrecision(6),tp:+r.plan.tp1.toPrecision(6)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("scan").hidden=view!=="scan"&&view!=="heat";$("scan").textContent=view==="heat"?"Actualiser":"Scanner";
+  $("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("scan").hidden=view!=="scan"&&view!=="heat";$("scan").textContent=view==="heat"?"Actualiser":"Scanner";
   if(isScan){mode=v;useStore(v);var f=results.slice().sort(rank)[0];openSym=f&&f.plan?f.sym:null;statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
+  else if(view==="res"){statusLine();loadRes()}
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
   else if(view==="fund"){statusLine();drawWeekly()}
@@ -960,7 +964,7 @@ $("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);el
     if(f[0]==="exclude"){S.exclude=el.value.toUpperCase().replace(/[^A-Z0-9,; ]/g,"");el.value=S.exclude}
     else{var v=parseFloat(String(el.value).replace(",","."));if(!(v>=0)||(v===0&&f[0]!=="minvol"&&f[0]!=="fee"))v=DEF[f[0]];S[f[0]]=v;el.value=v}
     saveSettings();if(view==="trades"){openTrades().forEach(paint);totals()}else if(view==="one")renderOne();else render()})});
-window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(view==="fund")drawWeekly();if(view==="one"&&oneRes&&oneRes.plan)draw(oneRes);if(openSym){var r=find(openSym);if(r)draw(r)}});
+window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(view==="fund")drawWeekly();if(view==="res")drawRes();if(view==="one"&&oneRes&&oneRes.plan)draw(oneRes);if(openSym){var r=find(openSym);if(r)draw(r)}});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render)}catch(e){}
 
 /* ---------- squeeze risk: crowded side (funding, account ratio), rising open interest, nearby liquidation pools ---------- */
@@ -1538,6 +1542,105 @@ $("view-pf").addEventListener("click",function(e){
   if(x){if(!armed["p"+x.dataset.pfx]){armed["p"+x.dataset.pfx]=1;x.textContent="Confirmer : effacer les clés";return}
     delete armed["p"+x.dataset.pfx];try{Android.clearKeys(x.dataset.pfx)}catch(er){}delete pf[x.dataset.pfx];renderPf()}});
 
+/* ---------- results recap: realised futures results from Binance, or the app's own journal ---------- */
+var resSrc=null,resDays=30,resData=null,resBusy=false,resErr="";
+function resModel(exits,daily,bySym,parts,notes){
+  var wins=exits.filter(function(x){return x.pnl>0}),loss=exits.filter(function(x){return x.pnl<0});
+  function sum(a){return a.reduce(function(s,x){return s+x.pnl},0)}
+  var sw=sum(wins),sl=-sum(loss),cum=0;
+  daily.sort(function(a,b){return a.t-b.t});
+  var curve=daily.map(function(d){cum+=d.v;return{t:d.t,v:cum}});
+  bySym.sort(function(a,b){return Math.abs(b.net)-Math.abs(a.net)});
+  var srt=exits.slice().sort(function(a,b){return b.pnl-a.pnl});
+  return{exits:exits.slice().sort(function(a,b){return b.t-a.t}),n:exits.length,wins:wins.length,avgW:wins.length?sw/wins.length:0,avgL:loss.length?sl/loss.length:0,
+    pf:sl>0?sw/sl:null,best:srt[0]||null,worst:srt.length>1?srt[srt.length-1]:null,curve:curve,bySym:bySym,parts:parts,net:parts.net,notes:notes}}
+function incomeStats(pnl,fee,fund){
+  var notes=[],odd=false,exits=[],last={},dayMap={},symMap={},gross=0,fees=0,fnd=0;
+  function ok(r){if(STABLE[String(r.asset).toUpperCase()])return true;odd=true;return false}
+  function day(t,v){var d=new Date(t);d.setHours(0,0,0,0);var k=d.getTime();dayMap[k]=(dayMap[k]||0)+v}
+  function sym(s,v,exit){var o=symMap[s]||(symMap[s]={sym:String(s||"").replace(/USDT$/,""),net:0,n:0});o.net+=v;if(exit)o.n++}
+  (pnl||[]).slice().sort(function(a,b){return a.time-b.time}).forEach(function(r){
+    if(!ok(r))return;var v=+r.income||0,e=last[r.symbol];gross+=v;day(r.time,v);
+    /* fills closing the same position within ten minutes count as one exit */
+    if(e&&r.time-e.t<=600000){e.pnl+=v;e.t=r.time;sym(r.symbol,v,false)}
+    else{e={sym:String(r.symbol||"").replace(/USDT$/,""),t:r.time,pnl:v};last[r.symbol]=e;exits.push(e);sym(r.symbol,v,true)}});
+  (fee||[]).forEach(function(r){if(!ok(r))return;var v=+r.income||0;fees+=v;day(r.time,v);if(r.symbol)sym(r.symbol,v,false)});
+  (fund||[]).forEach(function(r){if(!ok(r))return;var v=+r.income||0;fnd+=v;day(r.time,v);if(r.symbol)sym(r.symbol,v,false)});
+  if([pnl,fee,fund].some(function(a){return a&&a.length>=1000}))notes.push("Historique très fourni : seules les 1 000 lignes les plus anciennes de la période ont été lues, choisis une période plus courte");
+  if(odd)notes.push("Les frais payés dans une autre monnaie que l'USDT (BNB par exemple) ne sont pas comptés");
+  notes.push("Gains et pertes par sortie affichés hors frais ; le résultat net inclut frais et funding");
+  var daily=[],bs=[],k;for(k in dayMap)daily.push({t:+k,v:dayMap[k]});for(k in symMap)if(symMap[k].n||Math.abs(symMap[k].net)>=0.01)bs.push(symMap[k]);
+  return resModel(exits,daily,bs,{gross:gross,fees:fees,fund:fnd,net:gross+fees+fnd},notes)}
+function journalStats(days){
+  var from=Date.now()-days*864e5,exits=[],dayMap={},symMap={},net=0,fees=0;
+  T.forEach(function(t){if(!t.closed||!(t.tc>=from))return;
+    exits.push({sym:t.sym,t:t.tc,pnl:t.net});net+=t.net;
+    fees+=(+S.fee||0)/100*(t.entry+t.exit)*t.qty;
+    var d=new Date(t.tc);d.setHours(0,0,0,0);dayMap[d.getTime()]=(dayMap[d.getTime()]||0)+t.net;
+    var o=symMap[t.sym]||(symMap[t.sym]={sym:t.sym,net:0,n:0});o.net+=t.net;o.n++});
+  var daily=[],bs=[],k;for(k in dayMap)daily.push({t:+k,v:dayMap[k]});for(k in symMap)bs.push(symMap[k]);
+  return resModel(exits,daily,bs,{gross:net+fees,fees:-fees,fund:0,net:net},["Trades clôturés dans l'onglet Mes trades, frais estimés inclus, funding non compté"])}
+function loadRes(){
+  var hasB=false;try{hasB=CANPF&&Android.hasKeys("binance")}catch(e){}
+  if(resSrc===null)resSrc=hasB?"binance":"journal";
+  if(resSrc==="journal"){resErr="";resData=journalStats(resDays);renderRes();return}
+  if(!hasB){resErr="Connecte ton compte Binance dans l'onglet Portefeuille pour lire tes résultats réels, ou passe sur le journal de l'appli.";resData=null;renderRes();return}
+  if(resBusy)return;resBusy=true;resErr="";renderRes();
+  var d=resDays;
+  Promise.all(["REALIZED_PNL","COMMISSION","FUNDING_FEE"].map(function(t){return xapi("binance","inc:"+t+":"+d)})).then(function(a){
+    resBusy=false;if(d!==resDays||resSrc!=="binance"){loadRes();return}
+    resData=incomeStats(a[0],a[1],a[2]);renderRes()
+  },function(e){resBusy=false;resData=null;resErr=e&&e.status===400?"Cette fonction demande la dernière version de l'application : réinstalle l'APK.":apiMsg(e);renderRes()})}
+function renderRes(){
+  var el=$("view-res"),m=resData;
+  function chip(g,v,l,on){return'<button type="button" data-'+g+'="'+v+'" aria-pressed="'+on+'">'+l+"</button>"}
+  var h='<h2 style="margin:0">Résultats de mes trades</h2>'
+    +'<div class="filters">'+chip("rs","binance","Binance Futures, réel",resSrc==="binance")+chip("rs","journal","Journal de l'appli",resSrc==="journal")+"</div>"
+    +'<div class="filters">'+chip("rd",7,"7 jours",resDays===7)+chip("rd",30,"30 jours",resDays===30)+chip("rd",90,"90 jours",resDays===90)+"</div>";
+  if(resBusy)h+='<div class="empty">Lecture de tes résultats…</div>';
+  else if(resErr)h+='<div class="warn">'+esc(resErr)+"</div>";
+  else if(m&&!m.n&&Math.abs(m.net)<0.005)h+='<div class="empty">Aucun trade clôturé sur cette période.</div>';
+  else if(m){
+    var p=m.parts,mx=0;m.bySym.forEach(function(x){if(Math.abs(x.net)>mx)mx=Math.abs(x.net)});
+    h+='<article class="card tr"><div><div class="cap">Résultat net sur '+resDays+' jours</div><div class="net '+(m.net>=0?"pos":"neg")+'">'+sgn(m.net,2)+" $</div>"
+      +'<div class="sub">Gains et pertes réalisés '+sgn(p.gross,2)+" $ · frais "+sgn(p.fees,2)+" $"+(p.fund?" · funding "+sgn(p.fund,2)+" $":"")+"</div></div>"
+      +'<div class="funnel plain"><div><b>'+(m.n?fr(m.wins/m.n*100,0)+" %":"–")+"</b><span>sorties gagnantes ("+m.wins+"/"+m.n+")</span></div>"
+      +'<div><b class="pos">'+(m.avgW?"+"+fr(m.avgW,2):"–")+"</b><span>gain moyen</span></div>"
+      +'<div><b class="neg">'+(m.avgL?"−"+fr(m.avgL,2):"–")+"</b><span>perte moyenne</span></div>"
+      +"<div><b>"+(m.pf===null?"–":fr(m.pf,2))+"</b><span>facteur de profit</span></div></div>"
+      +(m.curve.length>1?'<div><div class="cap">Résultat cumulé, jour par jour</div><canvas id="rcv" aria-label="Courbe du résultat cumulé"></canvas></div>':"")
+      +"</article>";
+    if(m.bySym.length)h+='<article class="card tr"><div class="cap">Par crypto</div>'+m.bySym.slice(0,10).map(function(x){
+      return'<div class="z"><b style="color:var(--ink)">'+esc(x.sym)+"</b><span>"+x.n+(x.n>1?" sorties":" sortie")+'</span><span class="zb" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><i style="width:'+(mx?Math.max(3,Math.abs(x.net)/mx*60):3).toFixed(0)+"%;background:var(--"+(x.net>=0?"good":"bad")+')"></i><b class="'+(x.net>=0?"pos":"neg")+'">'+sgn(x.net,2)+" $</b></span></div>"}).join("")+"</article>";
+    if(m.exits.length){
+      h+='<article class="card tr">';
+      if(m.best)h+='<div class="size"><span>Meilleure sortie <b class="pos">'+esc(m.best.sym)+" "+sgn(m.best.pnl,2)+" $</b></span>"+(m.worst?'<span>Pire sortie <b class="neg">'+esc(m.worst.sym)+" "+sgn(m.worst.pnl,2)+" $</b></span>":"")+"</div>";
+      h+='<div class="cap">Dernières sorties</div>'+m.exits.slice(0,12).map(function(x){
+        return'<div class="pos1"><b>'+esc(x.sym)+'</b><span class="sub">'+when(x.t)+'</span><b class="'+(x.pnl>=0?"pos":"neg")+'" style="margin-left:auto">'+sgn(x.pnl,2)+" $</b></div>"}).join("")+"</article>"}
+    h+='<div class="sub">'+m.notes.join(". ")+". Les résultats passés ne disent rien des suivants.</div>"}
+  el.innerHTML=h;drawRes()}
+function drawRes(){
+  var m=resData,cv=$("rcv");if(!m||!cv||!cv.clientWidth)return;
+  var css=getComputedStyle(document.documentElement);function tk(v){return css.getPropertyValue(v).trim()}
+  var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
+  var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
+  var c=m.curve,vals=c.map(function(x){return x.v}).concat([0]),lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals),pad=(hi-lo)*0.1||1;lo-=pad;hi+=pad;
+  var AX=58,BT=18,pw=W-AX,ph=H-BT,n=c.length;
+  function y(v){return ph-(v-lo)/(hi-lo)*ph}function x(i){return 6+i/(n-1)*(pw-12)}
+  var last=c[n-1].v,col=tk(last>=0?"--good":"--bad");
+  g.beginPath();g.moveTo(x(0),y(0));c.forEach(function(p,i){g.lineTo(x(i),y(p.v))});g.lineTo(x(n-1),y(0));g.closePath();g.globalAlpha=0.16;g.fillStyle=col;g.fill();g.globalAlpha=1;
+  g.strokeStyle=tk("--line");g.lineWidth=1;g.setLineDash([4,4]);g.beginPath();g.moveTo(0,y(0));g.lineTo(pw,y(0));g.stroke();g.setLineDash([]);
+  g.strokeStyle=col;g.lineWidth=2;g.beginPath();c.forEach(function(p,i){if(i)g.lineTo(x(i),y(p.v));else g.moveTo(x(i),y(p.v))});g.stroke();
+  g.fillStyle=col;g.beginPath();g.arc(x(n-1),y(last),3.5,0,6.3);g.fill();
+  g.font="500 10.5px "+(tk("--mono")||"monospace");g.textBaseline="middle";g.fillStyle=tk("--muted");
+  [hi-pad,0,lo+pad].forEach(function(v,i){if(i!==1||(Math.abs(y(0)-y(hi-pad))>12&&Math.abs(y(0)-y(lo+pad))>12))g.fillText(sgn(v,0)+" $",pw+6,y(v))});
+  g.textBaseline="alphabetic";function dl(t){return new Date(t).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})}
+  g.fillText(dl(c[0].t),4,H-4);var tx=dl(c[n-1].t);g.fillText(tx,pw-g.measureText(tx).width-2,H-4)}
+$("view-res").addEventListener("click",function(e){
+  var b=e.target.closest("[data-rs],[data-rd]");if(!b)return;
+  if(b.dataset.rs)resSrc=b.dataset.rs;else resDays=+b.dataset.rd;
+  loadRes()});
+
 /* ---------- background alerts ---------- */
 function alertStatus(){
   var on=S.a10||S.a50||S.atr,st=$("a-st"),t;
@@ -1609,7 +1712,7 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|one|fund|pf|hbtc|heth)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|res|one|fund|pf|hbtc|heth)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
