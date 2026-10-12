@@ -1,0 +1,28 @@
+// Trigger and plan-geometry experiments (training period).
+const S = require("./study.js"), dir = process.argv[2];
+const T = S.load(dir + "/out", dir + "/data"), C = T.C;
+const months = tr => { const m = {}; tr.forEach(t => { const k = new Date(t.t).toISOString().slice(2, 7); (m[k] = m[k] || []).push(t); }); return Object.keys(m).sort().map(k => k + ":" + (S.L.stats(m[k]).avg >= 0 ? "+" : "") + S.L.stats(m[k]).avg.toFixed(2) + "(" + m[k].length + ")").join(" "); };
+const test = (label, gate, extra) => { const tr = S.run(T, Object.assign({ gate, set: process.argv[3] || "train" }, extra || {})); S.show(label, tr); if (extra && extra.m) console.log("      " + months(tr)); return tr; };
+const calm = (a, C) => C.relVol[a] < 0.7 && C.dayR[a] < 0.45;
+console.log("== triggers (all conditions)");
+test("no trigger required", null);
+for (const k of ["tSweep", "tBos", "tCandle", "tRsi", "tDelta", "tClimax"]) test("  first bar with " + k, (a, C) => C[k][a] === 1);
+test("  any trigger", (a, C) => C.tN[a] >= 1);
+test("  two triggers", (a, C) => C.tN[a] >= 2);
+test("  sweep or bos", (a, C) => C.tSweep[a] === 1 || C.tBos[a] === 1);
+console.log("== triggers inside calm conditions");
+test("calm, no trigger", calm);
+for (const k of ["tSweep", "tBos", "tCandle", "tDelta"]) test("  calm + " + k, (a, C) => calm(a, C) && C[k][a] === 1);
+test("  calm + any trigger", (a, C) => calm(a, C) && C.tN[a] >= 1);
+test("  calm + no trigger at all", (a, C) => calm(a, C) && C.tN[a] === 0);
+console.log("== stop distance behind the zone (calm), target = levels 1R–3R else 2R");
+for (const k of [0.25, 0.5, 0.75, 1, 1.5]) test("  stop zone + " + k + " ATR4", calm, { plan: (T, a) => S.planLevels(T, a, k) });
+console.log("== fixed targets (calm, stop zone + 0.5 ATR4)");
+const fixed = rr => (T, a) => { const p = S.planLevels(T, a), e = T.price[a], d = C.dir[a]; return { sl: p.sl, tp: e + d * rr * Math.abs(e - p.sl) }; };
+for (const rr of [1, 1.5, 2, 2.5, 3, 4]) test("  target " + rr + "R", calm, { plan: fixed(rr) });
+console.log("== stop just beyond the 6-hour extreme (calm)");
+const tight = (m, rr) => (T, a) => { const e = T.price[a], d = C.dir[a], x = C.ext15[a]; if (isNaN(x)) return null; const sl = x - d * m * C.a1[a]; if ((e - sl) * d < 0.4 * C.a1[a]) return null; return { sl, tp: e + d * rr * Math.abs(e - sl) }; };
+for (const m of [0.25, 0.5, 1]) for (const rr of [2, 3]) test("  extreme + " + m + " ATR1h, " + rr + "R", calm, { plan: tight(m, rr) });
+console.log("== volatility stop: n × ATR 1H (calm)");
+const vstop = (m, rr) => (T, a) => { const e = T.price[a], d = C.dir[a]; const sl = e - d * m * C.a1[a]; return { sl, tp: e + d * rr * Math.abs(e - sl) }; };
+for (const m of [1.5, 2.5, 4]) for (const rr of [1.5, 2, 3]) test("  " + m + " ATR1h, " + rr + "R", calm, { plan: vstop(m, rr) });

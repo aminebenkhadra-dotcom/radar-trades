@@ -1,0 +1,33 @@
+name: Backtest data
+on:
+  push:
+    branches: [backtest-run]
+    paths: ['.github/workflows/backtest.yml', 'tools/backtest/fetch.js']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        run: node --version && node tools/backtest/fetch.js klines out 2>&1 | tee fetch.log | tail -80
+      - name: Publish candles
+        run: |
+          cp fetch.log out/fetch.log
+          cd out && git init -q -b backtest-data
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Market data" && git push -q -f "$REMOTE" backtest-data
+          du -sh .
+      - name: Fetch positioning metrics
+        continue-on-error: true
+        run: node tools/backtest/fetch.js metrics out 2>&1 | tee metrics.log | tail -80
+      - name: Publish metrics
+        continue-on-error: true
+        run: |
+          cp metrics.log out/metrics.log
+          cd out && git add -A && git commit -qm "Positioning metrics" && git push -q -f "$REMOTE" backtest-data
+          du -sh .

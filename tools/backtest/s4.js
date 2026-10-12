@@ -1,0 +1,20 @@
+// Gate experiments with real one-trade-at-a-time simulation, training period, month by month.
+const S = require("./study.js"), dir = process.argv[2];
+const T = S.load(dir + "/out", dir + "/data"), C = T.C;
+const months = tr => { const m = {}; tr.forEach(t => { const k = new Date(t.t).toISOString().slice(2, 7); (m[k] = m[k] || []).push(t); }); return Object.keys(m).sort().map(k => k + ":" + (S.L.stats(m[k]).avg >= 0 ? "+" : "") + S.L.stats(m[k]).avg.toFixed(2) + "(" + m[k].length + ")").join(" "); };
+const test = (label, gate, extra) => { const tr = S.run(T, Object.assign({ gate, set: process.argv[3] || "train" }, extra || {})); S.show(label, tr); console.log("      " + months(tr)); return tr; };
+const v2 = (a, C) => C.s2[a] + 5 + 5 * (C.tRsi[a] || 0) >= 70 && C.rr[a] >= 1.5;
+test("all zone touches", null);
+test("v2 ready", v2);
+test("dayR<0.45", (a, C) => C.dayR[a] < 0.45);
+test("relVol<0.7", (a, C) => C.relVol[a] < 0.7);
+test("a1p<1.1", (a, C) => C.a1p[a] < 1.1);
+test("a15p<0.5", (a, C) => C.a15p[a] < 0.5);
+test("vr=a1p/atrp<0.42", (a, C) => C.a1p[a] / C.atrp[a] < 0.42);
+test("volReg<0.8", (a, C) => C.volReg[a] < 0.8);
+test("calm: relVol<0.8&dayR<0.6", (a, C) => C.relVol[a] < 0.8 && C.dayR[a] < 0.6);
+test("calm2: relVol<0.7&dayR<0.45", (a, C) => C.relVol[a] < 0.7 && C.dayR[a] < 0.45);
+test("calm2 & v2", (a, C) => C.relVol[a] < 0.7 && C.dayR[a] < 0.45 && v2(a, C));
+test("calm2 & btc24<1", (a, C) => C.relVol[a] < 0.7 && C.dayR[a] < 0.45 && C.btc24[a] < 1);
+test("calm2 & btcR4<59", (a, C) => C.relVol[a] < 0.7 && C.dayR[a] < 0.45 && C.btcR4[a] < 59);
+test("NOT calm: relVol>1&dayR>0.6", (a, C) => C.relVol[a] > 1 && C.dayR[a] > 0.6);

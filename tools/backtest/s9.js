@@ -1,0 +1,23 @@
+// Positioning (crowded side) inside the setup candidates: both periods, real trade simulation.
+const S = require("./study.js"), dir = process.argv[2];
+const T = S.load(dir + "/out", dir + "/data"), C = T.C;
+const g = (label, gate) => { const a = S.L.stats(S.run(T, { gate, set: "train" })), b = S.L.stats(S.run(T, { gate, set: "test" })); const f = s => String(s.n).padStart(5) + " win " + s.win.toFixed(1) + " % avg " + (s.avg >= 0 ? "+" : "") + s.avg.toFixed(3) + "R ±" + s.se.toFixed(3); console.log(label.padEnd(44) + " TRAIN " + f(a) + "   TEST " + f(b)); };
+g("all zone touches", null);
+console.log("-- funding, in the direction of the trade (positive = the trade pays funding = crowd on the same side)");
+g("  fund×dir < -0.005  (paid to hold)", (a, C) => C.fund[a] < -0.005);
+g("  -0.005 … 0.005", (a, C) => C.fund[a] >= -0.005 && C.fund[a] <= 0.005);
+g("  fund×dir > 0.005", (a, C) => C.fund[a] > 0.005);
+g("  fund×dir > 0.01   (crowded same side)", (a, C) => C.fund[a] > 0.01);
+console.log("-- long/short account ratio, direction-adjusted (log ls × dir; high = retail on the same side)");
+const lsd = a => Math.log(C.ls[a]) * C.dir[a], topd = a => Math.log(C.top[a]) * C.dir[a];
+g("  lsd < -0.4  (retail against)", a => lsd(a) < -0.4); g("  -0.4 … 0.1", a => lsd(a) >= -0.4 && lsd(a) <= 0.1); g("  lsd > 0.1", a => lsd(a) > 0.1); g("  lsd > 0.6  (retail heavily same side)", a => lsd(a) > 0.6);
+console.log("-- top traders ratio, direction-adjusted");
+g("  topd < -0.5", a => topd(a) < -0.5); g("  -0.5 … 0.3", a => topd(a) >= -0.5 && topd(a) <= 0.3); g("  topd > 0.3", a => topd(a) > 0.3);
+console.log("-- by direction");
+g("  LONG", (a, C) => C.dir[a] > 0); g("  LONG  & funding ≤ 0.005 %", (a, C) => C.dir[a] > 0 && C.fund[a] <= 0.005); g("  LONG  & funding > 0.005 %", (a, C) => C.dir[a] > 0 && C.fund[a] > 0.005);
+g("  LONG  & ls < 1.5", (a, C) => C.dir[a] > 0 && C.ls[a] < 1.5); g("  LONG  & ls ≥ 2.5", (a, C) => C.dir[a] > 0 && C.ls[a] >= 2.5);
+g("  SHORT", (a, C) => C.dir[a] < 0); g("  SHORT & funding ≥ 0.005 %", (a, C) => C.dir[a] < 0 && -C.fund[a] >= 0.005); g("  SHORT & funding < 0", (a, C) => C.dir[a] < 0 && -C.fund[a] < 0);
+g("  SHORT & ls ≥ 2.5", (a, C) => C.dir[a] < 0 && C.ls[a] >= 2.5); g("  SHORT & ls < 1.5", (a, C) => C.dir[a] < 0 && C.ls[a] < 1.5);
+console.log("-- app's squeeze score against the trade (funding + ratio + open interest)");
+g("  squeeze against = 0", (a, C) => C.sqA[a] === 0); g("  squeeze against 15–30", (a, C) => C.sqA[a] >= 15 && C.sqA[a] <= 30); g("  squeeze against ≥ 33", (a, C) => C.sqA[a] >= 33);
+g("  squeeze for ≥ 30", (a, C) => C.sqF[a] >= 30); g("  squeeze for = 0", (a, C) => C.sqF[a] === 0);
