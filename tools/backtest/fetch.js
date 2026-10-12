@@ -4,7 +4,7 @@ const fs = require("fs"), path = require("path"), zlib = require("zlib");
 const BASE = "https://data.binance.vision/data/futures/um/";
 const LIST = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix=data/futures/um/monthly/klines/";
 const what = process.argv[2] || "klines", OUT = process.argv[3] || "out";
-const START = "2025-10";   // first month of the test window
+const START = process.env.START || "2025-10";   // first month of the test window (env START overrides)
 const HIST = 24;           // months of daily candles kept before the window
 const TOP = 60;            // universe size, ranked by volume in the START month
 const EXTRA = ["PIXELUSDT"];
@@ -49,7 +49,7 @@ function daysOf(ym, until) {          // days of a month, up to `until` (YYYY-MM
   for (let d = 1; d <= new Date(Date.UTC(y, m, 0)).getUTCDate(); d++) { const s = ym + "-" + p2(d); if (s < until) o.push(s); }
   return o;
 }
-const now = new Date(), TODAY = now.toISOString().slice(0, 10), THIS = TODAY.slice(0, 7), LAST = addMonths(THIS, -1);
+const now = new Date(), TODAY = now.toISOString().slice(0, 10), THIS = TODAY.slice(0, 7), LAST = addMonths(THIS, -1), END = process.env.END || THIS;   // env END: last month to download
 const ms = t => { t = +t; return t > 1e14 ? Math.round(t / 1000) : t; };
 async function klines(sym, iv, months) {
   const out = [];
@@ -93,7 +93,7 @@ async function universe() {
   if (what === "klines") {
     const u = await universe();
     console.log("universe", u.listed, u.candidates, u.withData, u.top.length, u.top.join(" "));
-    const win = monthRange(START, THIS), hist = monthRange(addMonths(START, -HIST), addMonths(START, -1));
+    const win = monthRange(START, END), hist = monthRange(addMonths(START, -HIST), addMonths(START, -1));
     const info = {};
     await pool(u.top, 6, async s => {
       const m15 = await klines(s, "15m", win), d1 = await klines(s, "1d", hist);
@@ -108,7 +108,7 @@ async function universe() {
     fs.writeFileSync(path.join(OUT, "index.json"), JSON.stringify({ made: now.toISOString(), start: START, universe: u, symbols: info, calls, miss, fail }, null, 1));
   } else {
     const idx = JSON.parse(fs.readFileSync(path.join(OUT, "index.json"), "utf8")), syms = Object.keys(idx.symbols);
-    const days = monthRange(START, THIS).flatMap(m => daysOf(m, TODAY));
+    const days = monthRange(START, END).flatMap(m => daysOf(m, TODAY));
     const stat = {};
     for (const s of syms) {
       const got = await pool(days, 40, d => grab(`${BASE}daily/metrics/${s}/${s}-metrics-${d}.zip`));

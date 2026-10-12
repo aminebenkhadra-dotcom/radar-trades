@@ -5,18 +5,21 @@ stop, objectifs, taille de position), suit les trades pris et affiche le portefe
 
 ## Ce que valent les signaux
 
-Le moteur a été rejoué bougie par bougie sur 11 mois de données Binance (novembre 2025 à octobre 2026, 60 contrats les plus
-échangés), frais et glissement compris. R est la somme risquée sur un trade.
+Le moteur a été rejoué bougie par bougie sur deux années séparées de données Binance, chacune sur la soixantaine de contrats
+les plus échangés au début de l'année, frais et glissement compris. L'année 2024-2025 n'a servi à aucun réglage : c'est le
+test le plus honnête. R est la somme risquée sur un trade.
 
-| Un setup est « Prêt » quand                | Setups | Gagnants | Résultat moyen | Nov. à mai | Juin à oct. |
-|--------------------------------------------|-------:|---------:|---------------:|-----------:|------------:|
-| les 6 contrôles sont validés (par défaut)  |  2 469 |     36 % |        +0,02 R |    +0,09 R |     −0,10 R |
-| tendance, zone, déclencheur, risque        |  6 905 |     34 % |        −0,04 R |    −0,02 R |     −0,08 R |
-| tendance, zone, risque                     |  8 739 |     34 % |        −0,04 R |    −0,03 R |     −0,07 R |
+| Un setup est « Prêt » quand                | Oct. 2024 à oct. 2025               | Nov. 2025 à oct. 2026              |
+|--------------------------------------------|-------------------------------------|------------------------------------|
+| les 6 contrôles sont validés (par défaut)  | 3 347 setups · 32 % · −0,08 R       | 2 469 setups · 36 % · +0,02 R      |
+| tendance, zone, déclencheur, risque        | 9 193 setups · 34 % · −0,03 R       | 6 905 setups · 34 % · −0,04 R      |
+| tendance, zone, risque                     | 11 565 setups · 35 % · −0,01 R      | 8 739 setups · 34 % · −0,04 R      |
 
-Aucun réglage n'a été gagnant de façon durable, et aucun des quelque 90 critères essayés (force de tendance, structure,
+Aucun réglage n'a été gagnant de façon durable. Aucun des quelque 90 critères essayés (force de tendance, structure,
 Bitcoin, confluences, déclencheurs 15 minutes, volume, positionnement) n'a amélioré les résultats sur une période qu'il
-n'avait pas servi à choisir. Les contrôles décrivent une configuration : ils ne prédisent pas le marché.
+n'avait pas servi à choisir. Ne prendre que les setups dans le sens de la tendance du marché (onglet Tendance) a aidé en
+2025-2026 (+0,05 R par trade) et nui en 2024-2025 (−0,11 R). Un objectif à 1R rend un trade sur deux gagnant sans changer
+le résultat moyen. Les contrôles décrivent une configuration : ils ne prédisent pas le marché.
 
 Le dossier `tools/backtest` contient les scripts qui ont produit ces chiffres ; `tools/engine.js` est le moteur, copié dans
 la page de l'appli par `node tools/inject.js`.

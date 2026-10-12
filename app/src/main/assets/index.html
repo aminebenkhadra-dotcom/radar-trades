@@ -249,6 +249,38 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .verdict.neg{color:var(--bad)}
 .tr .bar{height:6px}
 .funnel.plain.two div:last-child{border-color:transparent}
+.mline{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px}
+.mline b{font-family:var(--display);font-size:15px}
+.mline.up{border-color:var(--good);background:var(--good-soft)} .mline.up b{color:var(--good)}
+.mline.dn{border-color:var(--bad);background:var(--bad-soft)} .mline.dn b{color:var(--bad)}
+.gbig{font-family:var(--display);font-weight:800;font-size:28px;line-height:1.1}
+.gbig span{font-family:var(--mono);font-size:18px;font-weight:600}
+.gbig.pos{color:var(--good)} .gbig.neg{color:var(--bad)}
+.gauge{position:relative;height:12px;border-radius:6px;background:linear-gradient(to right,var(--bad) 0,var(--bad-soft) 30%,var(--line) 42%,var(--line) 58%,var(--good-soft) 70%,var(--good) 100%)}
+.gauge i{position:absolute;top:-5px;width:5px;height:22px;border-radius:3px;background:var(--ink);transform:translateX(-2px);box-shadow:0 0 0 2px var(--surface)}
+.side{font-weight:600;font-size:14px;color:var(--muted)} .side.up{color:var(--good)} .side.dn{color:var(--bad)}
+.pil.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pil.four b{font-size:15px;display:block;color:var(--ink)} .pil.four b.pos{color:var(--good)} .pil.four b.neg{color:var(--bad)}
+.pil small{display:block;color:var(--muted);font-size:11px;font-family:var(--body);font-weight:400}
+.pil b em{font-style:normal}
+.funnel .track{padding:0;border:0;border-radius:2px;background:linear-gradient(to right,var(--bad-soft) 0 40%,var(--line) 40% 60%,var(--good-soft) 60% 100%)}
+.funnel .track i{padding:0;border:0}
+.mcv{width:100%;height:150px;display:block;background:var(--sunk);border-radius:10px;margin-top:6px}
+.mcv.tall{height:240px}
+.cyl{position:relative;display:flex;height:16px;border-radius:8px;overflow:visible;margin-top:10px}
+.cyl i{display:block;height:100%} .cyl i:first-child{border-radius:8px 0 0 8px} .cyl i:nth-child(5){border-radius:0 8px 8px 0}
+.c-a{background:rgba(53,201,143,.34)} .c-t{background:rgba(242,182,60,.42)} .c-b{background:rgba(255,111,97,.34)} .c-l{background:var(--sunk);box-shadow:inset 0 0 0 1px var(--line)} .c-p{background:rgba(53,201,143,.2)}
+.cyl u{position:absolute;top:1px;width:2px;height:14px;background:var(--ink);opacity:.55} .cyl u.lo{background:var(--ink)}
+.cyl u.ath{top:-3px;height:22px;width:3px;background:var(--accent);opacity:1}
+.cyl b{position:absolute;top:-6px;width:6px;height:28px;border-radius:3px;background:var(--ink);transform:translateX(-3px);box-shadow:0 0 0 2px var(--surface)}
+.cyll{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:8px}
+.legend2{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--muted)}
+.legend2 i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend2 i.mk{background:var(--ink)} .legend2 i.mk.hist{background:var(--muted);width:3px}
+.ind{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px}
+.ind:first-of-type{border-top:0}
+.ind b{font-family:var(--mono);font-weight:600;text-align:right} .ind b.pos{color:var(--good)} .ind b.neg{color:var(--bad)}
+.ind small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
 .funnel.plain.two div b.pos{color:var(--good)} .funnel.plain.two div b.neg{color:var(--bad)}
 
 </style>
@@ -269,6 +301,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="all" aria-selected="true">Tous</button>
     <button type="button" role="tab" data-v="10" aria-selected="false">Top 10</button>
     <button type="button" role="tab" data-v="50" aria-selected="false">Top 50</button>
+    <button type="button" role="tab" data-v="mkt" aria-selected="false">Tendance</button>
+    <button type="button" role="tab" data-v="cyc" aria-selected="false">Cycle</button>
     <button type="button" role="tab" data-v="one" aria-selected="false">Analyser</button>
     <button type="button" role="tab" data-v="fund" aria-selected="false">Fondamental</button>
     <button type="button" role="tab" data-v="trades" aria-selected="false">Mes trades<b id="tcount"></b></button>
@@ -283,15 +317,20 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div id="banner" role="status" hidden></div>
 
   <section class="view" id="view-scan">
+  <button class="mline" type="button" id="mkt-line" hidden></button>
   <div class="funnel" id="funnel" hidden></div>
 
   <h2 id="top-h">Top 3 à surveiller</h2>
   <div class="stack" id="top"></div>
   <h2 id="next-h" hidden>Suivants</h2>
   <div class="stack" id="next"></div>
+  <h2 id="none-h" hidden>Sans setup</h2>
+  <div class="stack" id="none"></div>
   <div id="bt-list"></div>
   </section>
   <section class="view" id="view-trades" hidden></section>
+  <section class="view" id="view-mkt" hidden></section>
+  <section class="view" id="view-cyc" hidden></section>
   <section class="view" id="view-news" hidden></section>
   <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
@@ -322,7 +361,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt</label>
       <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter si un de mes trades ouverts passe en « Sortie à envisager »</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
-      <label class="wide">Me prévenir à partir de<select id="a-pct"><option value="90">90 % : le prix approche de la zone</option><option value="95">95 % : sur la zone, il ne manque qu'un contrôle</option><option value="100">100 % : setup prêt uniquement</option></select></label>
+      <label class="wide">Me prévenir à partir de<select id="a-pct"><option value="95">95 % ou prêt : sur la zone, au plus un contrôle manquant</option><option value="100">Prêt uniquement</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
     </div>
@@ -354,8 +393,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
-    Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur 11 mois de données Binance et 60 cryptos : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Version 20.
+    Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko. Version 21.
     </footer>
 </div>
 <script>
@@ -974,7 +1013,7 @@ function scan(m){
   banner("");setStatus("Liste des marchés…");render();
   var ex=excluded(),f={},minv=(+S.minvol||0)*1e6,none=[],O=opts(),ctx={btc:null},nul=function(){return null};
   Promise.all([get("exchangeInfo"),get("ticker/24hr"),get("premiumIndex").catch(function(){return[]}),
-    top?cg("coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1").catch(nul):null,btcContext().catch(nul)]).then(function(a){
+    top?cg("coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1").catch(nul):null,btcContext().catch(nul),marketState().catch(nul)]).then(function(a){
     readExi(a[0]);exiP=Promise.resolve(a[0]);ctx.btc=a[4];
     var fundBy={};(Array.isArray(a[2])?a[2]:[]).forEach(function(t){fundBy[t.symbol]=+t.lastFundingRate});
     var volBy={};(Array.isArray(a[1])?a[1]:[]).forEach(function(t){volBy[t.symbol]=+t.quoteVolume||0});
@@ -1023,7 +1062,7 @@ function scan(m){
       :[[f.total,"marchés scannés"],[f.liquid,"liquides"],[f.trend,"en tendance 1J"],[f.setups,"setups"]];
     stores[m]={results:list,funnel:f,stamp:Date.now(),live:true};
     saveStore(m);
-    if(mode===m){useStore(m);openSym=list.length&&list[0].plan?list[0].sym:null}
+    if(mode===m){useStore(m);openSym=firstSetup()}
     if(top&&f.by==="vol")banner("Classement par capitalisation indisponible pour l'instant (CoinGecko ne répond pas). Ce Top "+top+" est classé par volume ; relance le scan dans une minute.");
     finish()
   }).catch(function(e){banner(why(e),true);finish()})}
@@ -1071,18 +1110,26 @@ function gatesView(r){
   return'<div><div class="cap">Contrôles · '+passed(r)+' validés sur 6</div><div class="gates">'+r.gates.map(function(g){
     return'<details class="gt '+g.st+(need.indexOf(g.k)<0?" opt":"")+'"><summary><span class="ic">'+(g.st==="ok"?"✓":g.st==="mid"?"~":"✕")+"</span><b>"+g.label+'</b><span class="hd">'+esc(g.head)+"</span></summary>"
       +'<ul class="why">'+g.items.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></details>"}).join("")+"</div>"
-    +'<div class="sub" style="margin-top:6px">Touche un contrôle pour le détail. Sur 11 mois de test, les setups « Prêt » ont gagné environ une fois sur trois : ces contrôles décrivent le contexte, ils ne prédisent pas le résultat.</div></div>'}
+    +'<div class="sub" style="margin-top:6px">Touche un contrôle pour le détail. Sur deux ans de test, les setups « Prêt » ont gagné environ une fois sur trois : ces contrôles décrivent le contexte, ils ne prédisent pas le résultat.</div></div>'}
 function render(){
   var rs=results.slice().sort(rank),fu=$("funnel"),top=mode!=="all";
   fu.hidden=!funnel;
   if(funnel)fu.innerHTML=(funnel.tiles||[[funnel.total,"marchés scannés"],[funnel.liquid,"liquides"],[funnel.trend,"en tendance 1J"],[funnel.setups,"setups"]]).map(function(x){
     return"<div><b>"+fr(x[0]||0,0)+"</b><span>"+x[1]+"</span></div>"}).join("");
   if(funnel&&top&&funnel.tiles&&funnel.tiles[3]){funnel.tiles[3][0]=results.filter(function(r){return r.st==="ready"}).length;fu.lastChild.firstChild.textContent=fr(funnel.tiles[3][0],0)}
-  $("top-h").textContent=top?"Top "+mode+(funnel&&funnel.by==="cap"?" par capitalisation":" par volume 24h"):"Top 3 à surveiller";
-  var head=top?rs:rs.slice(0,3),rest=top?[]:rs.slice(3);
-  $("top").innerHTML=rs.length?head.map(function(r,i){return card(r,i+1)}).join(""):'<div class="empty">'+(busy?"Scan en cours…":live?"Aucun setup propre pour l\'instant. Relance un scan plus tard.":"Appuie sur Scanner pour lancer le premier scan.")+'</div>';
-  $("next-h").hidden=!rest.length;
-  $("next").innerHTML=rest.map(function(r,i){return card(r,i+4)}).join("");
+  /* longs and shorts apart, the side the whole market leans to first */
+  var ms=MKT,side=ms&&ms.side?ms.side:1,setups=rs.filter(function(r){return r.plan}),none=rs.filter(function(r){return!r.plan});
+  var g1=setups.filter(function(r){return r.dir===side}),g2=setups.filter(function(r){return r.dir!==side});
+  function head(dir,n){var lab=(dir>0?"Longs":"Shorts")+" · "+n;
+    return ms&&ms.side?lab+(dir===ms.side?" · dans le sens du marché":" · contre la tendance du marché"):lab}
+  mktLine();
+  $("top-h").textContent=g1.length||!g2.length?head(side,g1.length):head(-side,g2.length);
+  var first=g1.length||!g2.length?g1:g2,second=first===g1?g2:[];
+  $("top").innerHTML=first.length?first.map(function(r,i){return card(r,i+1)}).join(""):'<div class="empty">'+(busy?"Scan en cours…":live?"Aucun setup propre pour l\'instant. Relance un scan plus tard.":"Appuie sur Scanner pour lancer le premier scan.")+'</div>';
+  $("next-h").hidden=!second.length;$("next-h").textContent=second.length?head(-side,second.length):"";
+  $("next").innerHTML=second.map(function(r,i){return card(r,i+1)}).join("");
+  $("none-h").hidden=!none.length;$("none-h").textContent="Sans setup · "+none.length;
+  $("none").innerHTML=none.map(function(r){return card(r,0)}).join("");
   var bl=$("bt-list"),showBt=mode==="10"&&rs.length>0&&(!busy||BT.TOP10);
   if(showBt){if(!bl.firstChild||bl.dataset.k!==String(BT.TOP10&&BT.TOP10.st)){bl.innerHTML=btCard("TOP10");bl.dataset.k=String(BT.TOP10&&BT.TOP10.st);drawBT("TOP10")}}
   else{bl.innerHTML="";bl.dataset.k=""}
@@ -1103,7 +1150,7 @@ function card(r,n,force){
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+(r.st!=="ready"&&r.pct?" · "+r.pct+" %":"")+"</span></span>"
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +(r.gates?"<span>"+dots(r)+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan,z=sizing(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'
@@ -1193,11 +1240,11 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
-  if(isScan){mode=v;useStore(v);var f=results.slice().sort(rank)[0];openSym=f&&f.plan?f.sym:null;statusLine();render();
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
   else if(view==="news"){statusLine();loadNews(false)}
@@ -1205,6 +1252,7 @@ function setView(v){
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
   else if(view==="fund"){statusLine();drawWeekly()}
+  else if(view==="mkt"||view==="cyc"){statusLine();renderMkt();loadMkt(false)}
   else{statusLine();renderTrades();tick();checkDue()}}
 function when(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 
@@ -1313,6 +1361,7 @@ function checkTrade(t){
     else add(-3,"no","Tendance 4H retournée contre ton trade");
     if(bd===dir)add(1,"ok","Tendance 1J dans ton sens");
     else if(bd===-dir)add(-2,"no","Tendance 1J contre ton trade");
+    if(MKT&&MKT.side)add(0,MKT.side===dir?"ok":"mid",MKT.side===dir?"Dans le sens de la tendance du marché ("+MKT.label.toLowerCase()+")":"Contre la tendance du marché ("+MKT.label.toLowerCase()+")");
     var eng=judge(analyze(t.sym,d1,h4,h1,null,opts()),{quiet:true,strict:0,fee:+S.fee||0,lev:+S.lev||1});
     if(eng.plan&&eng.dir===-dir&&eng.score>=50)add(-3,"no","Le scanner propose maintenant un "+(dir>0?"short":"long")+" sur cette crypto (score "+eng.score+")");
     else if(eng.plan&&eng.dir===dir)add(1,"ok","Le scanner voit toujours un setup "+(dir>0?"long":"short"));
@@ -1396,19 +1445,20 @@ $("app").addEventListener("click",function(e){
     try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
   var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
-$("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else scan(mode)});
+$("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else if(view==="mkt"||view==="cyc")loadMkt(true);else scan(mode)});
 [["account","f-account"],["risk","f-risk"],["lev","f-lev"],["margin","f-margin"],["minvol","f-minvol"],["fee","f-fee"],["exclude","f-exclude"]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
   el.addEventListener("change",function(){
     if(f[0]==="exclude"){S.exclude=el.value.toUpperCase().replace(/[^A-Z0-9,; ]/g,"");el.value=S.exclude}
     else{var v=parseFloat(String(el.value).replace(",","."));if(!(v>=0)||(v===0&&f[0]!=="minvol"&&f[0]!=="fee"))v=DEF[f[0]];S[f[0]]=v;el.value=v}
     saveSettings();if(f[0]==="fee"||f[0]==="lev")rejudge();if(view==="trades"){openTrades().forEach(paint);totals()}else if(view==="one")renderOne();else render()})});
-window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(view==="fund")drawWeekly();if(view==="res")drawRes();if(view==="one"&&oneRes)drawBT(oneRes.sym);if(view==="scan"&&mode==="10")drawBT("TOP10");if(view==="one"&&oneRes&&oneRes.plan)draw(oneRes);if(openSym){var r=find(openSym);if(r)draw(r)}});
+window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(view==="fund")drawWeekly();if(view==="res")drawRes();if(view==="one"&&oneRes)drawBT(oneRes.sym);if(view==="mkt"||view==="cyc")drawMkt();if(view==="scan"&&mode==="10")drawBT("TOP10");if(view==="one"&&oneRes&&oneRes.plan)draw(oneRes);if(openSym){var r=find(openSym);if(r)draw(r)}});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render)}catch(e){}
 /* measured on 11 months of Binance data, 60 most traded contracts, default settings (tools/backtest in the repository) */
-var REF={2:[2469,36,"+0,02","+0,09","−0,10"],1:[6905,34,"−0,04","−0,02","−0,08"],0:[8739,34,"−0,04","−0,03","−0,07"]};
+/* measured on two separate years of Binance data, about 60 of the most traded contracts each, default settings (tools/backtest) */
+var REF={2:[[3347,32,"−0,08"],[2469,36,"+0,02"]],1:[[9193,34,"−0,03"],[6905,34,"−0,04"]],0:[[11565,35,"−0,01"],[8739,34,"−0,04"]]};
 function precRef(){var x=REF[+S.strict]||REF[2];
-  $("p-ref").textContent="Mesuré sur 11 mois et 60 cryptos avec ce niveau et les autres réglages d'origine : "+fr(x[0],0)+" setups, "+x[1]+" % gagnants, "+x[2]+" R par trade ("+x[3]+" R de novembre à mai, "+x[4]+" R de juin à octobre). Aucun niveau n'a été gagnant de façon durable : les contrôles rendent l'appli plus sélective, ils ne prédisent pas le marché."}
+  $("p-ref").textContent="Mesuré avec ce niveau et les autres réglages d'origine, sur une soixantaine de cryptos. Octobre 2024 à octobre 2025 : "+fr(x[0][0],0)+" setups, "+x[0][1]+" % gagnants, "+x[0][2]+" R par trade. Novembre 2025 à octobre 2026 : "+fr(x[1][0],0)+" setups, "+x[1][1]+" % gagnants, "+x[1][2]+" R par trade. Aucun niveau n'a été gagnant de façon durable : les contrôles rendent l'appli plus sélective, ils ne prédisent pas le marché."}
 $("p-strict").value=String(S.strict);
 $("p-strict").addEventListener("change",function(){S.strict=+this.value;saveSettings();rejudge()});
 [["minrr","p-minrr",1,5],["slk","p-slk",0.1,2],["feecap","p-feecap",1,50]].forEach(function(f){
@@ -2224,6 +2274,157 @@ function renderNews(){
     +(n.dead.length?" Sources sans réponse : "+n.dead.join(", ")+".":"")+" Touche un titre pour ouvrir l'article dans ton navigateur.</div>";
   el.innerHTML=h}
 
+/* ---------- market trend and crypto cycle ---------- */
+/* Trend score, -100 to +100: Bitcoin daily trend 30, Bitcoin above its 21-week average 25, Ether daily trend 15,
+   share of the 40 most traded coins in a daily uptrend minus those in a downtrend 30. */
+var MKT=null,mktP=null,mktErr="",mktBusy=false;
+try{var mk0=JSON.parse(localStorage.getItem("radar-market")||"null");if(mk0&&mk0.v===1)MKT=mk0}catch(e){}
+var HALV=[Date.UTC(2012,10,28),Date.UTC(2016,6,9),Date.UTC(2020,4,11),Date.UTC(2024,3,20)],NEXTH=Date.UTC(2028,3,15),MONTH=30.44*864e5;
+function firstSetup(){var rs=results.slice().sort(rank),side=MKT&&MKT.side?MKT.side:1,f=rs.filter(function(r){return r.plan&&r.dir===side})[0]||rs.filter(function(r){return r.plan})[0];return f?f.sym:null}
+function smaS(v,n){var o=[],s=0;for(var i=0;i<v.length;i++){s+=v[i];if(i>=n)s-=v[i-n];o.push(i>=n-1?s/n:null)}return o}
+function mktLabel(sc){return sc>=40?"Haussière":sc>=15?"Plutôt haussière":sc>-15?"Neutre":sc>-40?"Plutôt baissière":"Baissière"}
+function marketState(force){
+  if(!force&&MKT&&Date.now()-MKT.at<15*60e3)return Promise.resolve(MKT);
+  if(mktP)return mktP;
+  var nul=function(){return null};
+  mktP=Promise.all([klines("BTCUSDT","1d",400,200),klines("BTCUSDT","1w",400,60),klines("ETHUSDT","1d",120,60).catch(nul),
+      get("ticker/24hr").catch(nul),get("premiumIndex").catch(nul),exInfo().catch(nul),cg("global").catch(nul),
+      fetch("/news/fng").then(function(r){if(!r.ok)throw 0;return r.json()}).catch(nul)]).then(function(a){
+    var ex=excluded(),ok={};
+    ((a[5]&&a[5].symbols)||[]).forEach(function(s){if(s.contractType==="PERPETUAL"&&s.status==="TRADING"&&s.quoteAsset==="USDT"&&isCrypto(s)&&!ex[s.baseAsset])ok[s.symbol]=1});
+    var top=(Array.isArray(a[3])?a[3]:[]).filter(function(t){return ok[t.symbol]}).sort(function(x,y){return(+y.quoteVolume||0)-(+x.quoteVolume||0)}).slice(0,40);
+    return pool(top,6,function(t){return klines(t.symbol,"1d",120,60).then(function(k){return{sym:t.symbol,k:k}})},function(){})
+      .then(function(p){return mktModel(a,p.out,top)})
+  }).then(function(m){MKT=m;mktP=null;mktErr="";try{localStorage.setItem("radar-market",JSON.stringify(m))}catch(e){}return m},
+    function(e){mktP=null;mktErr=why(e);throw e});
+  return mktP}
+function mktModel(a,coins,top){
+  var d=a[0],w=a[1],nd=d.length,nw=w.length,price=d[nd-1].c,dc=closes(d),wc=closes(w),m={v:1,at:Date.now(),price:price};
+  var e21=ema(wc,21),s50=smaS(wc,50),s200=smaS(wc,200),e21up=e21[nw-1]>e21[Math.max(0,nw-5)];
+  m.btcD=bias(d.slice(-90));m.btcW=price>e21[nw-1]?1:-1;m.ethD=a[2]?bias(a[2].slice(-90)):0;
+  /* breadth today and over the last 30 days */
+  var ser=[];
+  for(var back=29;back>=0;back--){var s=0,n=0;coins.forEach(function(c){var k=c.k,end=k.length-back;if(end<60)return;s+=bias(k.slice(Math.max(0,end-90),end));n++});ser.push(n?s/n:0)}
+  var up=0,dn=0;coins.forEach(function(c){var b=bias(c.k.slice(-90));if(b>0)up++;else if(b<0)dn++});
+  m.breadth={now:ser[ser.length-1],series:ser,up:up,dn:dn,n:coins.length};
+  m.score=Math.round(30*m.btcD+25*m.btcW+15*m.ethD+30*m.breadth.now);
+  m.label=mktLabel(m.score);m.side=m.score>=15?1:m.score<=-15?-1:0;
+  /* the rest of the picture: who rose today, funding, Bitcoin's share, mood */
+  var chg=top.map(function(t){return+t.priceChangePercent}).filter(function(v){return isFinite(v)});
+  m.adv=chg.length?chg.filter(function(v){return v>0}).length/chg.length*100:null;
+  var fb={};(Array.isArray(a[4])?a[4]:[]).forEach(function(x){fb[x.symbol]=+x.lastFundingRate});
+  var fs=top.map(function(t){return fb[t.symbol]}).filter(function(v){return isFinite(v)});
+  m.fund=fs.length?fs.reduce(function(x,y){return x+y},0)/fs.length*100:null;
+  var g=a[6]&&a[6].data;m.dom=g&&g.market_cap_percentage&&isFinite(+g.market_cap_percentage.btc)?+g.market_cap_percentage.btc:null;
+  m.cap24=g&&isFinite(+g.market_cap_change_percentage_24h_usd)?+g.market_cap_change_percentage_24h_usd:null;
+  var f=a[7]&&Array.isArray(a[7].data)?a[7].data:[];
+  m.fng=f.length?{v:+f[0].value,c:f[0].value_classification,w:f[7]?+f[7].value:null,mo:f[29]?+f[29].value:null}:null;
+  /* altcoin season: share of the big coins doing better than Bitcoin over 90 days */
+  var b90=nd>91?price/d[nd-91].c-1:null,beat=0,cnt=0;
+  coins.forEach(function(c){var k=c.k,n=k.length;if(c.sym==="BTCUSDT"||n<91||b90===null)return;cnt++;if(k[n-1].c/k[n-91].c-1>b90)beat++});
+  m.alt=cnt?{share:beat/cnt*100,n:cnt,btc90:b90*100}:null;
+  /* charts: 120 days of Bitcoin with its 20 and 50 day averages, weekly history with the long averages */
+  var e20=ema(dc,20),e50=ema(dc,50);m.day=[];for(var i=Math.max(0,nd-120);i<nd;i++)m.day.push([d[i].t,dc[i],e20[i],e50[i]]);
+  m.week=[];for(i=0;i<nw;i++)m.week.push([w[i].t,wc[i],e21[i],s50[i],s200[i]]);
+  /* cycle */
+  var ath=0,athT=0;w.forEach(function(k){if(k.h>ath){ath=k.h;athT=k.t}});d.forEach(function(k){if(k.h>ath){ath=k.h;athT=k.t}});
+  var last=HALV[HALV.length-1],s200d=nd>=200?smaS(dc,200)[nd-1]:null,s111=nd>=111?smaS(dc,111)[nd-1]:null,s350=nd>=350?smaS(dc,350)[nd-1]:null;
+  var c={ath:ath,athT:athT,dd:(price/ath-1)*100,mo:(Date.now()-last)/MONTH,moAth:(athT-last)/MONTH,e21:e21[nw-1],e21up:e21up,s50:s50[nw-1],s200:s200[nw-1],
+    mayer:s200d?price/s200d:null,pi:s111&&s350?s111/(2*s350):null,r200:s200[nw-1]?price/s200[nw-1]:null};
+  var bull=price>c.e21&&c.e21up&&c.s50!==null&&price>c.s50,bear=price<c.e21&&!c.e21up&&c.s50!==null&&price<c.s50;
+  c.regime=bull?"Bull market":bear?"Bear market":price>c.e21?"Transition haussière":"Transition baissière";
+  c.k=bull?"up":bear?"dn":"mid";
+  var mo=c.mo;c.phase=mo<6?"Début de cycle, juste après le halving":mo<12?"Hausse d'après-halving":mo<18?"Fenêtre historique des sommets":mo<30?"Phase baissière historique":mo<42?"Zone historique des creux":"Approche du prochain halving";
+  m.cyc=c;return m}
+function loadMkt(force){
+  if(mktBusy)return;mktBusy=true;renderMkt();
+  marketState(force).then(function(){mktBusy=false;renderMkt()},function(){mktBusy=false;renderMkt()})}
+function dir3(v,a,b){return v>0?'<b class="pos">▲ '+a+"</b>":v<0?'<b class="neg">▼ '+b+"</b>":"<b>– neutre</b>"}
+function fngFr(c){return({"Extreme Fear":"Peur extrême","Fear":"Peur","Neutral":"Neutre","Greed":"Avidité","Extreme Greed":"Avidité extrême"})[c]||c}
+function renderMkt(){
+  var el=$(view==="cyc"?"view-cyc":"view-mkt"),m=MKT;
+  var h='<div class="trh"><h2 style="margin:0">'+(view==="cyc"?"Où en est le cycle crypto":"Tendance du marché crypto")+'</h2><span class="sub" style="margin-left:auto">'+(mktBusy?"Chargement…":m?"à "+new Date(m.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"")+"</span></div>";
+  if(!m){el.innerHTML=h+'<div class="empty">'+(mktBusy?"Lecture du marché…":mktErr?esc(mktErr):"Appuie sur Actualiser.")+"</div>";return}
+  if(mktErr&&!mktBusy)h+='<div class="warn">Mise à jour impossible : '+esc(mktErr)+" Données de "+when(m.at)+".</div>";
+  el.innerHTML=h+(view==="cyc"?cycView(m):trendView(m));drawMkt()}
+function trendView(m){
+  var cls=m.score>=15?"pos":m.score<=-15?"neg":"",b=m.breadth;
+  var h='<article class="card tr"><div class="cap">État de la tendance</div><div class="gbig '+cls+'">'+m.label+' <span>'+sgn(m.score,0)+"</span></div>"
+    +'<div class="gauge"><i style="left:'+((m.score+100)/2).toFixed(1)+'%"></i></div><div class="raill"><span>−100 baissière</span><span>neutre</span><span>haussière +100</span></div>'
+    +'<div class="side '+(m.side>0?"up":m.side<0?"dn":"")+'">'+(m.side>0?"Côté favorisé : les longs":m.side<0?"Côté favorisé : les shorts":"Aucun côté favorisé : marché sans direction claire")+"</div>"
+    +'<div class="pil four"><div><span>Bitcoin 1J</span>'+dir3(m.btcD,"haussier","baissier")+"</div><div><span>Bitcoin hebdo</span>"+dir3(m.btcW,"au-dessus","en dessous")+'<small>de sa moyenne 21 semaines</small></div><div><span>Ether 1J</span>'+dir3(m.ethD,"haussier","baissier")
+    +'</div><div><span>Largeur</span><b><em class="pos">▲ '+b.up+'</em> · <em class="neg">▼ '+b.dn+"</em></b><small>sur les "+b.n+" plus grosses cryptos, en 1J</small></div></div></article>";
+  h+='<article class="card tr"><div class="cap">Largeur du marché sur 30 jours : part des cryptos en hausse moins celles en baisse</div><canvas id="mkt-cv" class="mcv" aria-label="Largeur du marché sur 30 jours"></canvas></article>';
+  var t=[];
+  if(m.fng)t.push('<div><b class="'+(m.fng.v>=60?"pos":m.fng.v<=40?"neg":"")+'">'+m.fng.v+"/100</b><span>"+fngFr(m.fng.c)+'</span><div class="track fgt"><i style="left:'+m.fng.v+'%"></i></div></div>');
+  if(m.adv!==null)t.push('<div><b class="'+(m.adv>=55?"pos":m.adv<=45?"neg":"")+'">'+fr(m.adv,0)+" %</b><span>des cryptos en hausse sur 24 h</span></div>");
+  if(m.fund!==null)t.push('<div><b>'+(m.fund>0?"+":"")+fr(m.fund,3)+" %</b><span>funding moyen</span></div>");
+  if(m.dom!==null)t.push("<div><b>"+fr(m.dom,1)+" %</b><span>part du Bitcoin</span></div>");
+  if(m.cap24!==null)t.push('<div><b class="'+(m.cap24>=0?"pos":"neg")+'">'+sgn(m.cap24,1)+" %</b><span>capitalisation 24 h</span></div>");
+  if(t.length)h+='<div class="funnel plain" style="grid-template-columns:repeat('+Math.min(3,t.length)+',minmax(0,1fr))">'+t.join("")+"</div>";
+  h+='<article class="card tr"><div class="cap">Bitcoin, 120 jours · moyennes 20 jours (jaune) et 50 jours (gris)</div><canvas id="mkt-btc" class="mcv" aria-label="Bitcoin sur 120 jours"></canvas></article>';
+  return h+'<div class="sub">Dans les listes de setups, le côté favorisé passe en premier. Testé sur deux ans, ne trader que dans le sens du marché a aidé en 2025-2026 (+0,05\u00a0R par trade) et nui en 2024-2025 (−0,11\u00a0R) : un repère de contexte, pas un filtre qui gagne à coup sûr.</div>'}
+function cycView(m){
+  var c=m.cyc,mo=Math.min(47.9,c.mo),day=function(t){return new Date(t).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"})};
+  /* does the price trend agree with the historical calendar of the cycle? */
+  var calUp=c.mo<18||c.mo>=42,syn=c.k==="up"?(calUp?"Tendance des prix et calendrier du cycle concordent : marché haussier.":"Les prix montent alors que le calendrier historique place cette période en phase de baisse ou de creux : signaux contradictoires, prudence.")
+    :c.k==="dn"?(calUp?"Les prix baissent en pleine fenêtre historique de hausse : signaux contradictoires.":"Tendance des prix et calendrier du cycle concordent : marché baissier.")
+    :"Signaux mitigés : la tendance des prix hésite autour de ses moyennes longues.";
+  var h='<article class="card tr"><div class="cap">Phase du marché</div><div class="gbig '+(c.k==="up"?"pos":c.k==="dn"?"neg":"")+'">'+c.regime+"</div>"
+    +'<div class="sub">'+(c.k==="up"?"Bitcoin au-dessus de ses moyennes 21 et 50 semaines, la première en hausse.":c.k==="dn"?"Bitcoin sous ses moyennes 21 et 50 semaines, la première en baisse.":"Signaux partagés entre les moyennes 21 et 50 semaines.")+"</div>"
+    +'<div class="cap" style="margin-top:6px">Position dans le cycle de 4 ans : '+fr(c.mo,0)+" mois après le halving d'avril 2024 · "+c.phase+"</div>"+'<div class="side '+(c.k==="up"&&calUp?"up":c.k==="dn"&&!calUp?"dn":"")+'" style="margin-top:2px">'+syn+"</div>"
+    +'<div class="cyl"><i style="width:25%" class="c-a"></i><i style="width:12.5%" class="c-t"></i><i style="width:25%" class="c-b"></i><i style="width:25%" class="c-l"></i><i style="width:12.5%" class="c-p"></i>'
+    +'<u class="hist" style="left:'+(17.3/48*100)+'%" title="Sommet 2017"></u><u class="hist" style="left:'+(18/48*100)+'%" title="Sommet 2021"></u>'
+    +'<u class="hist lo" style="left:'+(29.2/48*100)+'%" title="Creux 2018"></u><u class="hist lo" style="left:'+(30.3/48*100)+'%" title="Creux 2022"></u>'
+    +(c.moAth>=0&&c.moAth<48?'<u class="ath" style="left:'+(c.moAth/48*100)+'%"></u>':"")+'<b style="left:'+(mo/48*100).toFixed(1)+'%"></b></div>'
+    +'<div class="cyll"><span>halving</span><span>12</span><span>18</span><span>30</span><span>42 mois</span></div>'
+    +'<div class="legend2"><span><i class="c-a"></i>hausse</span><span><i class="c-t"></i>sommets</span><span><i class="c-b"></i>baisse</span><span><i class="c-l"></i>creux</span><span><i class="mk"></i>aujourd\'hui</span><span><i class="mk hist"></i>sommets et creux passés</span></div></article>';
+  var rows=[];
+  function row(label,val,cls,txt){rows.push('<div class="ind"><span>'+label+'</span><b class="'+(cls||"")+'">'+val+'</b><small>'+txt+"</small></div>")}
+  row("Record de Bitcoin",px(c.ath),"",day(c.athT)+(c.moAth>=0?", "+fr(c.moAth,0)+" mois après le halving":""));
+  row("Recul depuis le record",sgn(c.dd,0)+" %",c.dd<-50?"neg":c.dd>-15?"pos":"","les bear markets de 2018 et 2022 ont reculé de −84\u00a0% et −77\u00a0%");
+  if(c.r200)row("Prix ÷ moyenne 200 semaines","×"+fr(c.r200,2),c.r200<1.2?"pos":c.r200>3?"neg":"","les creux de cycle passés se sont formés vers ×1");
+  if(c.mayer)row("Multiple de Mayer",fr(c.mayer,2),c.mayer<0.8?"pos":c.mayer>2.4?"neg":"","prix ÷ moyenne 200 jours : sous 0,8 zone de creux, au-dessus de 2,4 surchauffe");
+  if(c.pi)row("Indicateur Pi Cycle",fr(c.pi,2),c.pi>=0.95?"neg":"","le croisement à 1 a marqué les sommets de 2013, 2017 et 2021");
+  if(m.fng)row("Peur et avidité",m.fng.v+" · "+fngFr(m.fng.c),m.fng.v<=25?"pos":m.fng.v>=75?"neg":"","la peur extrême accompagne souvent les creux, l'avidité extrême les sommets");
+  if(m.alt)row("Saison des altcoins",fr(m.alt.share,0)+" %",m.alt.share>=75?"pos":"","des "+m.alt.n+" grosses cryptos font mieux que le Bitcoin sur 90 jours (saison des altcoins à partir de 75\u00a0%)");
+  h+='<article class="card tr"><div class="cap">Indicateurs de cycle</div>'+rows.join("")+"</article>";
+  h+='<article class="card tr"><div class="cap">Bitcoin en hebdomadaire (échelle log) · moyennes 21 semaines (jaune), 50 semaines (gris), 200 semaines (bleu)</div><canvas id="cyc-cv" class="mcv tall" aria-label="Bitcoin hebdomadaire et ses moyennes longues"></canvas></article>';
+  return h+'<div class="sub">Aux deux derniers cycles, le sommet est arrivé 17 à 18 mois après le halving et le creux environ 12 mois plus tard. Ce cycle de 4 ans ne repose que sur trois cycles complets : une régularité historique, pas une règle. Prochain halving estimé vers avril 2028.</div>'}
+function drawMkt(){
+  var m=MKT;if(!m)return;
+  var css=getComputedStyle(document.documentElement);function tk(v){return css.getPropertyValue(v).trim()}
+  function prep(id){var cv=$(id);if(!cv||!cv.clientWidth)return null;var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);return{g:g,W:W,H:H}}
+  var c=prep("mkt-cv");
+  if(c){var g=c.g,s=m.breadth.series,n=s.length,AX=44,pw=c.W-AX,y=function(v){return c.H/2-v*(c.H/2-8)},bw=pw/n;
+    g.strokeStyle=tk("--line");g.lineWidth=1;g.beginPath();g.moveTo(0,y(0));g.lineTo(pw,y(0));g.stroke();
+    s.forEach(function(v,i){g.fillStyle=tk(v>=0?"--good":"--bad");var y0=y(0),y1=y(v);g.fillRect(i*bw+bw*0.15,Math.min(y0,y1),bw*0.7,Math.max(1,Math.abs(y1-y0)))});
+    g.font="500 10.5px "+(tk("--mono")||"monospace");g.fillStyle=tk("--muted");g.textBaseline="middle";
+    g.fillText("+100 %",pw+4,y(1)+6);g.fillText("0",pw+4,y(0));g.fillText("−100 %",pw+4,y(-1)-6)}
+  c=prep("mkt-btc");
+  if(c){var gg=c.g,d=m.day,lo=Infinity,hi=-Infinity;d.forEach(function(r){[r[1],r[2],r[3]].forEach(function(v){if(v<lo)lo=v;if(v>hi)hi=v})});
+    var pad=(hi-lo)*0.08||1;lo-=pad;hi+=pad;var AX2=64,pw2=c.W-AX2,yy=function(v){return c.H-6-(v-lo)/(hi-lo)*(c.H-12)},xx=function(i){return i/(d.length-1)*pw2};
+    function ln(k,col,lw){gg.strokeStyle=col;gg.lineWidth=lw;gg.beginPath();d.forEach(function(r,i){if(i)gg.lineTo(xx(i),yy(r[k]));else gg.moveTo(xx(i),yy(r[k]))});gg.stroke()}
+    ln(3,tk("--muted"),1.2);ln(2,tk("--accent"),1.4);ln(1,tk("--ink"),1.8);
+    gg.font="500 10.5px "+(tk("--mono")||"monospace");gg.fillStyle=tk("--muted");gg.textBaseline="middle";[lo+pad,(lo+hi)/2,hi-pad].forEach(function(v){gg.fillText(px(v),pw2+6,yy(v))})}
+  c=prep("cyc-cv");
+  if(c){var g3=c.g,w=m.week,L=Math.log,lo3=Infinity,hi3=-Infinity;w.forEach(function(r){for(var k=1;k<5;k++)if(r[k]){if(r[k]<lo3)lo3=r[k];if(r[k]>hi3)hi3=r[k]}});
+    lo3=L(lo3)-0.08;hi3=L(hi3)+0.08;var AX3=64,pw3=c.W-AX3,t0=w[0][0],t1=w[w.length-1][0],y3=function(v){return c.H-6-(L(v)-lo3)/(hi3-lo3)*(c.H-12)},x3=function(t){return(t-t0)/(t1-t0)*pw3};
+    HALV.forEach(function(t){if(t<t0)return;var x=x3(t);g3.strokeStyle=tk("--line");g3.setLineDash([3,4]);g3.lineWidth=1;g3.beginPath();g3.moveTo(x,0);g3.lineTo(x,c.H);g3.stroke();g3.setLineDash([]);
+      g3.fillStyle=tk("--muted");g3.font="500 9.5px "+(tk("--mono")||"monospace");g3.textBaseline="top";g3.fillText("halving",x+3,4)});
+    function ln3(k,col,lw){g3.strokeStyle=col;g3.lineWidth=lw;g3.beginPath();var on=false;w.forEach(function(r){if(!r[k]){on=false;return}var x=x3(r[0]),y=y3(r[k]);if(on)g3.lineTo(x,y);else{g3.moveTo(x,y);on=true}});g3.stroke()}
+    ln3(4,"#6aa7ff",1.4);ln3(3,tk("--muted"),1.2);ln3(2,tk("--accent"),1.4);ln3(1,tk("--ink"),1.8);
+    g3.font="500 10.5px "+(tk("--mono")||"monospace");g3.fillStyle=tk("--muted");g3.textBaseline="middle";
+    [Math.exp(lo3+0.08),Math.exp((lo3+hi3)/2),Math.exp(hi3-0.08)].forEach(function(v){g3.fillText(px(v).replace(/,\d+$/,""),pw3+6,y3(v))});
+    g3.textBaseline="alphabetic";g3.fillText(String(new Date(t0).getUTCFullYear()),2,c.H-4);var ty=String(new Date(t1).getUTCFullYear());g3.fillText(ty,pw3-g3.measureText(ty).width-2,c.H-4)}}
+/* one line on top of the setup lists: where the whole market leans */
+function mktLine(){
+  var el=$("mkt-line"),m=MKT;if(!el)return;
+  if(!m){el.hidden=true;return}
+  el.hidden=false;el.className="mline "+(m.side>0?"up":m.side<0?"dn":"");
+  el.innerHTML="<span>Tendance du marché <b>"+m.label.toLowerCase()+"</b> "+sgn(m.score,0)+'</span><span class="sub">'+(m.side>0?"longs d'abord":m.side<0?"shorts d'abord":"aucun côté")+" ›</span>"}
+$("mkt-line").addEventListener("click",function(){setView("mkt")});
+
 /* ---------- background alerts ---------- */
 function alertStatus(){
   var on=S.a10||S.a50||S.atr,st=$("a-st"),t;
@@ -2244,7 +2445,8 @@ $("a-50").addEventListener("change",function(){S.a50=this.checked;saveSettings()
 $("a-tr").checked=!!S.atr;
 $("a-tr").addEventListener("change",function(){S.atr=this.checked;saveSettings();applyWatch()});
 $("a-min").addEventListener("change",function(){S.amin=+this.value||30;saveSettings();applyWatch()});
-$("a-pct").value=String(S.apct||95);
+if(!(+S.apct>=95)){S.apct=95;saveSettings()}
+$("a-pct").value=String(+S.apct>=100?100:95);
 $("a-pct").addEventListener("change",function(){S.apct=+this.value||95;saveSettings();alertStatus()});
 $("a-test").addEventListener("click",function(){try{Android.test()}catch(e){}});
 $("a-bat").addEventListener("click",function(){try{Android.askBattery()}catch(e){}});
@@ -2279,14 +2481,14 @@ window.bgScan=function(t10,t50){
     var seen={},now=Date.now(),n=0,k;
     try{seen=JSON.parse(localStorage.getItem("radar-alerted")||"{}")||{}}catch(e){}
     for(k in seen)if(now-seen[k]>4*36e5)delete seen[k];
-    var thr=+S.apct||95;
+    var thr=Math.max(95,+S.apct||95),ms=MKT;
     st.results.forEach(function(r){
       if(!r.plan||!(r.pct>=thr))return;
       var rdy=r.st==="ready";n++;
       var id=r.sym+(r.dir>0?"L":"S")+(rdy?"r":"n");if(seen[id])return;seen[id]=now;
       var mi=rdy?[]:missing(r);
       try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · "+passed(r)+"/6 contrôles",
-        (mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
+        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
     trades(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
   scan(m)};
@@ -2296,7 +2498,7 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===3&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|hbtc|heth)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|hbtc|heth|mkt|cyc)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});

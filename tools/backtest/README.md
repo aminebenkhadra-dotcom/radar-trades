@@ -11,6 +11,9 @@ Ces scripts rejouent le moteur de l'appli sur des données Binance passées. Ils
 - `gen.js`, `engine_research.js`, `study.js`, `s*.js`, `t1.js`, `pos.js`, `export.js` : la recherche de critères. `gen.js`
   construit un tableau de toutes les situations où le prix est sur une zone, avec une centaine de mesures ; les autres
   scripts cherchent lesquelles séparent les bons trades des mauvais sur novembre à mai, puis vérifient sur juin à octobre.
+- `gen2.js`, `study2.js`, `study3.js` : le même travail avec le moteur livré ; filtres de tendance du marché (Bitcoin, Ether,
+  largeur du marché) et objectifs plus proches. Ils ont été lancés sur une seconde année, octobre 2024 à octobre 2025
+  (`START=2024-09 END=2025-10 node fetch.js klines <dossier>`), qui n'avait servi à aucun réglage.
 - `chk.js`, `chk2.js` : contrôles du banc de test lui-même (un filtre qui triche avec le futur doit gagner ; les données de
   flux horodatées T décrivent les minutes après T et doivent être décalées).
 
