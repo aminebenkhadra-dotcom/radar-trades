@@ -296,7 +296,7 @@ function judge(r,opt){
   else if(f.retr>=0.25&&f.retr<=0.7)add(g,"ok",5,function(){return"Repli de "+rp+" % de la dernière impulsion"});
   else add(g,"mid",2,function(){return f.retr<0.25?"Repli faible ("+Math.max(0,rp)+" %) : entrée proche "+(L?"des sommets":"des creux"):"Repli profond ("+rp+" %)"});
   if(strict>=2&&!nk)g.ok=false;
-  if(!q)g.head=(r.dist>0.5?"À "+pct(r.distPct)+" · ":"")+kind.replace(" 4H","")+(nk?" · "+nk+(nk>1?" repères":" repère"):"")+" · repli "+Math.max(0,rp)+"\u00a0%";
+  if(!q)g.head=(r.dist>0.5?"À "+pct(r.distPct)+" · ":"")+kind.replace(" 4H","")+(nk?" · "+nk+(nk>1?" repères":" repère"):(f.zkind||f.conf||L?" isolé":" isolée"));
 
   /* Déclencheur */
   g=G.trig;var T=r.dist<=0.5?r.trig:null;
