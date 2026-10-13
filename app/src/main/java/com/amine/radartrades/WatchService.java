@@ -23,6 +23,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONObject;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -173,6 +175,26 @@ public class WatchService extends Service {
         @JavascriptInterface
         public void notify(String title, String text, String tag, String tab) {
             alert(getApplicationContext(), title, text, tag == null ? "setup" : tag, tab);
+        }
+
+        /** Same fixed read-only account queries as the visible page, so open positions can be checked in the background. */
+        @JavascriptInterface
+        public void api(final int id, final String exchange, final String name) {
+            new Thread(() -> {
+                final String[] r = Exchanges.call(getApplicationContext(), String.valueOf(exchange), String.valueOf(name));
+                final String status = r[0].matches("\\d{1,3}") ? r[0] : "0";
+                main.post(() -> {
+                    if (web != null) {
+                        web.evaluateJavascript("window.onApi&&window.onApi(" + id + "," + status + ","
+                                + JSONObject.quote(r[1]) + ")", null);
+                    }
+                });
+            }).start();
+        }
+
+        @JavascriptInterface
+        public boolean hasKeys(String exchange) {
+            return exchange != null && Vault.has(getApplicationContext(), exchange);
         }
 
         @JavascriptInterface

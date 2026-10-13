@@ -39,8 +39,30 @@ final class Exchanges {
         }
     }
 
+    private static final String[] BAD = {"400", "{\"msg\":\"Requête inconnue\"}"};
+
     private static String[] binance(String[] cred, String name) throws Exception {
         String host = "https://api.binance.com", path, method = "GET", extra = "";
+        // a few queries take one value after a colon: a contract (BTCUSDT) or a coin (SOL), letters and digits only
+        String arg = null;
+        int colon = name.indexOf(':');
+        if (colon > 0 && !name.startsWith("inc:")) {
+            arg = name.substring(colon + 1);
+            name = name.substring(0, colon);
+            boolean contract = name.equals("ord") || name.equals("algo");
+            if (!arg.matches(contract ? "[A-Z0-9]{2,24}" : "[A-Z0-9]{1,15}")) return BAD;
+            switch (name) {
+                case "ord": host = "https://fapi.binance.com"; path = "/fapi/v1/openOrders"; extra = "symbol=" + arg + "&"; break;
+                case "algo": host = "https://fapi.binance.com"; path = "/fapi/v1/openAlgoOrders"; extra = "symbol=" + arg + "&"; break;
+                case "earnF": path = "/sapi/v1/simple-earn/flexible/list"; extra = "asset=" + arg + "&current=1&size=100&"; break;
+                case "earnLk": path = "/sapi/v1/simple-earn/locked/list"; extra = "asset=" + arg + "&current=1&size=100&"; break;
+                case "chainLk": path = "/sapi/v1/onchain-yields/locked/list"; extra = "asset=" + arg + "&current=1&size=100&"; break;
+                case "soft": path = "/sapi/v1/soft-staking/list"; extra = "asset=" + arg + "&current=1&size=100&"; break;
+                default: return BAD;
+            }
+            String q = extra + "recvWindow=10000&timestamp=" + System.currentTimeMillis();
+            return http(method, host + path + "?" + q + "&signature=" + hex(hmac(cred[1], q)), new String[]{"X-MBX-APIKEY", cred[0]});
+        }
         if (name.startsWith("inc:")) {
             // realised results of the futures account: inc:<type>:<days>
             String[] p = name.split(":");
@@ -60,7 +82,9 @@ final class Exchanges {
             case "onchain": path = "/sapi/v1/onchain-yields/locked/position"; extra = "size=100&"; break;
             case "fut": host = "https://fapi.binance.com"; path = "/fapi/v2/account"; break;
             case "pos": host = "https://fapi.binance.com"; path = "/fapi/v2/positionRisk"; break;
-            default: return new String[]{"400", "{\"msg\":\"Requête inconnue\"}"};
+            case "wbeth": path = "/sapi/v1/eth-staking/eth/history/rateHistory"; extra = "current=1&size=100&"; break;
+            case "bnsol": path = "/sapi/v1/sol-staking/sol/history/rateHistory"; extra = "current=1&size=100&"; break;
+            default: return BAD;
         }
         String q = extra + "recvWindow=10000&timestamp=" + System.currentTimeMillis();
         String url = host + path + "?" + q + "&signature=" + hex(hmac(cred[1], q));

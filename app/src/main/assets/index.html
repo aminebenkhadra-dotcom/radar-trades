@@ -183,7 +183,7 @@ h2{font-family:var(--display);font-weight:600;font-size:16px;margin:6px 0 -4px}
 .pfk{padding-bottom:0}
 details.man{background:var(--sunk);border-color:transparent} details.man summary{font-size:14px;font-weight:500}
 .hbox{border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.hbox.ok{border-color:var(--good);background:var(--good-soft)} .hbox.warn{border-color:var(--accent);background:var(--accent-soft)} .hbox.exit{border-color:var(--bad);background:var(--bad-soft)}
+.hbox.ok{border-color:var(--good);background:var(--good-soft)} .hbox.warn{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-size:inherit;font-weight:400} .hbox.exit{border-color:var(--bad);background:var(--bad-soft)}
 .hrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hrow b{font-family:var(--display);font-size:17px}
 .hdot{width:12px;height:12px;border-radius:50%;background:var(--muted);flex:none}
@@ -282,6 +282,52 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .ind b{font-family:var(--mono);font-weight:600;text-align:right} .ind b.pos{color:var(--good)} .ind b.neg{color:var(--bad)}
 .ind small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
 .funnel.plain.two div b.pos{color:var(--good)} .funnel.plain.two div b.neg{color:var(--bad)}
+/* live Binance positions */
+.tag{font-family:var(--mono);font-size:11.5px;background:var(--sunk);border-radius:6px;padding:3px 7px;color:var(--muted)}
+.ldot{width:9px;height:9px;border-radius:50%;background:var(--good);margin-left:auto;box-shadow:0 0 0 0 var(--good-soft);animation:beat 1.6s ease-out infinite}
+@keyframes beat{0%{box-shadow:0 0 0 0 var(--good-soft)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.ldot{animation:none}}
+.alarm{display:flex;flex-direction:column;gap:2px;border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:9px 12px;font-size:13.5px}
+.alarm b{font-family:var(--display);font-size:15px;color:var(--bad)} .alarm span{color:var(--ink)}
+.lv{border-color:var(--accent)}
+.pil.four.lvt b{font-family:var(--mono);font-size:14px;font-weight:600}
+.lvh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lvh h2{margin:0}
+.cl1{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px}
+.cl1 b.pos,.cl1 b.neg{margin-left:auto;font-family:var(--mono)}
+/* earn */
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:grid;grid-template-columns:minmax(0,1fr) 5.8em;gap:10px;align-items:center;width:100%;text-align:left;background:var(--sunk);border:1px solid transparent;border-radius:10px;padding:9px 11px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt.sold{opacity:.5}
+.ol{min-width:0} .ol b{display:block;font-size:14px;font-weight:600} .ol small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--muted);font-size:11.5px;line-height:1.35}
+.oa b{display:block;text-align:right;font-family:var(--mono);font-size:15.5px;font-weight:600;color:var(--good)}
+.oa i{display:block;height:5px;border-radius:3px;background:var(--good);margin:5px 0 0 auto;min-width:3px}
+.src{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:5px;padding:2px 6px;margin-bottom:3px;background:var(--line);color:var(--ink)}
+.src.bn{background:var(--accent-soft);color:var(--accent)} .src.defi{background:rgba(106,167,255,.16);color:#6aa7ff}
+.best{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.best .gbig{font-size:34px}
+.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.steps li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;font-size:14px;line-height:1.4}
+.steps li::before{counter-increment:s;content:counter(s);width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:12px}
+.rk{display:flex;flex-wrap:wrap;gap:6px}
+.rk span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--muted)}
+.rk span.hi{border-color:var(--bad);color:var(--bad)}
+.yrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:9px 0;font-size:13.5px}
+.yrow b{font-family:var(--display);font-size:15px} .yrow em{font-style:normal;font-family:var(--mono);font-weight:600;color:var(--good);text-align:right}
+.yrow small{grid-column:1/-1;color:var(--muted);font-size:11.5px}
+.filters button b.v{font-weight:500;color:inherit;opacity:.75}
+/* altcoin season */
+.agauge{position:relative;height:14px;border-radius:7px;background:linear-gradient(to right,var(--accent) 0 25%,var(--line) 25% 75%,#6aa7ff 75% 100%)}
+.agauge i{position:absolute;top:-5px;width:6px;height:24px;border-radius:3px;background:var(--ink);transform:translateX(-3px);box-shadow:0 0 0 2px var(--surface)}
+.gbig.alt{color:#6aa7ff} .gbig.btc{color:var(--accent)}
+.agl{position:relative;height:15px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+.agl span{position:absolute;top:0;transform:translateX(-50%)} .agl span:first-child{left:0;transform:none} .agl span:last-child{right:0;transform:none}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tfr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;align-items:center;font-size:13px;padding:4px 0}
+.tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
+.tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
 
 </style>
 </head>
@@ -309,6 +355,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="news" aria-selected="false">Actus</button>
     <button type="button" role="tab" data-v="res" aria-selected="false">Résultats</button>
     <button type="button" role="tab" data-v="pf" aria-selected="false">Portefeuille</button>
+    <button type="button" role="tab" data-v="earn" aria-selected="false">Earn</button>
     <button type="button" role="tab" data-v="hbtc" aria-selected="false">Heatmap BTC</button>
     <button type="button" role="tab" data-v="heth" aria-selected="false">Heatmap ETH</button>
   </div>
@@ -334,6 +381,11 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <section class="view" id="view-news" hidden></section>
   <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
+  <section class="view" id="view-earn" hidden>
+    <h2 style="margin:0">Earn et staking</h2>
+    <form class="askf" id="earn-form"><input id="earn-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Crypto, par exemple SOL" aria-label="Crypto"><button class="take" type="submit">Voir</button></form>
+    <div class="stack" id="earn-out" style="gap:14px"></div>
+  </section>
   <section class="view" id="view-one" hidden>
     <h2 style="margin:0">Potentiel de trade d'une crypto</h2>
     <form class="askf" id="one-form"><input id="one-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Symbole, par exemple SOL" aria-label="Symbole de la crypto"><button class="take" type="submit">Analyser</button></form>
@@ -359,7 +411,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt</label>
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt</label>
-      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter si un de mes trades ouverts passe en « Sortie à envisager »</label>
+      <label class="wide chk"><input type="checkbox" id="a-tr"> Surveiller mes trades et mes positions Binance : sortie à envisager, break-even, stop absent, liquidation proche, position fermée</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <label class="wide">Me prévenir à partir de<select id="a-pct"><option value="95">95 % ou prêt : sur la zone, au plus un contrôle manquant</option><option value="100">Prêt uniquement</option></select></label>
       <div class="wide sub" id="a-st"></div>
@@ -394,7 +446,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko. Version 21.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Version 22.
     </footer>
 </div>
 <script>
@@ -1224,13 +1276,16 @@ function beState(t,price){
   var rNow=r0?(price-t.entry)*dir/r0:0;
   return{st:(price-goPx)*dir>=0?"go":rNow>=0.6?"soon":"wait",be:be,goPx:goPx}}
 function paintBE(t,price){
-  var el=$("be-"+t.id);if(!el)return;var b=beState(t,price),k=b.st+"|"+px(b.be)+"|"+(b.goPx?px(b.goPx):"");
+  var el=$("be-"+t.id);if(!el)return;
+  /* a live Binance position without a stop gets the red alarm instead */
+  if(t.live&&!(t.sl>0)){el.innerHTML="";el.className="be";el.dataset.k="";return}
+  var b=beState(t,price),k=b.st+"|"+px(b.be)+"|"+(b.goPx?px(b.goPx):""),lv=!!t.live;
   if(el.dataset.k===k)return;el.dataset.k=k;el.className="be "+b.st;
-  var txt=b.st==="done"?"<b>Trade sécurisé</b><span>Ton stop est déjà au break-even net ou mieux.</span>":
-    b.st==="go"?"<b>Feu vert</b><span>Tu peux placer ton stop à <b>"+px(b.be)+"</b>, le break-even net de frais.</span>":
+  var txt=b.st==="done"?"<b>Trade sécurisé</b><span>"+(lv?"Ton stop sur Binance":"Ton stop")+" est déjà au break-even net ou mieux.</span>":
+    b.st==="go"?"<b>Feu vert</b><span>"+(lv?"Monte ton stop sur Binance à <b>":"Tu peux placer ton stop à <b>")+px(b.be)+"</b>, le break-even net de frais."+(lv?" L'appli verra le changement toute seule.":"")+"</span>":
     b.st==="soon"?"<b>Bientôt</b><span>Feu vert à partir de "+px(b.goPx)+". Break-even net : "+px(b.be)+".</span>":
     "<b>Pas encore</b><span>Feu vert à partir de "+px(b.goPx)+". Break-even net : "+px(b.be)+".</span>";
-  el.innerHTML='<span class="lamp"></span><span class="betxt">'+txt+"</span>"+(b.st==="go"?'<button class="ghost" type="button" data-be="'+t.id+'">J\'ai déplacé mon stop</button>':"")}
+  el.innerHTML='<span class="lamp"></span><span class="betxt">'+txt+"</span>"+(b.st==="go"&&!lv?'<button class="ghost" type="button" data-be="'+t.id+'">J\'ai déplacé mon stop</button>':"")}
 function addTrade(o){
   o.id=Date.now().toString(36)+Math.floor(Math.random()*1e4);o.t=Date.now();o.r0=Math.abs(o.entry-o.sl);
   T.unshift(o);saveTrades();renderTrades();tick()}
@@ -1240,10 +1295,10 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
@@ -1253,16 +1308,21 @@ function setView(v){
   else if(view==="one"){statusLine();renderOne()}
   else if(view==="fund"){statusLine();drawWeekly()}
   else if(view==="mkt"||view==="cyc"){statusLine();renderMkt();loadMkt(false)}
-  else{statusLine();renderTrades();tick();checkDue()}}
+  else if(view==="earn"){statusLine();renderEarn();if(CANPF&&!Object.keys(pf).length)loadAllPf()}
+  else{statusLine();renderTrades();tick();liveTick(true);checkDue()}}
 function when(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 
 function renderTrades(){
-  var op=openTrades(),cl=T.filter(function(t){return t.closed});
-  $("tcount").textContent=op.length||"";
-  var h='<div class="funnel two"><div><b id="sum-open">–</b><span>net en cours</span></div><div><b id="sum-done">–</b><span>net réalisé</span></div></div>';
-  if(!op.length)h+='<div class="empty">Aucun trade suivi. Dans l\'onglet Scanner, ouvre un setup et appuie sur « J\'ai pris ce trade ».</div>';
-  h+=op.map(function(t){var id=t.id;
+  var op=openTrades(),cl=T.filter(function(t){return t.closed}),on=hasBn();
+  tcount();
+  var h='<div class="stack" id="live"></div>';
+  if(on)h+='<div class="lvh"><h2>Suivi à la main</h2><span class="sub">trades pris depuis le scanner ou ajoutés ici</span></div>';
+  h+='<div class="funnel two"><div><b id="sum-open">–</b><span>net en cours</span></div><div><b id="sum-done">–</b><span>net réalisé</span></div></div>';
+  if(!op.length)h+=on?'<div class="sub">Aucun trade suivi à la main. Tes positions Binance sont suivies automatiquement au-dessus.</div>'
+    :'<div class="empty">Aucun trade suivi. Dans l\'onglet Scanner, ouvre un setup et appuie sur « J\'ai pris ce trade ».</div>';
+  h+=op.map(function(t){var id=t.id,twin=LV.list&&LV.list.some(function(p){return p.full===t.full&&p.dir===t.dir});
     return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="sub" style="margin-left:auto">depuis le '+when(t.t)+"</span></div>"
+      +(twin?'<div class="sub">Cette position existe aussi sur ton compte Binance : elle est suivie en direct plus haut, avec tes vrais stop et objectif.</div>':"")
       +'<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
       +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(t.sl)+'</span><span id="px-'+id+'">–</span><span>TP '+px(t.tp)+"</span></div></div>"
@@ -1282,7 +1342,9 @@ function renderTrades(){
     return'<article class="card"><div class="row done"><span><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="px">'+(t.dir>0?"Long":"Short")+" · "+px(t.entry)+" → "+px(t.exit)+" · "+when(t.tc)+'</span></span><span class="net sm '+(t.net>=0?"pos":"neg")+'">'+sgn(t.net,2)+" $</span></div></article>"}).join("")
     +'<button class="ghost danger" type="button" data-wipe="1">Effacer l\'historique</button>';
   $("view-trades").innerHTML=h;armed={};
+  renderLive();
   op.forEach(paint);op.forEach(paintHealth);op.forEach(paintTP);totals()}
+function tcount(){$("tcount").textContent=(openTrades().length+(LV.list?LV.list.length:0))||""}
 function totals(){
   var op=openTrades(),sum=0,ok=op.length>0;
   op.forEach(function(t){var p=lastPx[t.full];if(p===undefined)ok=false;else sum+=pnl(t,p).net});
@@ -1391,8 +1453,10 @@ function checkTrade(t){
     var a4=atr(h4),ahead=levels(h4,0.5*a4).filter(function(l){return(l.p-price)*dir>0.3*a4}).sort(function(x,y){return(x.p-y.p)*dir});
     var before=ahead.filter(function(l){return(t.tp-l.p)*dir>0.4*a4}),after=ahead.filter(function(l){return(l.p-t.tp)*dir>0.4*a4});
     var left=(t.tp-price)*dir,span=Math.abs(t.tp-t.entry),strong=b4===dir&&bd===dir&&!weak,be=bePrice(t),tp={act:"keep"},lvl=dir>0?"résistance":"support";
-    var r0=t.r0||Math.abs(t.entry-t.sl);
-    if(left<=0)tp={act:"hit"};
+    var r0=t.r0||Math.abs(t.entry-t.sl),first=ahead.filter(function(l){return(l.p-be)*dir>0.3*a4})[0];
+    /* a live Binance position may have no target at all: point to the first 4H level past break-even */
+    if(!(t.tp>0))tp=v!=="exit"&&first?{act:"set",px:first.p-dir*0.1*a4,why:"Premier niveau 4H dans ton sens, vers "+px(first.p)}:{act:"none"};
+    else if(left<=0)tp={act:"hit"};
     else if(v==="exit")tp={act:"keep",head:"Objectif en suspens",why:"Le trade est à risque : la question est la sortie, pas l'objectif"};
     else if(!before.length&&r0&&span>5*r0&&left>4*a4){
       var near=(t.entry+dir*3*r0-price)*dir>0.5*a4?t.entry+dir*3*r0:price+dir*2*a4;
@@ -1408,13 +1472,14 @@ function checkTrade(t){
     return{v:v,sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp}})}
 function paintTP(t){
   var el=$("tp-"+t.id);if(!el)return;var h=health[t.id],a=h&&!h.err&&h.tp;
-  if(!a||a.act==="hit"){el.className="be";el.innerHTML="";return}
-  var head=a.head?a.head:a.act==="up"?"Augmenter l'objectif":a.act==="down"?"Réduire l'objectif":"Objectif cohérent";
+  if(!a||a.act==="hit"||a.act==="none"){el.className="be";el.innerHTML="";return}
+  var head=a.head?a.head:a.act==="up"?"Augmenter l'objectif":a.act==="down"?"Réduire l'objectif":a.act==="set"?"Objectif à placer":"Objectif cohérent";
   var txt=a.act==="keep"?(a.done?"Objectif mis à jour à "+px(t.tp)+".":a.why?a.why+".":"Rien à changer pour l'instant."):
-    "Vise <b>"+px(a.px)+"</b> au lieu de "+px(t.tp)+". "+esc(a.why)+".";
-  el.className="be tp-"+a.act;
-  el.innerHTML='<span class="arw">'+(a.act==="up"?"▲":a.act==="down"?"▼":"●")+'</span><span class="betxt"><b>'+head+"</b><span>"+txt+"</span></span>"
-    +(a.act==="keep"?"":'<button class="ghost" type="button" data-tpok="'+t.id+'">✓ C\'est fait</button>')}
+    a.act==="set"?"Aucun objectif sur Binance. Repère possible : <b>"+px(a.px)+"</b>. "+esc(a.why)+".":
+    "Vise <b>"+px(a.px)+"</b> au lieu de "+px(t.tp)+(t.live?", en modifiant ton TP sur Binance":"")+". "+esc(a.why)+".";
+  el.className="be tp-"+(a.act==="set"?"down":a.act);
+  el.innerHTML='<span class="arw">'+(a.act==="up"?"▲":a.act==="down"?"▼":a.act==="set"?"◎":"●")+'</span><span class="betxt"><b>'+head+"</b><span>"+txt+"</span></span>"
+    +(a.act==="keep"||t.live?"":'<button class="ghost" type="button" data-tpok="'+t.id+'">✓ C\'est fait</button>')}
 var HLAB={ok:"Toujours valide",warn:"Fragile, à surveiller",exit:"Sortie à envisager"};
 function paintHealth(t){
   var el=$("hl-"+t.id);if(!el)return;var h=health[t.id];
@@ -1430,11 +1495,162 @@ function runHealth(t,force){
   return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full]);paintTP(t)})}
 function checkDue(){
   if(view!=="trades"||document.hidden)return;
-  var op=openTrades(),i=0;(function next(){if(i<op.length)runHealth(op[i++],false).then(next)})()}
+  healthQueue(liveTrades().concat(openTrades()),false)}
 setInterval(checkDue,60000);
+/* one check at a time: each one reads four timeframes, the order book and the squeeze data */
+var hq=[],hqOn=false;
+function healthQueue(list,force){
+  list.forEach(function(t){if(!hq.some(function(x){return x.t.id===t.id}))hq.push({t:t,f:force})});
+  if(hqOn)return;hqOn=true;
+  (function next(){var x=hq.shift();if(!x){hqOn=false;return}runHealth(x.t,x.f).then(next)})()}
+
+/* ---------- Binance Futures read live: open positions with the stop and target orders placed on Binance ---------- */
+var LV={list:null,err:"",ordErr:"",at:0,busy:false,ord:{},ordAt:0,sig:"",ps:{},acct:0,acctAt:0,incAt:0,incBusy:false},LVS=liveMem();
+function liveMem(){try{var o=JSON.parse(localStorage.getItem("radar-live")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return{}}}
+function saveLive(){try{localStorage.setItem("radar-live",JSON.stringify(LVS))}catch(e){}}
+function hasBn(){if(!CANPF)return false;try{return!!Android.hasKeys("binance")}catch(e){return false}}
+function lkey(p){return p.full+(p.dir>0?"L":"S")}
+/* one entry per open position: hedge mode reports LONG and SHORT apart, one-way mode signs the amount */
+function livePositions(a){
+  var out=[];(Array.isArray(a)?a:[]).forEach(function(p){
+    var q=+p.positionAmt;if(!q||!isFinite(q))return;
+    var ps=p.positionSide||"BOTH",dir=ps==="LONG"?1:ps==="SHORT"?-1:q>0?1:-1,full=String(p.symbol||""),mark=+p.markPrice||0;
+    var lev=+p.leverage||0,notional=Math.abs(+p.notional||q*mark),iso=p.marginType==="isolated",qm=full.match(/(USDT|USDC)$/);
+    out.push({full:full,sym:qm?full.slice(0,-qm[0].length):full,quote:qm?qm[0]:"",dir:dir,ps:ps,qty:Math.abs(q),entry:+p.entryPrice||0,be:+p.breakEvenPrice||0,mark:mark,
+      pnl:+p.unRealizedProfit||0,liq:+p.liquidationPrice||0,lev:lev,iso:iso,notional:notional,margin:iso&&+p.isolatedWallet>0?+p.isolatedWallet:lev?notional/lev:0})});
+  out.sort(function(x,y){return y.notional-x.notional});
+  return out}
+/* orders that close the position: conditional stop and take-profit orders (Binance's algo service, or older stop orders), reduce-only limits as targets */
+function liveExits(p,ords){
+  var sl=[],tp=[],close=p.dir>0?"SELL":"BUY",trail=false;
+  (ords||[]).forEach(function(o){
+    if(!o||o.side!==close||(o.symbol&&o.symbol!==p.full))return;
+    var ps=o.positionSide||"BOTH";if(ps!=="BOTH"&&ps!==p.ps)return;
+    var ty=String(o.orderType||o.type||""),trig=+(o.triggerPrice||o.stopPrice)||0,lim=+o.price||0,q=+(o.quantity||o.origQty)||0;
+    var all=o.closePosition===true||o.closePosition==="true",ro=all||o.reduceOnly===true||o.reduceOnly==="true"||ps!=="BOTH";
+    var part=all||!q?1:Math.min(1,q/p.qty);
+    if(/TRAILING/.test(ty)){trail=true;return}
+    if(/STOP/.test(ty)&&trig>0){sl.push({px:trig,part:part});return}
+    if(/TAKE_PROFIT/.test(ty)&&trig>0){tp.push({px:trig,part:part});return}
+    if(ty==="LIMIT"&&lim>0&&ro&&(lim-p.mark)*p.dir>0)tp.push({px:lim,part:part})});
+  /* the stop that triggers first, the target reached first */
+  sl.sort(function(a,b){return(b.px-a.px)*p.dir});tp.sort(function(a,b){return(a.px-b.px)*p.dir});
+  return{sl:sl,tp:tp,trail:trail}}
+/* first time a position is seen, and its risk unit: entry to the first stop on the losing side */
+function liveRemember(p){
+  var k=lkey(p),m=LVS[k],risky=p.sl>0&&(p.entry-p.sl)*p.dir>0;
+  if(!m)m=LVS[k]={t:Date.now(),e:p.entry,r0:risky?Math.abs(p.entry-p.sl):0};
+  else if(risky&&(!m.r0||Math.abs(p.entry-m.e)/p.entry>0.003)){m.r0=Math.abs(p.entry-p.sl);m.e=p.entry}
+  return m}
+function liveTrade(p){var m=LVS[lkey(p)]||{t:Date.now(),r0:0};
+  return{id:"bn"+lkey(p),sym:p.sym,full:p.full,dir:p.dir,entry:p.entry,qty:p.qty,sl:p.sl>0?p.sl:NaN,tp:p.tp>0?p.tp:NaN,t:m.t,r0:m.r0||0,live:true}}
+function liveTrades(){return(LV.list||[]).map(liveTrade)}
+/* positions, then the orders of each contract held (every 15 s in the app, at every check in the background) */
+function liveFetch(fresh){
+  return xapi("binance","pos").then(function(a){
+    var L=livePositions(a),syms={};L.forEach(function(p){syms[p.full]=1});
+    var need=fresh||BG||Date.now()-LV.ordAt>15e3||L.some(function(p){return!LV.ord[p.full]}),err="";
+    return(need&&L.length?Promise.all(Object.keys(syms).map(function(s){
+        return Promise.all([soft(xapi("binance","ord:"+s)),soft(xapi("binance","algo:"+s))]).then(function(r){
+          if(Array.isArray(r[0])&&Array.isArray(r[1]))LV.ord[s]=r[0].concat(r[1]);else err=apiMsg((r[0]&&r[0].__err)||(r[1]&&r[1].__err))})
+      })).then(function(){LV.ordAt=Date.now();LV.ordErr=err}):Promise.resolve()).then(function(){
+      L.forEach(function(p){var o=LV.ord[p.full],x=liveExits(p,o);p.ordOk=!!o;p.sls=x.sl;p.tps=x.tp;p.trail=x.trail;
+        p.sl=x.sl.length?x.sl[0].px:0;p.tp=x.tp.length?x.tp[0].px:0;lastPx[p.full]=p.mark});
+      liveSync(L);return L})})}
+/* positions gone since the last read were closed: keep them a day with their realised result */
+function liveSync(L){
+  LVS=liveMem();
+  var have={},now=Date.now(),c=LVS._c=(LVS._c||[]).filter(function(x){return now-x.tc<864e5});
+  L.forEach(function(p){have[lkey(p)]=1;liveRemember(p)});
+  Object.keys(LVS).forEach(function(k){if(k==="_c"||have[k])return;var m=LVS[k]||{};delete LVS[k];
+    var full=k.slice(0,-1),qm=full.match(/(USDT|USDC)$/);
+    c.push({k:k,full:full,sym:qm?full.slice(0,-qm[0].length):full,dir:k.slice(-1)==="L"?1:-1,t0:m.t||now,tc:now,net:null})});
+  saveLive()}
+function liveIncome(){
+  var now=Date.now(),wait=(LVS._c||[]).filter(function(x){return x.net===null});
+  if(!wait.length||LV.incBusy||now-LV.incAt<60e3)return Promise.resolve();
+  LV.incBusy=true;LV.incAt=now;
+  return Promise.all(["REALIZED_PNL","COMMISSION","FUNDING_FEE"].map(function(k){return soft(xapi("binance","inc:"+k+":7"))})).then(function(r){
+    var rows=[];r.forEach(function(x){if(Array.isArray(x))rows=rows.concat(x)});
+    LVS=liveMem();(LVS._c||[]).forEach(function(x){if(x.net!==null)return;var s=0,n=0;
+      rows.forEach(function(i){var t=+i.time;if(i.symbol===x.full&&t>=x.t0-6e4&&t<=x.tc+6e4){s+=+i.income||0;if(i.incomeType==="REALIZED_PNL")n++}});
+      if(n)x.net=Math.round(s*100)/100;else if(Date.now()-x.tc>15*60e3)x.net="?"});
+    saveLive();LV.incBusy=false},function(){LV.incBusy=false})}
+function liveTick(force){
+  if(LV.busy||document.hidden||view!=="trades"||!hasBn())return;
+  if(!force&&Date.now()-LV.at<4500)return;
+  LV.busy=true;
+  if(Date.now()-LV.acctAt>60e3)soft(xapi("binance","fut")).then(function(f){if(f&&!f.__err&&+f.totalWalletBalance>0){LV.acct=+f.totalWalletBalance;LV.acctAt=Date.now()}});
+  liveFetch(force).then(function(L){LV.list=L;LV.at=Date.now();LV.err="";LV.busy=false;paintLiveAll();liveIncome().then(paintLiveAll)},
+    function(e){LV.busy=false;LV.err=apiMsg(e);if(view==="trades")renderLive()})}
+setInterval(function(){liveTick(false)},5000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)liveTick(true)});
+function lvStatus(){return LV.at?"lu à "+new Date(LV.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"lecture…"}
+function paintLiveAll(){
+  if(view!=="trades")return;
+  var L=LV.list||[],c=LVS._c||[];
+  var sig=L.map(function(p){return[lkey(p),p.qty,p.entry,p.sl,p.tp,p.lev,p.iso,p.ordOk,p.sls.length,p.tps.length].join(":")}).join(",")+"|"+c.map(function(x){return x.k+x.tc+x.net}).join(",")+"|"+LV.err+LV.ordErr;
+  if(sig!==LV.sig||!$("lv-sum")){
+    LV.sig=sig;renderLive();
+    var ch=[];L.forEach(function(p){var t=liveTrade(p),s=[p.qty,p.entry,p.sl,p.tp].join(":");if(LV.ps[t.id]!==s){LV.ps[t.id]=s;ch.push(t)}});
+    if(ch.length)healthQueue(ch,true)}
+  else{L.forEach(paintLive);liveTotals()}
+  /* the closed positions shown here need no notification later */
+  if(!document.hidden&&c.some(function(x){return x.net!==null&&!x.nt})){c.forEach(function(x){if(x.net!==null)x.nt=1});saveLive()}
+  tcount()}
+function renderLive(){
+  var el=$("live");if(!el)return;
+  if(!CANPF){el.innerHTML="";return}
+  if(!hasBn()){el.innerHTML='<article class="card tr"><div class="trh"><span class="sym">Binance Futures en direct</span></div><div class="sub">Connecte ta clé Binance <b>en lecture seule</b> dans l\'onglet Portefeuille : tes positions ouvertes, leurs stops et leurs objectifs apparaîtront ici tout seuls, avec les conseils de suivi.</div><div class="acts"><button class="ghost" type="button" data-go="pf">Aller au Portefeuille</button></div></article>';return}
+  var L=LV.list,h='<div class="lvh"><h2>Binance Futures · en direct</h2><span class="sub" id="lv-st" style="margin-left:auto">'+lvStatus()+"</span></div>";
+  if(LV.err)h+='<div class="warn">'+esc(LV.err)+"</div>";
+  if(LV.ordErr)h+='<div class="warn">Ordres stop et TP non lus : '+esc(LV.ordErr)+"</div>";
+  if(!L){el.innerHTML=h+(LV.err?"":'<div class="empty">Lecture de tes positions…</div>');return}
+  if(L.length)h+='<div class="funnel plain two" id="lv-sum"><div><b id="lv-pnl">–</b><span>latent, '+L.length+(L.length>1?" positions":" position")+'</span></div><div><b id="lv-mg">–</b><span>marge engagée</span></div></div>';
+  else h+='<div class="sub" id="lv-sum">Aucune position ouverte sur Binance Futures. Dès que tu en ouvres une, elle apparaît ici avec son stop et son objectif.</div>';
+  h+=L.map(liveCard).join("")+closedView();
+  el.innerHTML=h;
+  L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p)});liveTotals()}
+function liveCard(p){
+  var t=liveTrade(p),id=t.id,acc=LV.acct||+S.account||0,risk=p.sl>0?(p.sl-p.entry)*p.dir*p.qty:null;
+  var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="ldot" title="Suivi en direct"></span></div>';
+  if(!p.ordOk)h+='<div class="sub">Stop et objectif pas encore lus sur Binance, nouvel essai dans quelques secondes.</div>';
+  else if(!(p.sl>0))h+='<div class="alarm"><b>Aucun stop-loss sur Binance</b><span>'+(p.trail?"Seul un stop suiveur est actif. ":"")+"Sans stop, rien ne limite la perte avant la liquidation"+(p.liq>0?" à "+px(p.liq):"")+". Place-le dans Binance : Positions, puis TP/SL.</span></div>";
+  else if(p.liq>0&&(p.sl-p.liq)*p.dir<0)h+='<div class="alarm"><b>Stop au-delà de la liquidation</b><span>Ton stop à '+px(p.sl)+" est plus loin que le prix de liquidation ("+px(p.liq)+") : la position serait liquidée avant. Rapproche le stop ou ajoute de la marge.</span></div>";
+  h+='<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
+    +'<div><div class="cap">Gain ou perte latent</div><div class="net" id="ln-'+id+'">–</div><div class="sub" id="ls-'+id+'"></div></div>';
+  if(p.sl>0&&p.tp>0)h+='<div><div class="rail" id="lr-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(p.sl)+'</span><span id="lp-'+id+'">–</span><span>TP '+px(p.tp)+"</span></div></div>";
+  h+='<div class="pil four lvt"><div><span>Taille</span><b>'+fr(p.qty,p.qty>=100?0:p.qty>=1?3:4)+"</b><small>"+usd0(p.notional)+" · marge "+usd0(p.margin)+"</small></div>"
+    +"<div><span>Entrée</span><b>"+px(p.entry)+"</b><small>break-even "+(p.be>0?px(p.be):"–")+"</small></div>"
+    +'<div><span>Liquidation</span><b>'+(p.liq>0?px(p.liq):"aucune")+'</b><small id="lq-'+id+'">'+(p.liq>0?"":"marge suffisante")+"</small></div>"
+    +'<div><span>Au stop</span><b class="'+(risk===null?"neg":risk>=0?"pos":"neg")+'">'+(risk===null?"aucun":sgn(risk,2)+" $")+"</b><small>"
+    +(risk===null?"perte non limitée":risk>=0?"gain verrouillé":acc?fr(-risk/acc*100,1)+" % du compte":"perte si touché")
+    +(p.sls.length>1?" · "+p.sls.length+" stops":"")+(p.tp>0?" · TP "+px(p.tp)+(p.tps.length>1?" (+"+(p.tps.length-1)+")":""):" · pas de TP")+"</small></div></div>";
+  return h+"</article>"}
+function paintLive(p){
+  var id="bn"+lkey(p),n=$("ln-"+id);if(!n)return;
+  var m=LVS[lkey(p)]||{},roe=p.margin?p.pnl/p.margin*100:null,r=m.r0?(p.mark-p.entry)*p.dir/m.r0:null;
+  n.textContent=sgn(p.pnl,2)+" $";n.className="net "+(p.pnl>=0?"pos":"neg");
+  $("ls-"+id).textContent=(roe!==null?sgn(roe,1)+" % sur la marge · ":"")+(r!==null?sgn(r,2)+" R · ":"")+"prix "+px(p.mark);
+  var lp=$("lp-"+id);if(lp)lp.textContent="Prix "+px(p.mark);
+  var rail=$("lr-"+id);if(rail){var span=p.tp-p.sl,pos=Math.max(0,Math.min(1,(p.mark-p.sl)/span)),e=Math.max(0,Math.min(1,(p.entry-p.sl)/span));
+    rail.style.setProperty("--e",(e*100).toFixed(1)+"%");rail.querySelector("i").style.left=(pos*100).toFixed(1)+"%"}
+  var q=$("lq-"+id);if(q&&p.liq>0){var d=Math.abs(p.mark-p.liq)/p.mark*100;q.textContent="à "+fr(d,1)+" % du prix";q.className=d<5?"neg":""}
+  paintBE(liveTrade(p),p.mark)}
+function liveTotals(){
+  var L=LV.list||[],a=$("lv-pnl"),b=$("lv-mg"),st=$("lv-st"),s=0,mg=0;if(st)st.textContent=lvStatus();if(!a)return;
+  L.forEach(function(p){s+=p.pnl;mg+=p.margin});
+  a.textContent=sgn(s,2)+" $";a.className=s>=0?"pos":"neg";b.textContent=usd0(mg)}
+function closedView(){
+  var c=(LVS._c||[]).slice().reverse();if(!c.length)return"";
+  return'<div><div class="cap">Fermées ces dernières 24 h</div>'+c.map(function(x){
+    return'<div class="cl1"><span class="pill '+(x.dir>0?"long":"short")+'">'+(x.dir>0?"Long":"Short")+"</span><b>"+esc(x.sym)+'</b><span class="sub">vue fermée à '+new Date(x.tc).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+"</span>"
+      +(x.net===null?'<span class="sub" style="margin-left:auto">résultat en lecture…</span>':x.net==="?"?'<span class="sub" style="margin-left:auto">voir Résultats</span>':'<b class="'+(x.net>=0?"pos":"neg")+'">'+sgn(x.net,2)+" $</b>")+"</div>"}).join("")
+    +'<div class="sub">Résultat réalisé, frais et funding compris, lu sur Binance.</div></div>'}
 
 /* ---------- events ---------- */
 $("app").addEventListener("click",function(e){
+  var go=e.target.closest("[data-go]");if(go){setView(go.dataset.go);try{scrollTo(0,0)}catch(x){}return}
   var bt=e.target.closest("[data-bt]");if(bt){runBT(bt.dataset.bt);return}
   var tk=e.target.closest("[data-take]");
   if(tk){var rt=find(tk.dataset.take);if(rt&&rt.plan&&!tk.disabled){takeSetup(rt);tk.disabled=true;tk.textContent="Ajouté à Mes trades"}return}
@@ -1883,8 +2099,8 @@ function loadBinance(){
       if(!(q>0))return 0;var base=String(asset).toUpperCase();
       if(base.indexOf("LD")===0&&base.length>3&&!P[base+"USDT"]){base=base.slice(2);w="Earn flexible"}
       var u=usdOf(P,base,q),o=by[base];
-      if(!o){o=by[base]={a:base,qty:0,usd:0,ws:[]};order.push(o)}
-      o.qty+=q;o.usd+=u;if(o.ws.indexOf(w)<0)o.ws.push(w);return u}
+      if(!o){o=by[base]={a:base,qty:0,usd:0,ws:[],fq:0};order.push(o)}
+      o.qty+=q;o.usd+=u;if(w==="Futures")o.fq+=q;if(o.ws.indexOf(w)<0)o.ws.push(w);return u}
     (a[0].balances||[]).forEach(function(b){spot+=put(b.asset,(+b.free||0)+(+b.locked||0),"Spot")});
     if(Array.isArray(a[1]))a[1].forEach(function(b){fund+=put(b.asset,(+b.free||0)+(+b.locked||0)+(+b.freeze||0),"Funding")});
     [a[6],a[7]].forEach(function(e){if(e&&!e.__err&&Array.isArray(e.rows))e.rows.forEach(function(x){earn+=put(x.asset,+x.amount||0,"Earn bloqué")})});
@@ -1892,7 +2108,7 @@ function loadBinance(){
     else m.notes.push("Compte Futures non lu");
     if(Array.isArray(a[3]))a[3].forEach(function(p){var q=+p.positionAmt;if(!q)return;
       m.positions.push({sym:p.symbol,dir:q>0?1:-1,size:Math.abs(q),entry:+p.entryPrice,mark:+p.markPrice,pnl:+p.unRealizedProfit,liq:+p.liquidationPrice,lev:p.leverage})});
-    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + ")}}));
+    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + "),fq:o.fq}}));
     var W=Array.isArray(a[5])?a[5]:null,btc=P.BTCUSDT||0,tot=0;
     if(W&&btc){W.forEach(function(w){var v=(+w.balance||0)*btc;if(v>=1){m.wallets.push([w.walletName,v]);tot+=v}})}
     if(tot>0)m.total=tot;
@@ -2026,7 +2242,7 @@ function loadPf(ex){
   if(pfBusy[ex])return;var has=false;try{has=Android.hasKeys(ex)}catch(e){}
   if(!has){delete pf[ex];renderPf();return}
   pfBusy[ex]=true;renderPf();
-  LOADERS[ex]().then(function(m){return addManual(ex,m)}).then(function(m){m.at=Date.now();pf[ex]=m},function(e){pf[ex]={err:apiMsg(e)}}).then(function(){pfBusy[ex]=false;renderPf()})}
+  LOADERS[ex]().then(function(m){return addManual(ex,m)}).then(function(m){m.at=Date.now();pf[ex]=m},function(e){pf[ex]={err:apiMsg(e)}}).then(function(){pfBusy[ex]=false;renderPf();if(view==="earn")renderEarn()})}
 function loadAllPf(){if(CANPF)EXS.forEach(function(x){loadPf(x[0])});else renderPf()}
 function usd0(v){return fr(v,v>=1000?0:2)+" $"}
 function renderPf(){
@@ -2094,6 +2310,187 @@ $("view-pf").addEventListener("click",function(e){
   if(r)loadPf(r.dataset.pfr);
   if(x){if(!armed["p"+x.dataset.pfx]){armed["p"+x.dataset.pfx]=1;x.textContent="Confirmer : effacer les clés";return}
     delete armed["p"+x.dataset.pfx];try{Android.clearKeys(x.dataset.pfx)}catch(er){}delete pf[x.dataset.pfx];renderPf()}});
+
+/* ---------- Earn and staking: where a coin earns the most, what it would bring, how to subscribe ---------- */
+var EARN={a:"",busy:false,err:"",res:{},sel:{},pf:null,pfBusy:false,pfN:0},LLAMA=null,llamaP=null;
+/* liquid staking and wrapped versions counted with the coin for DeFi pools */
+var STK={ETH:["ETH","WETH","STETH","WSTETH","RETH","WBETH","CBETH","METH","OSETH","ETHX","SFRXETH"],SOL:["SOL","JITOSOL","MSOL","BNSOL","JUPSOL","BSOL","INF","SSOL","HSOL"],
+  BTC:["BTC","WBTC","CBBTC","BTCB","TBTC"],BNB:["BNB","WBNB","SLISBNB","BNBX"]};
+var SRCN={bn:"Binance",okx:"OKX",defi:"DeFi"};
+/* rates arrive as fractions (0.05 = 5 %); anything above 150 % is taken as already in percent */
+function apr0(v){v=+v;if(!isFinite(v)||v<=0)return 0;return v>1.5?v/100:v}
+function defiPools(){
+  if(LLAMA&&Date.now()-LLAMA.at<60*60e3)return Promise.resolve(LLAMA.list);
+  if(llamaP)return llamaP;
+  llamaP=fetch("/yields/pools").then(function(r){if(!r.ok)throw{code:"http"};return r.json()}).then(function(d){
+    var list=(d&&Array.isArray(d.data)?d.data:[]).filter(function(p){return p&&p.exposure==="single"&&p.ilRisk==="no"&&!p.outlier&&+p.tvlUsd>=2e6&&+p.apy>0})
+      .map(function(p){return{s:String(p.symbol||"").toUpperCase(),p:String(p.project||""),c:String(p.chain||""),tvl:+p.tvlUsd,apy:+p.apy,rw:+p.apyReward||0,m:p.poolMeta||""}});
+    LLAMA={at:Date.now(),list:list};llamaP=null;return list},function(e){llamaP=null;throw e});
+  return llamaP}
+function nice(p){return p.split("-").map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(" ").replace(/ V(\d)$/," v$1")}
+function earnData(a){
+  var c=EARN.res[a],hb=hasBn(),nul=function(){return null};
+  if(c&&c.hb===hb&&Date.now()-c.at<20*60e3)return Promise.resolve(c);
+  function bx(n){return hb?soft(xapi("binance",n)):Promise.resolve(null)}
+  function okx(p){return fetch("/okx/api/v5/finance/"+p).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){return d&&String(d.code)==="0"&&Array.isArray(d.data)?d.data:null}).catch(nul)}
+  return Promise.all([bx("earnF:"+a),bx("earnLk:"+a),bx("chainLk:"+a),bx("soft:"+a),a==="ETH"?bx("wbeth"):null,a==="SOL"?bx("bnsol"):null,
+    okx("savings/lending-rate-summary?ccy="+a),a==="ETH"||a==="SOL"?okx("staking-defi/"+a.toLowerCase()+"/apy-history?days=7"):null,
+    defiPools().catch(nul),pubPrices("bspot")]).then(function(r){
+    var o=[],now=Date.now(),errs=[];
+    function rows(x){if(x&&x.__err){errs.push(apiMsg(x.__err));return[]}return x&&Array.isArray(x.rows)?x.rows:[]}
+    rows(r[0]).forEach(function(x){if(x.asset!==a)return;var ap=apr0(x.latestAnnualPercentageRate);if(!ap)return;
+      var tiers=[],tv=x.tierAnnualPercentageRate;if(tv&&typeof tv==="object")Object.keys(tv).forEach(function(k){var v=apr0(tv[k]);if(v)tiers.push(k.replace("-"," à ").replace(/([0-9.]+)([A-Z]+)$/,"$1 $2")+" : "+fr(v*100,2)+" %")});
+      o.push({src:"bn",kind:"flex",label:"Flexible",apr:ap,dur:0,min:+x.minPurchaseAmount||0,sold:x.isSoldOut===true||x.canPurchase===false,tiers:tiers,how:"bnflex"})});
+    rows(r[1]).forEach(function(x){var d=x.detail||{};if(d.asset!==a)return;var base=apr0(d.apr);if(!base)return;
+      var ex=apr0(d.extraRewardAPR),bo=+d.boostEndTime>now?apr0(d.boostApr):0;
+      o.push({src:"bn",kind:"lock",label:"Bloqué "+d.duration+" jours",apr:base+ex+bo,base:base,bonus:ex?{apr:ex,asset:d.extraRewardAsset||a}:null,boost:bo?{apr:bo,asset:d.boostRewardAsset||a}:null,
+        dur:+d.duration||0,min:+(x.quota&&x.quota.minimum)||0,cap:+(x.quota&&x.quota.totalPersonalQuota)||0,sold:d.isSoldOut===true,how:"bnlock"})});
+    rows(r[2]).forEach(function(x){var d=x.detail||{};if(d.asset!==a)return;var ap=apr0(d.apr);if(!ap)return;
+      o.push({src:"bn",kind:"chain",label:"On-chain "+d.duration+" jours",apr:ap,dur:+d.duration||0,min:+(x.quota&&x.quota.minimum)||0,cap:+(x.quota&&x.quota.totalPersonalQuota)||0,sold:d.isSoldOut===true,flex:d.canRedeemToFlex===true,how:"bnchain"})});
+    rows(r[3]).forEach(function(x){if(x.asset!==a)return;var ap=apr0(x.apr);if(!ap)return;
+      o.push({src:"bn",kind:"soft",label:"Soft staking",apr:ap,dur:0,min:+x.minAmount||0,cap:+x.maxCap||0,how:"bnsoft"})});
+    /* liquid staking: the published rate is checked against the growth of the token's exchange rate */
+    [[r[4],"WBETH","bneth"],[r[5],"BNSOL","bnsol"]].forEach(function(z){var rs=rows(z[0]);if(!rs.length)return;
+      rs=rs.slice().sort(function(x,y){return(+x.time)-(+y.time)});var last=rs[rs.length-1],first=rs[0];
+      var ap=apr0(last.annualPercentageRate),days=(+last.time-(+first.time))/864e5,er=(+last.exchangeRate)/(+first.exchangeRate);
+      var drv=days>=5&&er>1?Math.pow(er,365/days)-1:0;if(drv>0&&(!ap||ap>3*drv||ap<drv/3))ap=drv;
+      var bst=0;(last.boostRewards||[]).forEach(function(b){bst+=apr0(b.boostAPR)});
+      if(ap)o.push({src:"bn",kind:"liq",label:"Staking liquide "+z[1],apr:ap+bst,base:ap,boost:bst?{apr:bst,asset:"BNB"}:null,dur:0,tok:z[1],how:z[2]})});
+    var ol=r[6]&&r[6][0];if(ol){var ap1=apr0(ol.estRate)||apr0(ol.avgRate);if(ap1)o.push({src:"okx",kind:"flex",label:"Simple Earn flexible",apr:ap1,dur:0,how:"okxflex"})}
+    if(r[7]&&r[7].length){var ly=r[7].slice().sort(function(x,y){return(+y.ts)-(+x.ts)})[0],ap2=apr0(ly.rate);
+      if(ap2)o.push({src:"okx",kind:"liq",label:"Staking "+(a==="ETH"?"ETH (BETH)":"SOL (OKSOL)"),apr:ap2,dur:0,tok:a==="ETH"?"BETH":"OKSOL",how:"okxstake"})}
+    if(Array.isArray(r[8])){var al=STK[a]||[a,"W"+a],ps=r[8].filter(function(p){return al.indexOf(p.s)>=0&&p.apy<60});
+      var big=ps.filter(function(p){return p.tvl>=1e7});if(big.length>=2)ps=big;
+      ps.sort(function(x,y){return y.apy-x.apy});
+      ps.slice(0,3).forEach(function(p){o.push({src:"defi",kind:"defi",label:nice(p.p)+" · "+p.c,apr:p.apy/100,dur:0,tvl:p.tvl,chain:p.c,proj:nice(p.p),sym:p.s,rw:p.rw,how:"defi"})})}
+    /* platform offers first, best rate on top, sold-out ones after; DeFi pools last, for comparison */
+    o.sort(function(x,y){return(x.src==="defi"?1:0)-(y.src==="defi"?1:0)||(x.sold?1:0)-(y.sold?1:0)||y.apr-x.apr});
+    var P=r[9]||{},price=STABLE[a]?1:P[a+"USDT"]||(P[a+"BTC"]&&P.BTCUSDT?P[a+"BTC"]*P.BTCUSDT:0);
+    var d={at:Date.now(),a:a,opts:o,price:price,hb:hb,errs:errs};EARN.res[a]=d;return d})}
+/* what the user holds of a coin, without the Binance Futures wallet: that balance is the margin of his positions, not idle money */
+function heldOf(a){
+  var out={qty:0,usd:0,where:[],fq:0};
+  EXS.forEach(function(x){var m=pf[x[0]];if(!m||m.err)return;
+    m.assets.forEach(function(s){if(s.a!==a||!(s.qty>0))return;var f=Math.min(s.fq||0,s.qty);
+      out.qty+=s.qty-f;out.usd+=s.usd*(1-f/s.qty);out.fq+=f;out.where.push(x[1]+" "+s.w)})});
+  return out}
+function q4(v){return fr(v,v>=100?0:v>=1?2:v>=0.01?4:6)}
+/* what an offer brings on a given amount: promotional rates only apply up to the personal quota */
+function gainOf(o,q){return(o.cap>0?Math.min(q,o.cap):q)*o.apr}
+function earnBest(d,flexOnly,q){var l=d.opts.filter(function(o){return!o.sold&&o.src!=="defi"&&(!flexOnly||!o.dur)});
+  if(q>0)l.sort(function(x,y){return gainOf(y,q)-gainOf(x,q)});return l[0]||null}
+/* the offer shown first: the one that brings the most on what the user holds, else the best rate; DeFi only when nothing else exists */
+function earnTop(d,held){var b=earnBest(d,false,held&&held.qty);if(b)return b;return d.opts.filter(function(o){return!o.sold})[0]||null}
+function loadEarn(a){
+  /* USDT itself is a valid answer here; only a contract name like SOLUSDT loses its suffix */
+  a=String(a).toUpperCase().replace(/[^A-Z0-9]/g,"");if(a.length>4&&/USDT$/.test(a))a=a.slice(0,-4);
+  if(!a||EARN.busy)return;
+  EARN.a=a;EARN.err="";EARN.busy=true;$("earn-sym").value=a;renderEarn();
+  earnData(a).then(function(d){EARN.busy=false;var b=earnTop(d,heldOf(a));EARN.sel[a]=b?Math.max(0,d.opts.indexOf(b)):0;renderEarn()},function(e){EARN.busy=false;EARN.err=why(e);renderEarn()})}
+/* coins worth at least 10 $ outside the Futures margin, biggest first */
+function idleCoins(){return holdings().list.map(function(x){var h=heldOf(x.a);return{a:x.a,qty:h.qty,usd:h.usd}}).filter(function(x){return x.usd>=10}).sort(function(x,y){return y.usd-x.usd}).slice(0,10)}
+function earnAll(){
+  if(EARN.pfBusy)return;
+  var coins=idleCoins();
+  if(!coins.length){EARN.pf={at:Date.now(),rows:[],none:true};renderEarn();return}
+  EARN.pfBusy=true;EARN.pfN=0;renderEarn();
+  pool(coins,2,function(c){return earnData(c.a).then(function(d){return{c:c,d:d}})},function(dn){EARN.pfN=dn;var s=$("ey-st");if(s)s.textContent=dn+"/"+coins.length})
+    .then(function(p){
+      var rows=p.out.map(function(x){var q=x.c.qty,b=earnBest(x.d,false,q),f=earnBest(x.d,true,q),w=heldOf(x.c.a),u=q>0?x.c.usd/q:0;
+        return{a:x.c.a,usd:x.c.usd,qty:q,best:b,flex:f,gb:b?gainOf(b,q)*u:0,gf:f?gainOf(f,q)*u:0,inEarn:w.where.some(function(s){return/Earn/.test(s)})}});
+      rows.sort(function(x,y){return y.gb-x.gb});
+      var tb=0,tf=0;rows.forEach(function(r){tb+=r.gb;tf+=r.gf});
+      EARN.pf={at:Date.now(),rows:rows,tb:tb,tf:tf};EARN.pfBusy=false;renderEarn()},
+    function(){EARN.pfBusy=false;renderEarn()})}
+function optSub(o,a){
+  var s=[];
+  if(o.kind==="defi")s.push("TVL "+vol(o.tvl),o.sym!==a?"via "+o.sym:"");
+  else if(o.dur)s.push("bloqué "+o.dur+" j"+(o.flex?", sortie vers Flexible possible":""));
+  else s.push(o.kind==="liq"?"jeton "+o.tok+", revendable":o.kind==="soft"?"reste sur ton Spot":"retrait à tout moment");
+  if(o.bonus)s.push("dont "+fr(o.bonus.apr*100,2)+" % en "+o.bonus.asset);
+  if(o.boost)s.push("dont bonus "+fr(o.boost.apr*100,2)+" %");
+  if(o.min&&o.kind!=="defi")s.push("min "+q4(o.min)+" "+a);
+  if(o.cap>0&&o.apr>=0.15)s.push("plafond "+q4(o.cap)+" "+a+" par personne");
+  if(o.sold)s.push("épuisé");
+  return s.filter(Boolean).join(" · ")}
+/* step-by-step instructions and risks for each kind of product */
+function howTo(o,a,held){
+  var st=STABLE[a],pr=st?"Payé en "+a+" : pas de risque de prix":"Payé en "+a+" : si son prix baisse, tu perds en dollars malgré les intérêts",
+    open="Ouvre l'appli Binance et touche « Earn » sur l'accueil (sinon : Plus, puis Earn).",min=o.min?" (minimum "+q4(o.min)+" "+a+")":"",
+    onBn=held&&held.where.some(function(w){return/^Binance/.test(w)}),
+    pre=o.src!=="bn"||!held||!held.qty?[]:!onBn?["Tes "+a+" ne sont pas sur Binance : envoie-les d'abord sur ton compte Binance (Retrait sur l'autre plateforme, Dépôt sur Binance) en vérifiant le réseau et les frais."]
+      :[],
+    away=held&&held.qty&&o.src!=="bn"&&held.where.every(function(w){return!/^OKX/.test(w)})?["Envoie d'abord tes "+a+" vers OKX (Retrait sur Binance, Dépôt sur OKX) : vérifie bien le réseau et les frais de retrait."]:[];
+  switch(o.how){
+    case"bnflex":return{s:pre.concat([open,"Cherche « "+a+" », ouvre Simple Earn et choisis l'option Flexible.","Touche « S'abonner », indique le montant"+min+" et confirme. Binance prend les fonds sur ton Spot ou ton portefeuille Financement.","Les intérêts arrivent chaque jour. Tu récupères tes "+a+" quand tu veux : ils reviennent aussitôt sur ton Spot."]),
+      r:["Taux variable, revu chaque jour",pr,"Fonds confiés à Binance"]};
+    case"bnlock":return{s:pre.concat([open,"Cherche « "+a+" », ouvre Simple Earn, onglet Bloqué, durée "+o.dur+" jours.","Indique le montant"+min+", choisis ou non le renouvellement automatique, puis confirme.","Tes "+a+" restent bloqués "+o.dur+" jours : impossible de les vendre ou de les utiliser comme marge. Un rachat anticipé fait en général perdre les intérêts."]),
+      r:["Bloqué "+o.dur+" jours",pr,"Fonds confiés à Binance"].concat(o.bonus?["Bonus payé en "+o.bonus.asset]:[])};
+    case"bnchain":return{s:pre.concat([open,"Cherche « "+a+" » puis l'onglet des rendements on-chain (On-chain Yields), durée "+o.dur+" jours.","Indique le montant"+min+" et confirme : Binance engage tes "+a+" directement sur la blockchain.","Bloqués "+o.dur+" jours"+(o.flex?", avec une sortie possible vers Flexible":"")+". Le retrait peut demander quelques jours de plus."]),
+      r:["Bloqué "+o.dur+" jours","Retrait en plusieurs jours",pr,"Risque technique de la blockchain"]};
+    case"bnsoft":return{s:pre.concat([open,"Ouvre Soft Staking et active-le pour "+a+".","Garde tes "+a+" sur ton portefeuille Spot : ils rapportent tant qu'ils y restent"+(o.min&&o.cap?", de "+q4(o.min)+" à "+q4(o.cap)+" "+a:"")+".","Aucun blocage : tu peux vendre quand tu veux."]),
+      r:["Taux variable",pr]};
+    case"bneth":case"bnsol":var tk=o.tok;return{s:pre.concat(["Dans l'appli Binance : Earn, puis "+(a==="ETH"?"ETH Staking":"SOL Staking")+".","Touche « Staker », indique le montant de "+a+" et confirme : tu reçois du "+tk+".","Le "+tk+" prend de la valeur par rapport au "+a+" chaque jour : c'est ton rendement, sans rien bloquer."+(o.boost?" Les bonus éventuels sont versés à part.":""),"Pour sortir, revends le "+tk+" ou reconvertis-le en "+a+" (délai de quelques jours)."]),
+      r:["Sortie en quelques jours","Le "+tk+" peut s'écarter un peu du prix du "+a,pr,"Fonds confiés à Binance"]};
+    case"okxflex":return{s:away.concat(["Dans l'appli OKX, ouvre Earn, puis Simple Earn.","Cherche « "+a+" » et souscris en flexible.","Tes "+a+" sont prêtés aux traders sur marge d'OKX : le taux suit leur demande et bouge souvent.","Retrait possible à tout moment."]),
+      r:["Taux variable selon la demande",pr,"Fonds confiés à OKX"].concat(away.length?["Frais de retrait depuis Binance"]:[])};
+    case"okxstake":return{s:away.concat(["Dans l'appli OKX, ouvre Earn, puis On-chain Earn.","Choisis le staking "+a+" : tu reçois du "+o.tok+".","Le rendement s'ajoute chaque jour.","Pour sortir, revends le "+o.tok+" ou demande le retrait (délai possible)."]),
+      r:["Fonds confiés à OKX",pr].concat(away.length?["Frais de retrait depuis Binance"]:[])};
+    default:return{s:["Niveau avancé : il te faut un portefeuille auto-hébergé, par exemple Binance Wallet dans l'appli Binance.","Envoie tes "+a+" sur le réseau "+o.chain+(o.sym!==a?", puis échange-les contre du "+o.sym:"")+". Chaque envoi coûte des frais de réseau.","Ouvre "+o.proj+" depuis le navigateur du portefeuille, connecte-le et dépose tes "+o.sym+".","Personne ne peut annuler une erreur : vérifie l'adresse et le réseau avant chaque envoi."],
+      r:["Risque de piratage du protocole","Frais de réseau","Aucun service client",pr].concat(o.rw>0?["Une partie payée en jetons de récompense, qui peuvent chuter"]:[])}}}
+function earnResult(a,d){
+  var held=heldOf(a),best=earnTop(d,held),u=held.qty>0?held.usd/held.qty:0,h="";
+  if(!d.opts.length){
+    return'<article class="card tr"><div class="trh"><span class="sym">'+esc(a)+'</span></div><div class="sub">Aucune offre trouvée pour '+esc(a)+(d.hb?" chez Binance ni chez OKX.":" chez OKX ni en DeFi. Les taux Binance demandent une clé en lecture seule (onglet Portefeuille).")+(d.errs.length?" "+esc(d.errs[0]):"")+"</div></article>"}
+  var mx=0;d.opts.forEach(function(o){if(o.apr>mx)mx=o.apr});
+  var sel=Math.min(EARN.sel[a]||0,d.opts.length-1),so=d.opts[sel];
+  h+='<article class="card tr"><div class="trh"><span class="sym">'+esc(a)+'</span><span class="sub" style="margin-left:auto">'+(held.qty?"tu détiens "+q4(held.qty)+" "+esc(a)+(held.usd?" ≈ "+usd0(held.usd):""):"")+"</span></div>";
+  if(held.fq>0)h+='<div class="sub">'+q4(held.fq)+" "+esc(a)+" sur ton portefeuille Futures ne sont pas comptés : ils servent de marge à tes positions, laisse-les en place.</div>";
+  if(best)h+='<div class="best"><b class="gbig pos">'+fr(best.apr*100,2)+' %</b><span class="sub">par an · meilleure offre '+(best.src==="defi"?"trouvée":"sur plateforme")+" : "+SRCN[best.src]+" "+esc(best.label)+"</span></div>"
+    +(held.qty&&held.usd?'<div class="funnel plain two"><div><b class="pos">+'+q4(gainOf(best,held.qty))+" "+esc(a)+"</b><span>par an, soit ≈ "+usd0(gainOf(best,held.qty)*u)+"</span></div><div><b>≈ "+usd0(gainOf(best,held.qty)*u/12)+"</b><span>par mois</span></div></div>"
+      :'<div class="sub">Pour 1 000 $ de '+esc(a)+" placés : ≈ "+usd0(1000*best.apr)+" par an.</div>");
+  if(held.where.length)h+='<div class="sub">Où sont tes '+esc(a)+" : "+esc(held.where.join(" · "))+"</div>";
+  h+='<div class="cap">Toutes les offres · touche une ligne pour savoir comment faire</div><div class="opts">'+d.opts.map(function(o,i){
+    return'<button type="button" class="opt'+(o.sold?" sold":"")+'" data-eo="'+i+'" aria-pressed="'+(i===sel)+'"><span class="ol"><span class="src '+o.src+'">'+SRCN[o.src]+"</span><b>"+esc(o.label)+"</b><small>"+esc(optSub(o,a))+'</small></span><span class="oa"><b>'+fr(o.apr*100,2)+' %</b><i style="width:'+(mx?Math.max(4,o.apr/mx*100):4).toFixed(0)+'%"></i></span></button>'}).join("")+"</div>";
+  if(!d.hb)h+='<div class="sub">Taux Binance absents : connecte une clé Binance en lecture seule dans l\'onglet Portefeuille pour les voir.</div>';
+  else if(d.errs.length)h+='<div class="sub">Une partie des offres Binance n\'a pas pu être lue : '+esc(d.errs[0])+"</div>";
+  h+="</article>";
+  var g=howTo(so,a,held);
+  h+='<article class="card tr"><div class="cap">Comment faire · '+SRCN[so.src]+" "+esc(so.label)+"</div>"
+    +(held.qty&&!so.sold?'<div class="sub">Avec tes '+q4(held.qty)+" "+esc(a)+" : ≈ +"+q4(gainOf(so,held.qty))+" "+esc(a)+" par an"+(u?" (≈ "+usd0(gainOf(so,held.qty)*u)+")":"")+(so.dur?", soit ≈ +"+q4(gainOf(so,held.qty)*so.dur/365)+" "+esc(a)+" sur les "+so.dur+" jours":"")+(so.cap>0&&so.cap<held.qty?", ce taux ne s'applique qu'à "+q4(so.cap)+" "+esc(a)+" par personne":"")+".</div>":"")
+    +(so.tiers&&so.tiers.length?'<div class="sub">Paliers annoncés : '+esc(so.tiers.join(" · "))+"</div>":"")
+    +'<ol class="steps">'+g.s.map(function(x){return"<li><span>"+esc(x)+"</span></li>"}).join("")+'</ol><div class="rk">'+g.r.map(function(x,i){return'<span class="'+(i===0&&(so.dur||so.kind==="defi")?"hi":"")+'">'+esc(x)+"</span>"}).join("")+"</div></article>";
+  return h}
+function earnPfView(){
+  var e=EARN.pf,hb=hasBn(),n=Object.keys(pf).filter(function(k){return pf[k]&&!pf[k].err}).length;
+  var h='<article class="card tr"><div class="trh"><span class="sym">Faire travailler mon portefeuille</span>'+(EARN.pfBusy?'<span class="sub" style="margin-left:auto" id="ey-st">'+EARN.pfN+"</span>":e&&e.at?'<span class="sub" style="margin-left:auto">à '+new Date(e.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+"</span>":"")+"</div>";
+  if(!n)return h+'<div class="sub">'+(CANPF?"Connecte au moins un compte en lecture seule dans l'onglet Portefeuille : l'appli cherchera le meilleur rendement pour chacune de tes cryptos.":"Cette fonction demande la dernière version de l'application.")+"</div></article>";
+  if(EARN.pfBusy)return h+'<div class="sub">Recherche des offres pour chacune de tes cryptos…</div></article>';
+  if(e&&e.none)h+='<div class="sub">Aucune crypto de plus de 10 $ trouvée dans tes comptes.</div>';
+  else if(e){
+    h+=Math.abs(e.tb-e.tf)<0.5?'<div class="funnel plain two"><div><b class="pos">≈ '+usd0(e.tb)+'</b><span>par an au meilleur taux</span></div><div><b>sans blocage</b><span>les meilleures offres se retirent à tout moment</span></div></div>'
+      :'<div class="funnel plain two"><div><b class="pos">≈ '+usd0(e.tb)+'</b><span>par an au meilleur taux</span></div><div><b class="pos">≈ '+usd0(e.tf)+"</b><span>par an sans rien bloquer</span></div></div>";
+    h+=e.rows.map(function(r){var b=r.best;
+      return'<button type="button" class="yrow" data-ec="'+esc(r.a)+'"><span><b>'+esc(r.a)+'</b> <span class="sub">'+usd0(r.usd)+(r.inEarn?" · déjà en partie en Earn":"")+"</span></span><em>"+(b?"+"+usd0(r.gb)+"/an":"–")+"</em><small>"
+        +(b?"Meilleur : "+fr(b.apr*100,2)+" % · "+SRCN[b.src]+" "+esc(b.label)+(b.cap>0&&b.cap<r.qty?" (plafond "+q4(b.cap)+")":"")+(r.flex&&r.flex!==b?" · sans blocage : "+fr(r.flex.apr*100,2)+" %":""):"Aucune offre trouvée"+(hb?"":" (taux Binance non lus)"))+"</small></button>"}).join("");
+    h+='<div class="sub">Estimations au taux du jour sur la valeur actuelle. Touche une crypto pour voir les offres et la marche à suivre.</div>'}
+  else h+='<div class="sub">Calcule ce que chacune de tes cryptos pourrait rapporter en Earn ou en staking, au meilleur taux du jour.</div>';
+  return h+'<div class="acts"><button class="take" type="button" data-eall="1">'+(e?"Recalculer":"Calculer pour mes cryptos")+"</button></div></article>"}
+function renderEarn(){
+  var el=$("earn-out"),a=EARN.a,d=a&&EARN.res[a],mine=idleCoins(),h="";
+  if(mine.length)h+='<div class="filters">'+mine.map(function(c){return'<button type="button" data-ec="'+esc(c.a)+'" aria-pressed="'+(c.a===a)+'">'+esc(c.a)+' <b class="v">'+usd0(c.usd)+"</b></button>"}).join("")+"</div>";
+  if(EARN.busy)h+='<div class="empty">Recherche des meilleures offres pour '+esc(a)+"…</div>";
+  else if(EARN.err)h+='<div class="empty">'+esc(EARN.err)+"</div>";
+  else if(d)h+=earnResult(a,d);
+  else h+='<div class="empty">Saisis une crypto ou touche une des tiennes : l\'appli compare Binance (Flexible, Bloqué, On-chain, staking), OKX et les plus gros protocoles DeFi, calcule ce que ça te rapporterait et explique comment faire.</div>';
+  h+=earnPfView();
+  h+='<div class="sub">Taux lus en direct chez Binance, OKX et DefiLlama : ils changent chaque jour. Les intérêts sont payés dans la crypto placée, donc ta valeur en dollars suit toujours son prix. MEXC ne publie pas ses taux : regarde dans son appli, rubrique Earn. Ce ne sont pas des conseils financiers.</div>';
+  el.innerHTML=h}
+$("view-earn").addEventListener("submit",function(e){e.preventDefault();var i=$("earn-sym");if(i)loadEarn(i.value)});
+$("view-earn").addEventListener("click",function(e){
+  var c=e.target.closest("[data-ec]");if(c){loadEarn(c.dataset.ec);try{scrollTo(0,0)}catch(x){}return}
+  var o=e.target.closest("[data-eo]");if(o&&EARN.a){EARN.sel[EARN.a]=+o.dataset.eo;renderEarn();return}
+  if(e.target.closest("[data-eall]"))earnAll()});
 
 /* ---------- results recap: realised futures results from Binance, or the app's own journal ---------- */
 var resSrc=null,resDays=30,resData=null,resBusy=false,resErr="";
@@ -2337,8 +2734,88 @@ function mktModel(a,coins,top){
   var mo=c.mo;c.phase=mo<6?"Début de cycle, juste après le halving":mo<12?"Hausse d'après-halving":mo<18?"Fenêtre historique des sommets":mo<30?"Phase baissière historique":mo<42?"Zone historique des creux":"Approche du prochain halving";
   m.cyc=c;return m}
 function loadMkt(force){
+  if(view==="cyc")loadAlt(force);
   if(mktBusy)return;mktBusy=true;renderMkt();
   marketState(force).then(function(){mktBusy=false;renderMkt()},function(){mktBusy=false;renderMkt()})}
+
+/* ---------- altcoin season: the 50 biggest altcoins against Bitcoin over 90 days, Bitcoin's share, ETH/BTC ---------- */
+var ALT=null,altP=null,altErr="",altBusy=false;
+try{var al0=JSON.parse(localStorage.getItem("radar-alt")||"null");if(al0&&al0.v===1)ALT=al0}catch(e){}
+/* stablecoins, wrapped and staked versions, tokens backed by gold or funds: not altcoins for this index */
+var NOTALT={};("WBTC,WETH,STETH,WSTETH,WBETH,BETH,CBBTC,CBETH,RETH,WEETH,EETH,BNSOL,JITOSOL,MSOL,BTCB,TBTC,SOLVBTC,LBTC,METH,EZETH,RSETH,WBNB,SUSDE,SUSDS,USDE,USDS,USD1,PYUSD,FDUSD,TUSD,USDP,DAI,USDD,USDG,RLUSD,GHO,USDF,FRAX,USDX,USD0,EURC,USDY,USYC,BUIDL,USTB,BFUSD,USDT0,USDTB,XAUT,PAXG,"+NONCRYPTO).split(",").forEach(function(x){NOTALT[x]=1});
+function altState(force){
+  if(!force&&ALT&&Date.now()-ALT.at<3*36e5)return Promise.resolve(ALT);
+  if(altP)return altP;
+  altP=Promise.all([exInfo(),cg("coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=7d,30d"),
+      klines("BTCUSDT","1d",400,200),klines("ETHUSDT","1d",400,200).catch(function(){return null})]).then(function(a){
+    var by={},cgl=Array.isArray(a[1])?a[1]:[],coins=[];
+    ((a[0]&&a[0].symbols)||[]).forEach(function(s){if(s.contractType==="PERPETUAL"&&s.status==="TRADING"&&s.quoteAsset==="USDT"&&isCrypto(s))by[s.baseAsset]=s.symbol});
+    cgl.forEach(function(c){
+      var sy=String(c.symbol||"").toUpperCase(),c30=+c.price_change_percentage_30d_in_currency,c7=+c.price_change_percentage_7d_in_currency;
+      if(coins.length>=50||sy==="BTC"||STABLE[sy]||NOTALT[sy])return;
+      if(Math.abs(+c.current_price-1)<0.03&&Math.abs(c30)<2)return;
+      if(Math.abs(c30)<1&&Math.abs(c7)<0.5)return;
+      var full=by[sy]||by["1000"+sy]||by["1000000"+sy]||by["1M"+sy];
+      if(full&&!coins.some(function(x){return x.full===full}))coins.push({sym:sy,full:full})});
+    if(coins.length<10)throw{code:"http"};
+    return pool(coins,6,function(c){return klines(c.full,"1d",200,100).then(function(k){c.k=k;return c})},function(){}).then(function(p){return altModel(a,p.out,cgl)})
+  }).then(function(m){ALT=m;altP=null;altErr="";try{localStorage.setItem("radar-alt",JSON.stringify(m))}catch(e){}return m},
+    function(e){altP=null;altErr=e&&e.code==="short"?"Historique insuffisant pour calculer l'indice.":why(e);throw e});
+  return altP}
+function altModel(a,coins,cgl){
+  var btc=a[2],nb=btc.length,m={v:1,at:Date.now()},ser=[];
+  coins.forEach(function(c){var mp={};c.k.forEach(function(k){mp[k.t]=k.c});c.mp=mp});
+  /* index for each of the last 90 days: share of coins that rose more than Bitcoin over the 90 days before */
+  for(var i=Math.max(90,nb-90);i<nb;i++){
+    var t=btc[i].t,t0=btc[i-90].t,rb=btc[i].c/btc[i-90].c-1,beat=0,cnt=0;
+    coins.forEach(function(c){var x=c.mp[t],x0=c.mp[t0];if(!(x>0&&x0>0))return;cnt++;if(x/x0-1>rb)beat++});
+    if(cnt>=10)ser.push([t,beat/cnt*100,cnt,beat])}
+  if(!ser.length)throw{code:"short"};
+  var last=ser[ser.length-1];m.idx=last[1];m.n=last[2];m.beat=last[3];m.series=ser.map(function(x){return[x[0],Math.round(x[1]*10)/10]});
+  /* each coin against Bitcoin over the same 90 days */
+  var tn=btc[nb-1].t,tp=btc[nb-91].t,rb9=btc[nb-1].c/btc[nb-91].c-1,rel=[];m.btc90=rb9*100;
+  coins.forEach(function(c){var x=c.mp[tn],x0=c.mp[tp];if(x>0&&x0>0)rel.push([c.sym,Math.round(((x/x0)/(1+rb9)-1)*1000)/10])});
+  rel.sort(function(x,y){return y[1]-x[1]});m.top=rel.slice(0,5);m.flop=rel.slice(-5).reverse();
+  /* Bitcoin's share of the 100 biggest coins today, 7 and 30 days ago, rebuilt from each coin's price change */
+  var T={n:0,d7:0,d30:0},B={n:0,d7:0,d30:0};
+  cgl.forEach(function(c){var mc=+c.market_cap;if(!(mc>0))return;
+    function ago(k){var ch=+c["price_change_percentage_"+k+"_in_currency"];return isFinite(ch)&&ch>-99?mc/(1+ch/100):mc}
+    var v={n:mc,d7:ago("7d"),d30:ago("30d")};["n","d7","d30"].forEach(function(k){T[k]+=v[k];if(c.id==="bitcoin")B[k]+=v[k]})});
+  m.dom=T.n&&B.n?{n:B.n/T.n*100,d7:B.d7/T.d7*100,d30:B.d30/T.d30*100}:null;
+  /* ETH/BTC over a year with its 50-day average */
+  var e=a[3];
+  if(e){var et={},eb=[];e.forEach(function(k){et[k.t]=k.c});btc.forEach(function(k){if(et[k.t]>0)eb.push([k.t,et[k.t]/k.c])});
+    var v=eb.map(function(x){return x[1]}),sm=smaS(v,50),ne=eb.length,from=Math.max(0,ne-365);
+    if(ne>=100)m.eb={now:v[ne-1],ch90:(v[ne-1]/v[ne-91]-1)*100,sma:sm[ne-1],series:eb.slice(from).map(function(x,j){return[x[0],x[1],sm[from+j]]})}}
+  return m}
+function loadAlt(force){
+  if(altBusy||(!force&&ALT&&Date.now()-ALT.at<3*36e5))return;
+  altBusy=true;
+  altState(force).then(function(){altBusy=false;if(view==="cyc")renderMkt()},function(){altBusy=false;if(view==="cyc")renderMkt()})}
+function tfRows(list){var mx=0;list.forEach(function(r){mx=Math.max(mx,Math.abs(r[1]))});
+  return list.map(function(r){var c=r[1]>=0?"pos":"neg";return'<div class="tfr"><b>'+esc(r[0])+'</b><span class="'+c+'">'+sgn(r[1],0)+' %</span><i class="'+c+'" style="width:'+(mx?Math.max(3,Math.abs(r[1])/mx*100):3).toFixed(0)+'%"></i></div>'}).join("")}
+function altView(A,m){
+  var h='<article class="card tr"><div class="trh"><span class="sym">Saison des altcoins</span><span class="sub" style="margin-left:auto">'+(altBusy?"Chargement…":A?"à "+new Date(A.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"")+"</span></div>";
+  if(!A)return h+'<div class="sub">'+(altBusy?"Lecture des 50 plus grosses altcoins…":altErr?esc(altErr):"Appuie sur Actualiser.")+"</div></article>";
+  var x=A.idx,k=x>=75?"alt":x<=25?"btc":"",s=[],ok=0,mid=0;
+  h+='<div class="gbig '+k+'">'+(x>=75?"Saison des altcoins":x<=25?"Saison du Bitcoin":"Pas de saison marquée")+" <span>"+fr(x,0)+"/100</span></div>"
+    +'<div class="agauge"><i style="left:'+Math.max(0,Math.min(100,x)).toFixed(1)+'%"></i></div><div class="agl"><span>Bitcoin</span><span style="left:25%">25</span><span style="left:75%">75</span><span>Altcoins</span></div>'
+    +'<div class="sub">'+A.beat+" des "+A.n+" plus grosses altcoins font mieux que le Bitcoin sur 90 jours"+(x>25&&x<75?(x>=50?" : les altcoins prennent un léger avantage.":" : le Bitcoin garde l'avantage."):".")+"</div>";
+  function sig(st,t){s.push({k:st,t:t});if(st==="ok")ok++;if(st==="mid")mid++}
+  sig(x>=75?"ok":x>=50?"mid":"no","Indice à "+fr(x,0)+" : une saison des altcoins commence à 75");
+  var D=A.dom,dn=m&&m.dom!==null&&m.dom!==undefined?m.dom:D&&D.n;
+  if(D){var d30=D.n-D.d30;sig(d30<=-1?"ok":d30>=1?"no":"mid","Part du Bitcoin"+(dn?" à "+fr(dn,1)+" %":"")+(Math.abs(d30)<0.1?", stable sur 30 jours":", "+(d30<0?"en baisse":"en hausse")+" de "+fr(Math.abs(d30),1)+" point sur 30 jours"))}
+  if(A.eb){var e=A.eb,up=e.now>e.sma;sig(up&&e.ch90>0?"ok":up||e.ch90>0?"mid":"no","ETH/BTC "+(e.ch90>=0?"en hausse":"en baisse")+" de "+fr(Math.abs(e.ch90),0)+" % sur 90 jours, "+(up?"au-dessus":"en dessous")+" de sa moyenne 50 jours")}
+  var c=m&&m.cyc;if(c)sig(c.k==="up"?"ok":c.k==="dn"?"no":"mid","Bitcoin "+(c.k==="up"?"en bull market":c.k==="dn"?"en bear market":"en transition")+" : les saisons des altcoins de 2018 et 2021 sont venues après une forte hausse du Bitcoin");
+  var sc=ok+mid/2,no=s.length-ok-mid,concl=x>=75?"Saison des altcoins en cours. Par le passé, ces phases ont été courtes et se sont terminées brutalement."
+    :ok>=2&&sc>=2.5?"Les conditions d'une saison des altcoins se mettent en place, l'indice ne l'a pas encore confirmée."
+    :sc>=1.5?"Signaux partagés : rien ne confirme encore une saison des altcoins."
+    :"Pas de saison des altcoins en vue : l'argent reste plutôt sur le Bitcoin.";
+  h+='<div class="side">'+concl+'</div><div class="sub">'+[[ok,"favorable","favorables"],[mid,"mitigé","mitigés"],[no,"contraire","contraires"]].filter(function(z){return z[0]}).map(function(z){return z[0]+" "+(z[0]>1?z[2]:z[1])}).join(" · ")+" sur "+s.length+' signaux</div><ul class="why">'+s.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul>"
+    +'<div><div class="cap">Indice sur 90 jours</div><canvas id="alt-cv" class="mcv" aria-label="Indice de saison des altcoins sur 90 jours"></canvas></div>';
+  if(A.top&&A.top.length)h+='<div class="tf"><div><div class="cap">Mieux que BTC, 90 j</div>'+tfRows(A.top)+'</div><div><div class="cap">Moins bien que BTC</div>'+tfRows(A.flop)+"</div></div>";
+  if(A.eb)h+='<div><div class="cap">ETH/BTC sur un an · moyenne 50 jours en jaune</div><canvas id="eb-cv" class="mcv" aria-label="Ratio ETH/BTC sur un an"></canvas></div>';
+  return h+'<div class="sub">Indice calculé par l\'appli, sur le modèle de l\'« altcoin season index » : part des 50 plus grosses altcoins cotées sur Binance Futures (stablecoins et jetons adossés exclus) qui ont fait mieux que le Bitcoin sur 90 jours. La variation de la part du Bitcoin est estimée à partir des 100 plus grosses cryptos de CoinGecko.</div></article>'}
 function dir3(v,a,b){return v>0?'<b class="pos">▲ '+a+"</b>":v<0?'<b class="neg">▼ '+b+"</b>":"<b>– neutre</b>"}
 function fngFr(c){return({"Extreme Fear":"Peur extrême","Fear":"Peur","Neutral":"Neutre","Greed":"Avidité","Extreme Greed":"Avidité extrême"})[c]||c}
 function renderMkt(){
@@ -2379,6 +2856,7 @@ function cycView(m){
     +(c.moAth>=0&&c.moAth<48?'<u class="ath" style="left:'+(c.moAth/48*100)+'%"></u>':"")+'<b style="left:'+(mo/48*100).toFixed(1)+'%"></b></div>'
     +'<div class="cyll"><span>halving</span><span>12</span><span>18</span><span>30</span><span>42 mois</span></div>'
     +'<div class="legend2"><span><i class="c-a"></i>hausse</span><span><i class="c-t"></i>sommets</span><span><i class="c-b"></i>baisse</span><span><i class="c-l"></i>creux</span><span><i class="mk"></i>aujourd\'hui</span><span><i class="mk hist"></i>sommets et creux passés</span></div></article>';
+  h+=altView(ALT,m);
   var rows=[];
   function row(label,val,cls,txt){rows.push('<div class="ind"><span>'+label+'</span><b class="'+(cls||"")+'">'+val+'</b><small>'+txt+"</small></div>")}
   row("Record de Bitcoin",px(c.ath),"",day(c.athT)+(c.moAth>=0?", "+fr(c.moAth,0)+" mois après le halving":""));
@@ -2387,7 +2865,6 @@ function cycView(m){
   if(c.mayer)row("Multiple de Mayer",fr(c.mayer,2),c.mayer<0.8?"pos":c.mayer>2.4?"neg":"","prix ÷ moyenne 200 jours : sous 0,8 zone de creux, au-dessus de 2,4 surchauffe");
   if(c.pi)row("Indicateur Pi Cycle",fr(c.pi,2),c.pi>=0.95?"neg":"","le croisement à 1 a marqué les sommets de 2013, 2017 et 2021");
   if(m.fng)row("Peur et avidité",m.fng.v+" · "+fngFr(m.fng.c),m.fng.v<=25?"pos":m.fng.v>=75?"neg":"","la peur extrême accompagne souvent les creux, l'avidité extrême les sommets");
-  if(m.alt)row("Saison des altcoins",fr(m.alt.share,0)+" %",m.alt.share>=75?"pos":"","des "+m.alt.n+" grosses cryptos font mieux que le Bitcoin sur 90 jours (saison des altcoins à partir de 75\u00a0%)");
   h+='<article class="card tr"><div class="cap">Indicateurs de cycle</div>'+rows.join("")+"</article>";
   h+='<article class="card tr"><div class="cap">Bitcoin en hebdomadaire (échelle log) · moyennes 21 semaines (jaune), 50 semaines (gris), 200 semaines (bleu)</div><canvas id="cyc-cv" class="mcv tall" aria-label="Bitcoin hebdomadaire et ses moyennes longues"></canvas></article>';
   return h+'<div class="sub">Aux deux derniers cycles, le sommet est arrivé 17 à 18 mois après le halving et le creux environ 12 mois plus tard. Ce cycle de 4 ans ne repose que sur trois cycles complets : une régularité historique, pas une règle. Prochain halving estimé vers avril 2028.</div>'}
@@ -2416,7 +2893,23 @@ function drawMkt(){
     ln3(4,"#6aa7ff",1.4);ln3(3,tk("--muted"),1.2);ln3(2,tk("--accent"),1.4);ln3(1,tk("--ink"),1.8);
     g3.font="500 10.5px "+(tk("--mono")||"monospace");g3.fillStyle=tk("--muted");g3.textBaseline="middle";
     [Math.exp(lo3+0.08),Math.exp((lo3+hi3)/2),Math.exp(hi3-0.08)].forEach(function(v){g3.fillText(px(v).replace(/,\d+$/,""),pw3+6,y3(v))});
-    g3.textBaseline="alphabetic";g3.fillText(String(new Date(t0).getUTCFullYear()),2,c.H-4);var ty=String(new Date(t1).getUTCFullYear());g3.fillText(ty,pw3-g3.measureText(ty).width-2,c.H-4)}}
+    g3.textBaseline="alphabetic";g3.fillText(String(new Date(t0).getUTCFullYear()),2,c.H-4);var ty=String(new Date(t1).getUTCFullYear());g3.fillText(ty,pw3-g3.measureText(ty).width-2,c.H-4)}
+  var A=ALT;if(!A)return;
+  /* altcoin season index over 90 days, with the Bitcoin (under 25) and altcoin (over 75) zones */
+  c=prep("alt-cv");
+  if(c&&A.series&&A.series.length>1){var g4=c.g,se=A.series,AX4=34,pw4=c.W-AX4,y4=function(v){return c.H-6-v/100*(c.H-12)},x4=function(i){return i/(se.length-1)*pw4};
+    g4.fillStyle=tk("--accent-soft");g4.fillRect(0,y4(25),pw4,y4(0)-y4(25));g4.fillStyle="rgba(106,167,255,.16)";g4.fillRect(0,y4(100),pw4,y4(75)-y4(100));
+    g4.strokeStyle=tk("--line");g4.lineWidth=1;g4.setLineDash([3,4]);[25,75].forEach(function(v){g4.beginPath();g4.moveTo(0,y4(v));g4.lineTo(pw4,y4(v));g4.stroke()});g4.setLineDash([]);
+    g4.strokeStyle=tk("--ink");g4.lineWidth=2;g4.beginPath();se.forEach(function(r,i){if(i)g4.lineTo(x4(i),y4(r[1]));else g4.moveTo(x4(i),y4(r[1]))});g4.stroke();
+    var lx=x4(se.length-1),ly=y4(se[se.length-1][1]);g4.fillStyle=tk("--ink");g4.beginPath();g4.arc(lx,ly,3.5,0,7);g4.fill();
+    g4.font="500 10.5px "+(tk("--mono")||"monospace");g4.fillStyle=tk("--muted");g4.textBaseline="middle";[0,25,75,100].forEach(function(v){g4.fillText(String(v),pw4+6,y4(v))})}
+  /* ETH/BTC over a year with its 50-day average */
+  c=prep("eb-cv");
+  if(c&&A.eb&&A.eb.series.length>1){var g5=c.g,es=A.eb.series,lo5=Infinity,hi5=-Infinity;es.forEach(function(r){[r[1],r[2]].forEach(function(v){if(v){if(v<lo5)lo5=v;if(v>hi5)hi5=v}})});
+    var pad5=(hi5-lo5)*0.08||hi5*0.01;lo5-=pad5;hi5+=pad5;var AX5=64,pw5=c.W-AX5,y5=function(v){return c.H-6-(v-lo5)/(hi5-lo5)*(c.H-12)},x5=function(i){return i/(es.length-1)*pw5};
+    function ln5(k,col,lw){g5.strokeStyle=col;g5.lineWidth=lw;g5.beginPath();var on=false;es.forEach(function(r,i){if(!r[k]){on=false;return}if(on)g5.lineTo(x5(i),y5(r[k]));else{g5.moveTo(x5(i),y5(r[k]));on=true}});g5.stroke()}
+    ln5(2,tk("--accent"),1.4);ln5(1,tk("--ink"),1.8);
+    g5.font="500 10.5px "+(tk("--mono")||"monospace");g5.fillStyle=tk("--muted");g5.textBaseline="middle";[lo5+pad5,(lo5+hi5)/2,hi5-pad5].forEach(function(v){g5.fillText(fr(v,4),pw5+6,y5(v))})}}
 /* one line on top of the setup lists: where the whole market leans */
 function mktLine(){
   var el=$("mkt-line"),m=MKT;if(!el)return;
@@ -2456,24 +2949,42 @@ window.bgScan=function(t10,t50){
   var m=t50?"50":t10?"10":null,start=Date.now();
   function end(msg){try{Android.done(msg)}catch(e){}}
   S=loadSettings();T=loadTrades();
-  /* then re-check the open trades and warn once when one turns to "exit" */
+  /* then re-check the open trades and the live Binance positions, and warn once per event */
   function trades(msg){
-    var op=S.atr?openTrades():[];if(!op.length)return end(msg);
-    var prev={},i=0,bad=0;try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
-    (function next(){
+    var op=S.atr?openTrades():[],lv=S.atr&&hasBn();if(!op.length&&!lv)return end(msg);
+    var prev={},i=0,bad=0,nl=0;try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
+    function note(title,text,tag){try{Android.notify(title,text,tag,"trades")}catch(e){}}
+    (lv?liveFetch().then(function(L){return liveIncome().then(function(){return L})}).catch(function(){return null}):Promise.resolve(null)).then(function(L){
+      if(L){nl=L.length;LV.list=L;
+        L.forEach(function(p){var k=lkey(p),nm=p.sym+" · "+(p.dir>0?"long":"short");
+          if(p.ordOk&&!(p.sl>0)){if(!prev["ns"+k]){prev["ns"+k]=1;note(nm+" : aucun stop-loss","Ta position Binance n'a pas de stop. Sans stop, seule la liquidation"+(p.liq>0?" à "+px(p.liq):"")+" arrête la perte.","ns"+k)}}
+          else if(p.sl>0)delete prev["ns"+k];
+          if(p.sl>0&&p.liq>0&&(p.sl-p.liq)*p.dir<0){if(prev["sx"+k]!==p.sl){prev["sx"+k]=p.sl;note(nm+" : stop au-delà de la liquidation","Ton stop à "+px(p.sl)+" est plus loin que la liquidation ("+px(p.liq)+") : la position serait liquidée avant. Rapproche le stop ou ajoute de la marge.","sx"+k)}}
+          else delete prev["sx"+k];
+          var d=p.liq>0?Math.abs(p.mark-p.liq)/p.mark*100:100;
+          if(d<5&&(!prev["lq"+k]||Date.now()-prev["lq"+k]>6*36e5)){prev["lq"+k]=Date.now();
+            note(nm+" : liquidation proche","Le prix est à "+fr(d,1)+" % de ta liquidation ("+px(p.liq)+"). Réduis la position ou ajoute de la marge.","lq"+k)}});
+        /* positions closed since the last check, once their result is known */
+        LVS=liveMem();(LVS._c||[]).forEach(function(x){if(x.nt||x.net===null)return;x.nt=1;
+          note(x.sym+" · "+(x.dir>0?"long":"short")+" fermé",x.net==="?"?"Position fermée sur Binance. Le résultat est dans l'onglet Résultats.":"Résultat réalisé : "+sgn(x.net,2)+" $, frais et funding compris.","cl"+x.k)});
+        saveLive();op=L.map(liveTrade).concat(op)}
+      next()});
+    function next(){
       if(i>=op.length){try{localStorage.setItem("radar-health",JSON.stringify(prev))}catch(e){}
-        return end((msg?msg+" · ":"")+op.length+(op.length>1?" trades vérifiés":" trade vérifié")+(bad?", "+bad+" à risque":""))}
-      var t=op[i++];
+        var nm=op.length-nl,pa=[];
+        if(nl)pa.push(nl+(nl>1?" positions Binance":" position Binance"));if(nm)pa.push(nm+(nm>1?" trades suivis":" trade suivi"));
+        return end((msg?msg+" · ":"")+(pa.length?"contrôle de "+pa.join(" et "):"aucune position ouverte")+(bad?", "+bad+" à risque":""))}
+      var t=op[i++],nm2=t.sym+" · "+(t.dir>0?"long":"short");
       checkTrade(t).then(function(h){
-        if(h.v==="exit"){bad++;if(prev[t.id]!=="exit"){
-          try{Android.notify(t.sym+" · "+(t.dir>0?"long":"short")+" : sortie à envisager",h.items.filter(function(x){return x.k==="no"}).slice(0,3).map(function(x){return x.t}).join(" · "),"h"+t.id,"trades")}catch(e){}}}
+        if(h.v==="exit"){bad++;if(prev[t.id]!=="exit")note(nm2+" : sortie à envisager",h.items.filter(function(x){return x.k==="no"}).slice(0,3).map(function(x){return x.t}).join(" · "),"h"+t.id)}
         prev[t.id]=h.v;
-        health[t.id]=h;var b=beState(t,h.price);
-        if(h.tp&&(h.tp.act==="up"||h.tp.act==="down")&&prev["tp"+t.id]!==h.tp.act){prev["tp"+t.id]=h.tp.act;
-          try{Android.notify(t.sym+" · "+(h.tp.act==="up"?"objectif à augmenter":"objectif à réduire"),"Vise "+px(h.tp.px)+" au lieu de "+px(t.tp)+". "+h.tp.why+".","tp"+t.id,"trades")}catch(e){}}
+        health[t.id]=h;var b=t.sl>0?beState(t,h.price):{st:"none"};
+        if(h.tp&&(h.tp.act==="up"||h.tp.act==="down"||h.tp.act==="set")&&prev["tp"+t.id]!==h.tp.act){prev["tp"+t.id]=h.tp.act;
+          note(nm2+" · "+(h.tp.act==="up"?"objectif à augmenter":h.tp.act==="down"?"objectif à réduire":"aucun objectif placé"),
+            h.tp.act==="set"?"Repère possible pour ton TP : "+px(h.tp.px)+". "+h.tp.why+".":"Vise "+px(h.tp.px)+" au lieu de "+px(t.tp)+". "+h.tp.why+".","tp"+t.id)}
         if(b.st==="go"&&!prev["be"+t.id]){prev["be"+t.id]=1;
-          try{Android.notify(t.sym+" · feu vert break-even","Tu peux placer ton stop à "+px(b.be)+" (break-even net de frais) pour sécuriser le trade.","be"+t.id,"trades")}catch(e){}}
-        next()},function(){next()})})()}
+          note(nm2+" · feu vert break-even",(t.live?"Monte ton stop sur Binance à ":"Tu peux placer ton stop à ")+px(b.be)+" (break-even net de frais) pour sécuriser le trade.","be"+t.id)}
+        next()},function(){next()})}}
   if(!m)return trades("");
   if(busy)return end("scan déjà en cours");
   onScanDone=function(){
@@ -2498,12 +3009,12 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===3&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|hbtc|heth|mkt|cyc)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|hbtc|heth|mkt|cyc)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
 loadStores();
-banner("");$("tcount").textContent=openTrades().length||"";alertStatus();
+banner("");tcount();alertStatus();
 if(!BG){var h0=location.hash.slice(1);setView(/^(all|10|50|trades)$/.test(h0)?h0:"all")}
 })();
 </script>

@@ -12,7 +12,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-/** Serves the bundled page and relays its data requests to Binance's, CoinGecko's and DefiLlama's public APIs. */
+/** Serves the bundled page and relays its data requests to Binance's, CoinGecko's, OKX's and DefiLlama's public APIs. */
 final class Relay {
     static final String HOST = "radar.local";
     static final String HOME = "https://" + HOST + "/";
@@ -35,6 +35,12 @@ final class Relay {
             return feed == null ? reply(404, "Not Found", "text/plain", new ByteArrayInputStream(new byte[0])) : get(feed, "*/*", "text/plain");
         }
         if (path.startsWith("/llama/")) return fetch(LLAMA + u.getEncodedPath().substring(7), u);
+        // yields: OKX public Earn rates and DefiLlama's list of DeFi pools
+        if (path.equals("/okx/api/v5/finance/savings/lending-rate-summary")
+                || path.matches("/okx/api/v5/finance/staking-defi/(eth|sol)/apy-history")) {
+            return fetch("https://www.okx.com/" + u.getEncodedPath().substring(5), u);
+        }
+        if (path.equals("/yields/pools")) return get("https://yields.llama.fi/pools", "application/json", "application/json");
         try {
             return new WebResourceResponse("text/html", "utf-8", ctx.getAssets().open("index.html"));
         } catch (Exception e) {

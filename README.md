@@ -3,6 +3,15 @@
 Application Android qui scanne les contrats crypto USDT de Binance Futures, propose des setups (tendance, zone d'entrée,
 stop, objectifs, taille de position), suit les trades pris et affiche le portefeuille.
 
+- **Mes trades** lit en direct les positions ouvertes sur Binance Futures, avec leurs ordres stop et TP (y compris les ordres
+  conditionnels du service « algo » de Binance), et applique les contrôles de suivi : validité, feu vert break-even, objectif,
+  stop absent, stop au-delà de la liquidation, positions fermées avec leur résultat réalisé.
+- **Earn** compare pour une crypto les offres Binance (Flexible, Bloqué, On-chain, Soft staking, WBETH et BNSOL), les taux
+  publics d'OKX et les pools DeFi suivis par DefiLlama, calcule ce que rapporteraient les avoirs du portefeuille (hors marge
+  Futures) et explique la marche à suivre.
+- **Cycle** situe le marché dans le cycle de 4 ans et donne la saison des altcoins : part des 50 plus grosses altcoins qui font
+  mieux que le Bitcoin sur 90 jours, part du Bitcoin, ETH/BTC.
+
 ## Ce que valent les signaux
 
 Le moteur a été rejoué bougie par bougie sur deux années séparées de données Binance, chacune sur la soixantaine de contrats
@@ -27,7 +36,8 @@ la page de l'appli par `node tools/inject.js`.
 ## Données et clés
 
 L'appli lit les données de marché publiques de Binance. L'onglet Portefeuille demande des clés API **en lecture seule** :
-elles sont chiffrées sur le téléphone et ne servent qu'à des demandes de consultation. L'appli ne passe aucun ordre.
+elles sont chiffrées sur le téléphone et ne servent qu'à des demandes de consultation fixées dans `Exchanges.java`
+(soldes, positions, ordres ouverts, résultats, offres Earn). L'appli ne passe, ne modifie et n'annule aucun ordre.
 
 ## Installer
 
