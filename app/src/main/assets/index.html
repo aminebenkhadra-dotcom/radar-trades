@@ -349,6 +349,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="50" aria-selected="false">Top 50</button>
     <button type="button" role="tab" data-v="mkt" aria-selected="false">Tendance</button>
     <button type="button" role="tab" data-v="cyc" aria-selected="false">Cycle</button>
+    <button type="button" role="tab" data-v="tmp" aria-selected="false">Temporalité</button>
     <button type="button" role="tab" data-v="one" aria-selected="false">Analyser</button>
     <button type="button" role="tab" data-v="fund" aria-selected="false">Fondamental</button>
     <button type="button" role="tab" data-v="trades" aria-selected="false">Mes trades<b id="tcount"></b></button>
@@ -378,6 +379,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <section class="view" id="view-trades" hidden></section>
   <section class="view" id="view-mkt" hidden></section>
   <section class="view" id="view-cyc" hidden></section>
+  <section class="view" id="view-tmp" hidden></section>
   <section class="view" id="view-news" hidden></section>
   <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
@@ -423,6 +425,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <summary>Précision des setups</summary>
     <div class="grid">
       <label class="wide">Un setup est « Prêt » quand<select id="p-strict"><option value="2">les 6 contrôles sont validés</option><option value="1">tendance, zone, déclencheur et risque sont validés</option><option value="0">tendance, zone et risque sont validés</option></select></label>
+      <label class="wide">Temporalité<select id="p-tmode"><option value="signal">Signaler les setups du lundi et du mardi</option><option value="skip">Pas de « Prêt » ni d'alerte le lundi et le mardi</option><option value="off">Ne pas tenir compte du jour</option></select></label>
       <label>R:R minimum, net de frais<input id="p-minrr" inputmode="decimal"></label>
       <label>Marge du stop (× ATR 4H)<input id="p-slk" inputmode="decimal"></label>
       <label class="wide">Frais et glissement au maximum, en % du risque<input id="p-feecap" inputmode="decimal"></label>
@@ -446,14 +449,14 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Version 23.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Version 24.
     </footer>
 </div>
 <script>
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8};
+var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal"};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -1031,7 +1034,7 @@ function btcContext(){
   if(btcC&&Date.now()-btcC.at<5*60e3)return Promise.resolve(btcC.m);
   return Promise.all([klines("BTCUSDT","1d",90,55),klines("BTCUSDT","4h",200,80),klines("BTCUSDT","1h",200,80)]).then(function(k){
     btcC={at:Date.now(),m:market(k[0],k[1],k[2])};return btcC.m})}
-function verdict(r,O){judge(r,O);var x=EXI[r.full];if(x)r.step=x.step;snap(r,x?x.tick:r.tick);return r}
+function verdict(r,O){judge(r,O);timing(r);var x=EXI[r.full];if(x)r.step=x.step;snap(r,x?x.tick:r.tick);return r}
 var PAGE={net:"Pas de connexion à Binance. Vérifie ton réseau puis relance le scan.",
   rate:"Binance limite les requêtes pour l'instant. Attends une minute avant de relancer.",
   geo:"Binance refuse l'accès depuis cette connexion (restriction réseau ou pays).",
@@ -1156,11 +1159,11 @@ function sizing(r){
   return{risk:qty*d,qty:qty,notional:notional,m:m,w:w,fees:fees,qd:r.step>0?decOf(r.step):qty>=100?0:qty>=1?2:4}}
 function passed(r){return(r.gates||[]).filter(function(g){return g.ok}).length}
 /* required checks that are not validated yet */
-function missing(r){var need=r.need||[];return(r.gates||[]).filter(function(g){return!g.ok&&need.indexOf(g.k)>=0}).map(function(g){return g.label.toLowerCase()})}
+function missing(r){var need=r.need||[];return(r.gates||[]).filter(function(g){return!g.ok&&need.indexOf(g.k)>=0}).map(function(g){return g.label.toLowerCase()}).concat(r.tmBlock?["un autre jour que lundi ou mardi"]:[])}
 function dots(r){return'<span class="dots">'+(r.gates||[]).map(function(g){return'<i class="'+g.st+'"></i>'}).join("")+"</span>"}
 function gatesView(r){
   if(!r.gates)return"";var need=r.need||[];
-  return'<div><div class="cap">Contrôles · '+passed(r)+' validés sur 6</div><div class="gates">'+r.gates.map(function(g){
+  return(r.tm&&S.tmode!=="off"?'<div class="hbox warn" style="margin-bottom:8px">'+esc(TMTXT)+(r.tmBlock?" Ce setup n\'est donc pas déclaré « Prêt » (réglage Temporalité).":"")+"</div>":"")+'<div><div class="cap">Contrôles · '+passed(r)+' validés sur 6</div><div class="gates">'+r.gates.map(function(g){
     return'<details class="gt '+g.st+(need.indexOf(g.k)<0?" opt":"")+'"><summary><span class="ic">'+(g.st==="ok"?"✓":g.st==="mid"?"~":"✕")+"</span><b>"+g.label+'</b><span class="hd">'+esc(g.head)+"</span></summary>"
       +'<ul class="why">'+g.items.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></details>"}).join("")+"</div>"
     +'<div class="sub" style="margin-top:6px">Touche un contrôle pour le détail. Sur deux ans de test, les setups « Prêt » ont gagné environ une fois sur trois : ces contrôles décrivent le contexte, ils ne prédisent pas le résultat.</div></div>'}
@@ -1296,15 +1299,16 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
   else if(view==="news"){statusLine();loadNews(false)}
   else if(view==="res"){statusLine();loadRes()}
+  else if(view==="tmp"){statusLine();renderTmp();loadTmp(false)}
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
   else if(view==="fund"){statusLine();drawWeekly()}
@@ -1662,7 +1666,7 @@ $("app").addEventListener("click",function(e){
     try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
   var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
-$("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else if(view==="mkt"||view==="cyc")loadMkt(true);else scan(mode)});
+$("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else if(view==="mkt"||view==="cyc")loadMkt(true);else if(view==="tmp")loadTmp(true);else scan(mode)});
 [["account","f-account"],["risk","f-risk"],["lev","f-lev"],["margin","f-margin"],["minvol","f-minvol"],["fee","f-fee"],["exclude","f-exclude"]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
   el.addEventListener("change",function(){
@@ -1677,6 +1681,8 @@ var REF={2:[[3347,32,"−0,08"],[2469,36,"+0,02"]],1:[[9193,34,"−0,03"],[6905,
 function precRef(){var x=REF[+S.strict]||REF[2];
   $("p-ref").textContent="Mesuré avec ce niveau et les autres réglages d'origine, sur une soixantaine de cryptos. Octobre 2024 à octobre 2025 : "+fr(x[0][0],0)+" setups, "+x[0][1]+" % gagnants, "+x[0][2]+" R par trade. Novembre 2025 à octobre 2026 : "+fr(x[1][0],0)+" setups, "+x[1][1]+" % gagnants, "+x[1][2]+" R par trade. Aucun niveau n'a été gagnant de façon durable : les contrôles rendent l'appli plus sélective, ils ne prédisent pas le marché."}
 $("p-strict").value=String(S.strict);
+$("p-tmode").value=S.tmode==="skip"||S.tmode==="off"?S.tmode:"signal";
+$("p-tmode").addEventListener("change",function(){S.tmode=this.value;saveSettings();rejudge();if(view==="tmp")renderTmp()});
 $("p-strict").addEventListener("change",function(){S.strict=+this.value;saveSettings();rejudge()});
 [["minrr","p-minrr",1,5],["slk","p-slk",0.1,2],["feecap","p-feecap",1,50]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
@@ -2531,6 +2537,70 @@ function journalStats(days){
     var o=symMap[t.sym]||(symMap[t.sym]={sym:t.sym,net:0,n:0});o.net+=t.net;o.n++});
   var daily=[],bs=[],k;for(k in dayMap)daily.push({t:+k,v:dayMap[k]});for(k in symMap)bs.push(symMap[k]);
   return resModel(exits,daily,bs,{gross:net+fees,fees:-fees,fund:0,net:net},["Trades clôturés dans l'onglet Mes trades, frais estimés inclus, funding non compté"])}
+/* ---------- temporalité : jour et heure des setups ----------
+   Mesuré en rejouant le moteur (6 contrôles) sur deux années de données Binance, une soixantaine de contrats, heures UTC.
+   Le jour compte : les setups du lundi et du mardi ont été plus faibles les deux années. L'heure ne compte pas : les
+   meilleures heures d'une année n'ont pas battu les autres l'année suivante. */
+var TSTUDY={days:{A:[[465,33,-0.053],[390,35,-0.005],[337,38,0.103],[332,36,0.055],[339,35,-0.003],[328,38,0.084],[294,36,0.015]],
+  B:[[482,31,-0.115],[601,27,-0.229],[473,32,-0.091],[476,40,0.16],[498,32,-0.088],[436,33,-0.063],[381,32,-0.082]]},
+  hours:[[341,32,-0.106],[313,33,-0.055],[311,35,0.008],[253,36,0.028],[255,31,-0.102],[237,37,0.056],[211,36,0.043],[259,33,-0.048],[269,35,0.017],[234,29,-0.171],[194,31,-0.098],[187,34,-0.015],
+    [258,34,-0.02],[250,29,-0.156],[367,33,-0.058],[271,38,0.101],[257,42,0.196],[178,31,-0.113],[187,34,-0.009],[204,29,-0.186],[213,31,-0.12],[180,32,-0.082],[213,34,-0.022],[190,35,0.022]],
+  mt:[1938,31,-0.113],rest:[3894,35,0.004]};
+var TMTXT="Lundi ou mardi : sur deux ans de test, les setups pris ces jours-là ont fait −0,11 R en moyenne (31 % gagnants), contre 0,00 R (35 %) les autres jours.";
+var DNAMES=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+function weakDay(t){var d=new Date(t||Date.now()).getUTCDay();return d===1||d===2}
+function timing(r){if(!r)return;r.tm=false;r.tmBlock=false;if(!r.plan||S.tmode==="off")return;r.tm=weakDay();
+  if(r.tm&&S.tmode==="skip"&&r.st==="ready"){r.st="watch";r.tmBlock=true;r.pct=Math.min(r.pct||0,94)}}
+var tmpData=null,tmpBusy=false,tmpAt=0,tmpErr="";
+function loadTmp(force){
+  if(tmpBusy||(!force&&tmpData&&Date.now()-tmpAt<30*60e3)){renderTmp();return}
+  tmpBusy=true;tmpErr="";renderTmp();
+  klines("BTCUSDT","1h",1000,200).then(function(k){
+    var hv=[],hr=[],hn=[],dv=[0,0,0,0,0,0,0],dn=[0,0,0,0,0,0,0],i;
+    for(i=0;i<24;i++){hv.push(0);hr.push(0);hn.push(0)}
+    k.slice(0,-1).forEach(function(c){var d=new Date(c.t),h=d.getHours(),w=(d.getDay()+6)%7;hv[h]+=c.q;hr[h]+=(c.h-c.l)/c.o*100;hn[h]++;dv[w]+=c.q;dn[w]++});
+    var vol=hv.map(function(v,i){return hn[i]?v/hn[i]:0}),rng=hr.map(function(v,i){return hn[i]?v/hn[i]:0}),dvol=dv.map(function(v,i){return dn[i]?v/dn[i]:0});
+    var mv=vol.reduce(function(a,b){return a+b},0)/24,last=k[k.length-1],lh=new Date(last.t).getHours();
+    tmpData={vol:vol,rng:rng,dvol:dvol,mean:mv,now:{h:lh,v:last.q,share:vol[lh]?last.q/vol[lh]:null},from:k[0].t};
+    tmpAt=Date.now();tmpBusy=false;renderTmp()},function(e){tmpBusy=false;tmpErr="Activité du marché indisponible ("+(e&&e.code||"réseau")+").";renderTmp()})}
+function tbars(vals,lab,opt){
+  opt=opt||{};var mx=Math.max.apply(null,vals.map(function(v){return Math.abs(v)}).concat([1e-9])),sign=opt.signed;
+  return'<div style="display:grid;grid-template-columns:repeat('+vals.length+',1fr);gap:2px;align-items:end;height:'+(sign?110:90)+'px;margin-top:8px" role="img" aria-label="'+esc(lab.map(function(l,i){return l+" "+(opt.fmt?opt.fmt(vals[i]):fr(vals[i],1))}).join(", "))+'">'+vals.map(function(v,i){
+    var h=Math.max(2,Math.abs(v)/mx*(sign?48:84)),col=opt.col?opt.col(v,i):"var(--accent)",hi=opt.hi===i;
+    return'<div title="'+esc(lab[i]+" : "+(opt.fmt?opt.fmt(v):fr(v,1)))+'" style="display:flex;flex-direction:column;justify-content:'+(sign?"center":"flex-end")+';height:100%">'
+      +(sign?'<div style="height:50%;display:flex;align-items:flex-end"><i style="display:block;width:100%;height:'+(v>0?h:0)+'px;background:'+col+';border-radius:3px 3px 0 0"></i></div><div style="height:50%;display:flex;align-items:flex-start;border-top:1px solid var(--line)"><i style="display:block;width:100%;height:'+(v<0?h:0)+'px;background:'+col+';border-radius:0 0 3px 3px"></i></div>'
+        :'<i style="display:block;width:100%;height:'+h+'px;background:'+col+';border-radius:3px 3px 0 0;'+(hi?"outline:2px solid var(--ink);outline-offset:1px":"")+'"></i>')+"</div>"}).join("")
+    +'</div><div style="display:grid;grid-template-columns:repeat('+vals.length+',1fr);gap:2px;font-size:10px;color:var(--muted);text-align:center;margin-top:4px">'+lab.map(function(l,i){return"<span>"+(opt.every&&i%opt.every?"":esc(l))+"</span>"}).join("")+"</div>"}
+function renderTmp(){
+  var el=$("view-tmp");if(!el)return;var now=new Date(),wd=(now.getUTCDay()+6)%7,weak=weakDay(),d=tmpData,off=now.getTimezoneOffset()/60,i;
+  var h='<h2 style="margin:0">Temporalité</h2><p class="sub" style="margin:4px 0 0">Le jour compte un peu, l’heure non. Mesuré en rejouant le moteur sur deux ans de données Binance (5 832 setups « Prêt »).</p>';
+  h+='<article class="card tr"><div><div class="cap">Maintenant</div><div class="net '+(weak?"neg":"pos")+'" style="font-size:22px">'+DNAMES[wd]+" "+now.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+(weak?" · jour faible":" · jour normal")+"</div>"
+    +'<div class="sub">'+(weak?esc(TMTXT):"Les setups pris du mercredi au dimanche ont fait 0,00 R en moyenne sur deux ans (35 % gagnants) : pas un avantage, mais pas le handicap du lundi et du mardi.")+"</div>"
+    +(d&&d.now.share!==null?'<div class="sub">Volume Bitcoin de l’heure en cours : '+fr(d.now.share*100,0)+" % de la moyenne de cette heure (heure pas encore terminée).</div>":"")
+    +'<div class="sub">Réglage actuel : '+(S.tmode==="skip"?"pas de « Prêt » ni d’alerte le lundi et le mardi":S.tmode==="off"?"le jour n’est pas pris en compte":"les setups du lundi et du mardi sont signalés")+" (Précision des setups, en bas de page).</div></div></article>";
+  var A=TSTUDY.days.A,B=TSTUDY.days.B,lab=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+  function dcol(v,i){return i<=1?"var(--bad)":v>=0?"var(--good)":"var(--muted)"}
+  h+='<article class="card tr"><div><div class="cap">Résultat des setups par jour, en R par trade</div>'
+    +'<div class="sub">Novembre 2025 → octobre 2026</div>'+tbars(A.map(function(x){return x[2]}),lab,{signed:true,fmt:function(v){return sgn(v,2)+" R"},col:dcol})
+    +'<div class="sub" style="margin-top:10px">Octobre 2024 → octobre 2025</div>'+tbars(B.map(function(x){return x[2]}),lab,{signed:true,fmt:function(v){return sgn(v,2)+" R"},col:dcol})
+    +'<div class="sub" style="margin-top:8px">Lundi et mardi : '+fr(TSTUDY.mt[0],0)+" setups, "+TSTUDY.mt[1]+" % gagnants, −0,11 R. Les autres jours : "+fr(TSTUDY.rest[0],0)+" setups, "+TSTUDY.rest[1]+" % gagnants, +0,00 R. L’écart se retrouve sur les deux années ; écarter ces deux jours ramène le moteur à l’équilibre, pas au gain. Jours en heure UTC.</div></div></article>";
+  var hl=[],hv=[];for(i=0;i<24;i++){var lh=((i-off)%24+24)%24;hl[lh]=String(lh);hv[lh]=TSTUDY.hours[i][2]}
+  h+='<article class="card tr"><div><div class="cap">Résultat des setups par heure (ton heure locale)</div>'+tbars(hv,hl,{signed:true,every:3,fmt:function(v){return sgn(v,2)+" R"},col:function(v){return v>=0?"var(--good)":"var(--muted)"}})
+    +'<div class="sub" style="margin-top:8px">Aucun effet stable : les 8 meilleures heures d’une année ont fait aussi mal que les 8 pires l’année suivante. L’heure n’entre donc pas dans les décisions de l’appli.</div></div></article>';
+  if(tmpBusy&&!d)h+='<div class="empty">Lecture de l’activité du marché…</div>';
+  else if(tmpErr&&!d)h+='<div class="warn">'+esc(tmpErr)+"</div>";
+  if(d){var lab24=[];for(i=0;i<24;i++)lab24.push(String(i));
+    var mx=d.vol.indexOf(Math.max.apply(null,d.vol)),mn=d.vol.indexOf(Math.min.apply(null,d.vol));
+    h+='<article class="card tr"><div><div class="cap">Activité de Bitcoin par heure · '+Math.round((Date.now()-d.from)/864e5)+" derniers jours</div>"
+      +'<div class="sub">Volume moyen échangé, heure locale (l’heure en cours est entourée)</div>'+tbars(d.vol,lab24,{every:3,hi:now.getHours(),fmt:function(v){return fr(v/1e6,0)+" M$"},col:function(v){return v>=d.mean?"var(--accent)":"var(--line)"}})
+      +'<div class="sub" style="margin-top:10px">Amplitude moyenne d’une bougie d’une heure</div>'+tbars(d.rng,lab24,{every:3,hi:now.getHours(),fmt:function(v){return fr(v,2)+" %"},col:function(){return"var(--muted)"}})
+      +'<div class="sub" style="margin-top:8px">Heure la plus active : '+mx+" h ; la plus creuse : "+mn+" h. Aux heures creuses le carnet est plus mince : glissement plus fort et mèches plus faciles sur les stops serrés. Ce n’est pas un signal de gain.</div>"
+      +'<div class="sub">Volume moyen par heure selon le jour : '+lab.map(function(l,i){return l+" "+fr(d.dvol[i]/1e6,0)+" M$"}).join(" · ")+".</div></div></article>"}
+  var P=paperLoad().list.filter(function(t){return t.out}),pw=P.filter(function(t){return weakDay(t.t0)}),po=P.filter(function(t){return!weakDay(t.t0)});
+  function ps(a){var n=a.length,s=0,w=0;a.forEach(function(t){s+=t.out.r;if(t.out.r>0)w++});return n?n+" setups · "+fr(w/n*100,0)+" % gagnants · "+sgn(s/n,2)+" R":"aucun"}
+  h+='<article class="card tr"><div><div class="cap">Ton suivi sans argent</div>'+(P.length<20?'<div class="sub">'+P.length+" setup"+(P.length>1?"s":"")+" terminé"+(P.length>1?"s":"")+" pour l’instant. La comparaison par jour devient lisible vers 20 à 30 setups.</div>":"")
+    +'<div class="sub">Lundi et mardi : '+ps(pw)+'</div><div class="sub">Autres jours : '+ps(po)+"</div></div></article>";
+  el.innerHTML=h}
 /* ---------- suivi sans argent : chaque setup « Prêt » (ou à 95 % et plus) vu par un scan est noté au prix du moment,
    puis suivi sur les bougies 15 minutes jusqu'au stop ou au TP1, avec la même méthode que le test sur l'historique ---------- */
 var PK="radar-paper",PCOST=0.0012,PMAX=5*864e5,paperBusy=false;
@@ -2544,7 +2614,7 @@ function paperRecord(list){
     var cat=r.st==="ready"?"ready":(+r.pct>=95?"near":null);if(!cat||open[r.full+r.dir])return;
     var e=+r.plan.entry,sl=+r.plan.sl,tp=+r.plan.tp1;if(!(e>0&&sl>0&&tp>0)||!(Math.abs(e-sl)>0))return;
     open[r.full+r.dir]=1;n++;
-    p.list.push({id:r.full+(r.dir>0?"L":"S")+now,sym:r.sym,full:r.full,dir:r.dir,cat:cat,t0:now,e:e,sl:sl,tp:tp,pct:+r.pct||0,ok:passed(r)})});
+    p.list.push({id:r.full+(r.dir>0?"L":"S")+now,sym:r.sym,full:r.full,dir:r.dir,cat:cat,t0:now,e:e,sl:sl,tp:tp,pct:+r.pct||0,ok:passed(r),tm:!!r.tm})});
   if(p.list.length>800)p.list=p.list.slice(-800);
   if(n)paperSave(p);return n}
 /* closes the followed setups whose stop or TP1 has been reached (stop first when both are in the same candle) */
@@ -3058,7 +3128,7 @@ window.bgScan=function(t10,t50){
       var id=r.sym+(r.dir>0?"L":"S")+(rdy?"r":"n");if(seen[id])return;seen[id]=now;
       var mi=rdy?[]:missing(r);
       try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · "+passed(r)+"/6 contrôles",
-        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
+        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
     trades(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
   scan(m)};
@@ -3068,7 +3138,7 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===3&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|hbtc|heth|mkt|cyc)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|hbtc|heth|mkt|cyc|tmp)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});

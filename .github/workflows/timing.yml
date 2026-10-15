@@ -1,0 +1,36 @@
+name: Timing study
+on:
+  push:
+    branches: [timing-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: A, start: "2025-10", end: "2026-10" }
+          - { id: B, start: "2024-09", end: "2025-10" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.start }}", END: "${{ matrix.end }}" }
+        run: node tools/backtest/fetch.js klines data 2>&1 | tail -15
+      - name: Replay engine
+        run: |
+          mkdir -p res
+          for s in 2 0; do
+            node tools/backtest/ref.js data res $s 0/4 & node tools/backtest/ref.js data res $s 1/4 &
+            node tools/backtest/ref.js data res $s 2/4 & node tools/backtest/ref.js data res $s 3/4 & wait
+          done
+          ls -la res
+      - name: Publish trades
+        run: |
+          cd res && git init -q -b timing-${{ matrix.id }}
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Trades ${{ matrix.id }}" && git push -q -f "$REMOTE" timing-${{ matrix.id }}
