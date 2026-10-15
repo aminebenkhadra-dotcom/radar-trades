@@ -1,5 +1,5 @@
 // Temporalité : résultats des setups par session, jour et heure (UTC), et validation d'une année sur l'autre.
-// Les trades viennent du workflow timing.yml (branches timing-A et timing-B) ; usage : placer leurs fichiers dans tm/A et tm/B puis node timing.js
+// Trades produits par le workflow timing.yml (branches timing-A et timing-B) : placer leurs fichiers dans tm/A et tm/B, puis node timing.js
 const fs=require("fs");
 function load(dir,tag){let tr=[];for(let k=0;k<4;k++)tr=tr.concat(JSON.parse(fs.readFileSync(`tm/${dir}/${tag}-${k}.json`)).trades);return tr.map(t=>{const d=new Date(t.t+9e5);return Object.assign(t,{h:d.getUTCHours(),wd:(d.getUTCDay()+6)%7})})}
 const st=a=>{const n=a.length,w=a.filter(t=>t.r>0).length,s=a.reduce((x,t)=>x+t.r,0),m=n?s/n:0,v=a.reduce((x,t)=>x+(t.r-m)**2,0);return{n,win:n?w/n*100:0,avg:m,se:n>1?Math.sqrt(v/(n-1)/n):0}};
@@ -20,7 +20,7 @@ for(const tag of ["ref-2","ref-0"]){
     console.log("  ",lab,": 8 meilleures heures",[...best].sort((a,b)=>a-b).join(","),"→",f(st(T.filter(t=>best.has(t.h)))),"| 8 pires →",f(st(T.filter(t=>worst.has(t.h)))),"| reste",f(st(T)))}
   const we=x=>x.filter(t=>t.wd>=5),wk=x=>x.filter(t=>t.wd<5);console.log("  semaine A",f(st(wk(A))),"B",f(st(wk(B)))," | week-end A",f(st(we(A))),"B",f(st(we(B))));
 }
-
+{
 function load(dir,tag){let tr=[];for(let k=0;k<4;k++)tr=tr.concat(JSON.parse(fs.readFileSync(`tm/${dir}/${tag}-${k}.json`)).trades);return tr.map(t=>{const d=new Date(t.t+9e5);return Object.assign(t,{h:d.getUTCHours(),wd:(d.getUTCDay()+6)%7,q:Math.floor(d.getUTCMonth()/3)})})}
 const st=a=>{const n=a.length,w=a.filter(t=>t.r>0).length,s=a.reduce((x,t)=>x+t.r,0),m=n?s/n:0,v=a.reduce((x,t)=>x+(t.r-m)**2,0);return{n,win:n?w/n*100:0,avg:m,se:n>1?Math.sqrt(v/(n-1)/n):0}};
 const f=x=>(x.avg>=0?"+":"")+x.avg.toFixed(3)+"±"+x.se.toFixed(3)+" ("+x.n+","+x.win.toFixed(0)+"%)";
@@ -32,3 +32,4 @@ for(const tag of ["ref-2","ref-0"]){const A=load("A",tag),B=load("B",tag);consol
    console.log("  ",l,"jeudi vs autres par trimestre:",Object.keys(months).map(k=>{const M=months[k];return (st(M.filter(t=>t.wd===3)).avg-st(M.filter(t=>t.wd!==3)).avg).toFixed(2)}).join(" "),
      "| lun-mar vs autres:",Object.keys(months).map(k=>{const M=months[k];return (st(M.filter(t=>t.wd<=1)).avg-st(M.filter(t=>t.wd>1)).avg).toFixed(2)}).join(" "))}
  const both=A.concat(B);console.log("  2 ans : sans lundi-mardi",f(st(both.filter(t=>t.wd>1))),"| lundi-mardi",f(st(both.filter(t=>t.wd<=1))),"| tout",f(st(both)))}
+}

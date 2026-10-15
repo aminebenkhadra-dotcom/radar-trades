@@ -9,6 +9,10 @@ stop, objectifs, taille de position), suit les trades pris et affiche le portefe
 - **Résultats › Suivi sans argent** note chaque setup « Prêt » (ou à 95 % et plus) trouvé par un scan, manuel ou en
   arrière-plan, au prix du moment, puis regarde sur les bougies 15 minutes s'il touche d'abord le stop ou le TP1 (au plus
   5 jours), frais et glissement compris. Le résultat est donné en R : on juge les signaux en direct avant d'y mettre de l'argent.
+- **Temporalité** montre le résultat des setups par jour et par heure sur les deux années de test, et l'activité de Bitcoin
+  heure par heure. Le jour compte un peu : les setups du lundi et du mardi (UTC) ont fait −0,11 R contre 0,00 R les autres
+  jours, les deux années. L'heure ne compte pas : aucun effet stable d'une année sur l'autre. Le réglage « Temporalité »
+  (Précision des setups) signale ces jours, les écarte, ou n'en tient pas compte.
 - **Earn** compare pour une crypto les offres Binance (Flexible, Bloqué, On-chain, Soft staking, WBETH et BNSOL), les taux
   publics d'OKX et les pools DeFi suivis par DefiLlama, calcule ce que rapporteraient les avoirs du portefeuille (hors marge
   Futures) et explique la marche à suivre.
