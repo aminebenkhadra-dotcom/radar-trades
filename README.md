@@ -6,6 +6,9 @@ stop, objectifs, taille de position), suit les trades pris et affiche le portefe
 - **Mes trades** lit en direct les positions ouvertes sur Binance Futures, avec leurs ordres stop et TP (y compris les ordres
   conditionnels du service « algo » de Binance), et applique les contrôles de suivi : validité, feu vert break-even, objectif,
   stop absent, stop au-delà de la liquidation, positions fermées avec leur résultat réalisé.
+- **Résultats › Suivi sans argent** note chaque setup « Prêt » (ou à 95 % et plus) trouvé par un scan, manuel ou en
+  arrière-plan, au prix du moment, puis regarde sur les bougies 15 minutes s'il touche d'abord le stop ou le TP1 (au plus
+  5 jours), frais et glissement compris. Le résultat est donné en R : on juge les signaux en direct avant d'y mettre de l'argent.
 - **Earn** compare pour une crypto les offres Binance (Flexible, Bloqué, On-chain, Soft staking, WBETH et BNSOL), les taux
   publics d'OKX et les pools DeFi suivis par DefiLlama, calcule ce que rapporteraient les avoirs du portefeuille (hors marge
   Futures) et explique la marche à suivre.

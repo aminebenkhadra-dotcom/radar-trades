@@ -446,7 +446,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Version 22.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Version 23.
     </footer>
 </div>
 <script>
@@ -1114,6 +1114,7 @@ function scan(m){
       :[[f.total,"marchés scannés"],[f.liquid,"liquides"],[f.trend,"en tendance 1J"],[f.setups,"setups"]];
     stores[m]={results:list,funnel:f,stamp:Date.now(),live:true};
     saveStore(m);
+    try{paperRecord(list);paperResolve()}catch(e){}
     if(mode===m){useStore(m);openSym=firstSetup()}
     if(top&&f.by==="vol")banner("Classement par capitalisation indisponible pour l'instant (CoinGecko ne répond pas). Ce Top "+top+" est classé par volume ; relance le scan dans une minute.");
     finish()
@@ -2530,10 +2531,64 @@ function journalStats(days){
     var o=symMap[t.sym]||(symMap[t.sym]={sym:t.sym,net:0,n:0});o.net+=t.net;o.n++});
   var daily=[],bs=[],k;for(k in dayMap)daily.push({t:+k,v:dayMap[k]});for(k in symMap)bs.push(symMap[k]);
   return resModel(exits,daily,bs,{gross:net+fees,fees:-fees,fund:0,net:net},["Trades clôturés dans l'onglet Mes trades, frais estimés inclus, funding non compté"])}
+/* ---------- suivi sans argent : chaque setup « Prêt » (ou à 95 % et plus) vu par un scan est noté au prix du moment,
+   puis suivi sur les bougies 15 minutes jusqu'au stop ou au TP1, avec la même méthode que le test sur l'historique ---------- */
+var PK="radar-paper",PCOST=0.0012,PMAX=5*864e5,paperBusy=false;
+function paperLoad(){try{var p=JSON.parse(localStorage.getItem(PK)||"null");if(p&&Array.isArray(p.list))return p}catch(e){}return{list:[],since:Date.now()}}
+function paperSave(p){try{localStorage.setItem(PK,JSON.stringify(p))}catch(e){}}
+function paperRecord(list){
+  var p=paperLoad(),now=Date.now(),open={},n=0;
+  p.list.forEach(function(t){if(!t.out)open[t.full+t.dir]=1});
+  (list||[]).forEach(function(r){
+    if(!r||!r.plan||!r.full||!(r.dist<=0.5))return;
+    var cat=r.st==="ready"?"ready":(+r.pct>=95?"near":null);if(!cat||open[r.full+r.dir])return;
+    var e=+r.plan.entry,sl=+r.plan.sl,tp=+r.plan.tp1;if(!(e>0&&sl>0&&tp>0)||!(Math.abs(e-sl)>0))return;
+    open[r.full+r.dir]=1;n++;
+    p.list.push({id:r.full+(r.dir>0?"L":"S")+now,sym:r.sym,full:r.full,dir:r.dir,cat:cat,t0:now,e:e,sl:sl,tp:tp,pct:+r.pct||0,ok:passed(r)})});
+  if(p.list.length>800)p.list=p.list.slice(-800);
+  if(n)paperSave(p);return n}
+/* closes the followed setups whose stop or TP1 has been reached (stop first when both are in the same candle) */
+function paperResolve(){
+  if(paperBusy)return Promise.resolve(0);
+  var op=paperLoad().list.filter(function(t){return!t.out&&Date.now()-t.t0>15*60e3});if(!op.length)return Promise.resolve(0);
+  paperBusy=true;var done={},i=0;
+  function one(t){
+    return get("klines?symbol="+encodeURIComponent(t.full)+"&interval=15m&startTime="+t.t0+"&limit=500").then(function(k){
+      var R=Math.abs(t.e-t.sl),j,c=null,ex=null,why="";
+      for(j=0;j<k.length;j++){c={h:+k[j][2],l:+k[j][3],c:+k[j][4],ct:+k[j][6]};
+        if(c.ct>Date.now())break;
+        if(t.dir>0?c.l<=t.sl:c.h>=t.sl){ex=t.sl;why="stop";break}
+        if(t.dir>0?c.h>=t.tp:c.l<=t.tp){ex=t.tp;why="tp1";break}
+        if(c.ct-t.t0>=PMAX){ex=c.c;why="5j";break}}
+      if(ex!==null)done[t.id]={t:c.ct,px:ex,why:why,r:(ex-t.e)*t.dir/R-PCOST*t.e/R}},function(){})}
+  function next(){if(i>=op.length)return Promise.resolve();return one(op[i++]).then(function(){return wait(120)}).then(next)}
+  return next().then(function(){paperBusy=false;
+    var p=paperLoad(),n=0;p.list.forEach(function(t){if(!t.out&&done[t.id]){t.out=done[t.id];n++}});if(n)paperSave(p);return n},
+    function(){paperBusy=false;return 0})}
+function paperStats(days){
+  var p=paperLoad(),from=Date.now()-days*864e5,all=p.list.filter(function(t){return t.out&&t.out.t>=from}).sort(function(a,b){return a.out.t-b.out.t});
+  var m={u:" R",paper:true,n:all.length,wins:0,net:0,avgW:0,avgL:0,pf:null,curve:[],bySym:[],exits:[],best:null,worst:null,notes:[],
+    open:p.list.filter(function(t){return!t.out}).sort(function(a,b){return b.t0-a.t0}),since:p.since||(p.list[0]&&p.list[0].t0)||Date.now(),cats:{}};
+  var sw=0,sl=0,nw=0,nl=0,by={},day={},acc=0;
+  all.forEach(function(t){var r=t.out.r;m.net+=r;if(r>0){m.wins++;sw+=r;nw++}else{sl+=r;nl++}
+    var b=by[t.sym]||(by[t.sym]={sym:t.sym,n:0,net:0});b.n++;b.net+=r;
+    var c=m.cats[t.cat]||(m.cats[t.cat]={n:0,w:0,r:0});c.n++;c.r+=r;if(r>0)c.w++;
+    var d=new Date(t.out.t);d.setHours(0,0,0,0);acc+=r;day[+d]=acc;
+    var x={sym:t.sym+" "+(t.dir>0?"long":"short"),pnl:r,t:t.out.t,why:t.out.why};m.exits.push(x);
+    if(!m.best||r>m.best.pnl)m.best=x;if(!m.worst||r<m.worst.pnl)m.worst=x});
+  m.avgW=nw?sw/nw:0;m.avgL=nl?-sl/nl:0;m.pf=sl<0?sw/-sl:null;m.exits.reverse();
+  m.curve=Object.keys(day).map(function(k){return{t:+k,v:day[k]}}).sort(function(a,b){return a.t-b.t});
+  if(m.curve.length)m.curve.unshift({t:m.curve[0].t-864e5,v:0});
+  m.bySym=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){return Math.abs(b.net)-Math.abs(a.net)});
+  m.parts=null;
+  m.notes=["1 R = la perte si le stop est touché ; frais et glissement compris (0,12 % du prix)","Entrée au prix du scan, sortie au stop ou au TP1, ou au bout de 5 jours",
+    "Sur l'historique, le moteur faisait environ 34 % de gagnants pour un résultat proche de 0 R par trade"];
+  return m}
 function loadRes(){
   var hasB=false;try{hasB=CANPF&&Android.hasKeys("binance")}catch(e){}
   if(resSrc===null)resSrc=hasB?"binance":"journal";
   if(resSrc==="journal"){resErr="";resData=journalStats(resDays);renderRes();return}
+  if(resSrc==="paper"){resErr="";resData=paperStats(resDays);renderRes();paperResolve().then(function(n){if(n&&resSrc==="paper"){resData=paperStats(resDays);renderRes()}});return}
   if(!hasB){resErr="Connecte ton compte Binance dans l'onglet Portefeuille pour lire tes résultats réels, ou passe sur le journal de l'appli.";resData=null;renderRes();return}
   if(resBusy)return;resBusy=true;resErr="";renderRes();
   var d=resDays;
@@ -2542,18 +2597,20 @@ function loadRes(){
     resData=incomeStats(a[0],a[1],a[2]);renderRes()
   },function(e){resBusy=false;resData=null;resErr=e&&e.status===400?"Cette fonction demande la dernière version de l'application : réinstalle l'APK.":apiMsg(e);renderRes()})}
 function renderRes(){
-  var el=$("view-res"),m=resData;
+  var el=$("view-res"),m=resData,U=m&&m.u?m.u:U;
   function chip(g,v,l,on){return'<button type="button" data-'+g+'="'+v+'" aria-pressed="'+on+'">'+l+"</button>"}
   var h='<h2 style="margin:0">Résultats de mes trades</h2>'
-    +'<div class="filters">'+chip("rs","binance","Binance Futures, réel",resSrc==="binance")+chip("rs","journal","Journal de l'appli",resSrc==="journal")+"</div>"
+    +'<div class="filters">'+chip("rs","binance","Binance Futures, réel",resSrc==="binance")+chip("rs","journal","Journal de l'appli",resSrc==="journal")+chip("rs","paper","Suivi sans argent",resSrc==="paper")+"</div>"
     +'<div class="filters">'+chip("rd",7,"7 jours",resDays===7)+chip("rd",30,"30 jours",resDays===30)+chip("rd",90,"90 jours",resDays===90)+"</div>";
   if(resBusy)h+='<div class="empty">Lecture de tes résultats…</div>';
   else if(resErr)h+='<div class="warn">'+esc(resErr)+"</div>";
+  if(m&&m.paper)h+='<div class="sub">L’appli note chaque setup « Prêt » ou à 95 % et plus trouvé par un scan (manuel ou en arrière-plan), puis regarde s’il touche d’abord le stop ou le TP1. Aucun argent engagé : c’est pour juger les signaux avant de les trader. Suivi depuis le '+new Date(m.since).toLocaleDateString("fr-FR")+".</div>";
+  if(m&&m.paper&&!m.n)h+='<div class="empty">Aucun setup suivi n\'est encore terminé sur cette période.'+(m.open.length?" "+m.open.length+" en cours.":" Lance un scan pour commencer.")+"</div>";
   else if(m&&!m.n&&Math.abs(m.net)<0.005)h+='<div class="empty">Aucun trade clôturé sur cette période.</div>';
   else if(m){
     var p=m.parts,mx=0;m.bySym.forEach(function(x){if(Math.abs(x.net)>mx)mx=Math.abs(x.net)});
-    h+='<article class="card tr"><div><div class="cap">Résultat net sur '+resDays+' jours</div><div class="net '+(m.net>=0?"pos":"neg")+'">'+sgn(m.net,2)+" $</div>"
-      +'<div class="sub">Gains et pertes réalisés '+sgn(p.gross,2)+" $ · frais "+sgn(p.fees,2)+" $"+(p.fund?" · funding "+sgn(p.fund,2)+" $":"")+"</div></div>"
+    h+='<article class="card tr"><div><div class="cap">Résultat net sur '+resDays+' jours</div><div class="net '+(m.net>=0?"pos":"neg")+'">'+sgn(m.net,2)+U+"</div>"
+      +(p?'<div class="sub">Gains et pertes réalisés '+sgn(p.gross,2)+U+" · frais "+sgn(p.fees,2)+U+(p.fund?" · funding "+sgn(p.fund,2)+U:"")+"</div>":'<div class="sub">'+["ready","near"].filter(function(k){return m.cats[k]}).map(function(k){var q=m.cats[k];return(k==="ready"?"Prêts":"À 95 % et plus")+" : "+q.n+" · "+fr(q.w/q.n*100,0)+" % gagnants · "+sgn(q.r,1)+" R"}).join(" — ")+"</div>")+"</div>"
       +'<div class="funnel plain"><div><b>'+(m.n?fr(m.wins/m.n*100,0)+" %":"–")+"</b><span>sorties gagnantes ("+m.wins+"/"+m.n+")</span></div>"
       +'<div><b class="pos">'+(m.avgW?"+"+fr(m.avgW,2):"–")+"</b><span>gain moyen</span></div>"
       +'<div><b class="neg">'+(m.avgL?"−"+fr(m.avgL,2):"–")+"</b><span>perte moyenne</span></div>"
@@ -2561,16 +2618,18 @@ function renderRes(){
       +(m.curve.length>1?'<div><div class="cap">Résultat cumulé, jour par jour</div><canvas id="rcv" aria-label="Courbe du résultat cumulé"></canvas></div>':"")
       +"</article>";
     if(m.bySym.length)h+='<article class="card tr"><div class="cap">Par crypto</div>'+m.bySym.slice(0,10).map(function(x){
-      return'<div class="z"><b style="color:var(--ink)">'+esc(x.sym)+"</b><span>"+x.n+(x.n>1?" sorties":" sortie")+'</span><span class="zb" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><i style="width:'+(mx?Math.max(3,Math.abs(x.net)/mx*60):3).toFixed(0)+"%;background:var(--"+(x.net>=0?"good":"bad")+')"></i><b class="'+(x.net>=0?"pos":"neg")+'">'+sgn(x.net,2)+" $</b></span></div>"}).join("")+"</article>";
+      return'<div class="z"><b style="color:var(--ink)">'+esc(x.sym)+"</b><span>"+x.n+(x.n>1?" sorties":" sortie")+'</span><span class="zb" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><i style="width:'+(mx?Math.max(3,Math.abs(x.net)/mx*60):3).toFixed(0)+"%;background:var(--"+(x.net>=0?"good":"bad")+')"></i><b class="'+(x.net>=0?"pos":"neg")+'">'+sgn(x.net,2)+U+"</b></span></div>"}).join("")+"</article>";
     if(m.exits.length){
       h+='<article class="card tr">';
-      if(m.best)h+='<div class="size"><span>Meilleure sortie <b class="pos">'+esc(m.best.sym)+" "+sgn(m.best.pnl,2)+" $</b></span>"+(m.worst?'<span>Pire sortie <b class="neg">'+esc(m.worst.sym)+" "+sgn(m.worst.pnl,2)+" $</b></span>":"")+"</div>";
+      if(m.best)h+='<div class="size"><span>Meilleure sortie <b class="pos">'+esc(m.best.sym)+" "+sgn(m.best.pnl,2)+U+"</b></span>"+(m.worst?'<span>Pire sortie <b class="neg">'+esc(m.worst.sym)+" "+sgn(m.worst.pnl,2)+U+"</b></span>":"")+"</div>";
       h+='<div class="cap">Dernières sorties</div>'+m.exits.slice(0,12).map(function(x){
-        return'<div class="pos1"><b>'+esc(x.sym)+'</b><span class="sub">'+when(x.t)+'</span><b class="'+(x.pnl>=0?"pos":"neg")+'" style="margin-left:auto">'+sgn(x.pnl,2)+" $</b></div>"}).join("")+"</article>"}
+        return'<div class="pos1"><b>'+esc(x.sym)+'</b><span class="sub">'+when(x.t)+'</span><b class="'+(x.pnl>=0?"pos":"neg")+'" style="margin-left:auto">'+sgn(x.pnl,2)+U+"</b></div>"}).join("")+"</article>"}
+    if(m.paper&&m.open.length)h+='<article class="card tr"><div class="cap">En cours ('+m.open.length+")</div>"+m.open.slice(0,15).map(function(t){
+      return'<div class="pos1"><b>'+esc(t.sym)+" "+(t.dir>0?"long":"short")+'</b><span class="sub">'+when(t.t0)+" · entrée "+px(t.e)+" · stop "+px(t.sl)+" · TP1 "+px(t.tp)+"</span></div>"}).join("")+"</article>";
     h+='<div class="sub">'+m.notes.join(". ")+". Les résultats passés ne disent rien des suivants.</div>"}
   el.innerHTML=h;drawRes()}
 function drawRes(){
-  var m=resData,cv=$("rcv");if(!m||!cv||!cv.clientWidth)return;
+  var m=resData,cv=$("rcv"),U=m&&m.u?m.u:" $";if(!m||!cv||!cv.clientWidth)return;
   var css=getComputedStyle(document.documentElement);function tk(v){return css.getPropertyValue(v).trim()}
   var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
   var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
@@ -2583,7 +2642,7 @@ function drawRes(){
   g.strokeStyle=col;g.lineWidth=2;g.beginPath();c.forEach(function(p,i){if(i)g.lineTo(x(i),y(p.v));else g.moveTo(x(i),y(p.v))});g.stroke();
   g.fillStyle=col;g.beginPath();g.arc(x(n-1),y(last),3.5,0,6.3);g.fill();
   g.font="500 10.5px "+(tk("--mono")||"monospace");g.textBaseline="middle";g.fillStyle=tk("--muted");
-  [hi-pad,0,lo+pad].forEach(function(v,i){if(i!==1||(Math.abs(y(0)-y(hi-pad))>12&&Math.abs(y(0)-y(lo+pad))>12))g.fillText(sgn(v,0)+" $",pw+6,y(v))});
+  [hi-pad,0,lo+pad].forEach(function(v,i){if(i!==1||(Math.abs(y(0)-y(hi-pad))>12&&Math.abs(y(0)-y(lo+pad))>12))g.fillText(sgn(v,m.u?1:0)+U,pw+6,y(v))});
   g.textBaseline="alphabetic";function dl(t){return new Date(t).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})}
   g.fillText(dl(c[0].t),4,H-4);var tx=dl(c[n-1].t);g.fillText(tx,pw-g.measureText(tx).width-2,H-4)}
 $("view-res").addEventListener("click",function(e){
