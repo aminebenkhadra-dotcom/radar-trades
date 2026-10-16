@@ -176,7 +176,79 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   if(ctx&&ctx.btc&&sym!=="BTC"){f.btc4=ctx.btc.b4*dir;f.btcSh=ctx.btc.r4h*dir}else{f.btc4=null;f.btcSh=null}
 
   replan(r,opt);
+  r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
   return r}
+
+/* ---------- volume profile, anchored VWAP, order flow and price action, read on the last 5 days of 1H candles ---------- */
+/* volume at each price: every candle's volume spread evenly over its range; value area = the 70 % of volume around the POC */
+function vprofile(k,bins){
+  var lo=Infinity,hi=-Infinity,i,j;k.forEach(function(c){if(c.l<lo)lo=c.l;if(c.h>hi)hi=c.h});
+  var st=(hi-lo)/bins||1,v=[],vb=[],tot=0;for(i=0;i<bins;i++){v.push(0);vb.push(0)}
+  k.forEach(function(c){var a=Math.floor((c.l-lo)/st),b=Math.min(bins-1,Math.floor((c.h-lo)/st)),n=b-a+1,bq=isFinite(c.b)?c.b:c.q/2;
+    for(j=a;j<=b;j++){v[j]+=c.q/n;vb[j]+=bq/n}tot+=c.q});
+  var pi=0;for(i=1;i<bins;i++)if(v[i]>v[pi])pi=i;
+  var up=pi,dn=pi,acc=v[pi];
+  while(acc<0.7*tot&&(up<bins-1||dn>0)){var nu=up<bins-1?v[up+1]:-1,nd=dn>0?v[dn-1]:-1;if(nu>=nd){up++;acc+=nu}else{dn--;acc+=nd}}
+  return{lo:lo,hi:hi,st:st,v:v,vb:vb,poc:lo+(pi+0.5)*st,vah:lo+(up+1)*st,val:lo+dn*st,tot:tot}}
+/* volume-weighted average price from candle i0 to now (q is volume in dollars) */
+function avwap(k,i0){var sq=0,sb=0,out=[];for(var i=0;i<k.length;i++){if(i<i0){out.push(null);continue}var tp=(k[i].h+k[i].l+k[i].c)/3;sq+=k[i].q;sb+=k[i].q/tp;out.push(sb>0?sq/sb:null)}return out}
+/* candle pattern on one closed candle, read for a long (dir 1) or a short (dir -1): 1 for, -1 against, 0 none */
+function paCandle(k1,k0,a,dir){
+  if(!k1||!k0||!(a>0))return{s:0};
+  var body=Math.abs(k0.c-k0.o),rng=k0.h-k0.l,lw=Math.min(k0.o,k0.c)-k0.l,uw=k0.h-Math.max(k0.o,k0.c),b1=Math.abs(k1.c-k1.o);
+  var bullE=k0.c>k0.o&&k1.c<k1.o&&k0.c>=k1.o&&k0.o<=k1.c&&body>=Math.max(b1,0.3*a),bearE=k0.c<k0.o&&k1.c>k1.o&&k0.c<=k1.o&&k0.o>=k1.c&&body>=Math.max(b1,0.3*a);
+  var hammer=rng>=0.6*a&&lw>=2*body&&lw>=0.55*rng,star=rng>=0.6*a&&uw>=2*body&&uw>=0.55*rng;
+  var s=0,t="";
+  if(bullE){s=dir;t="avalement haussier"}else if(bearE){s=-dir;t="avalement baissier"}
+  else if(hammer){s=dir;t="mèche de rejet par le bas"}else if(star){s=-dir;t="mèche de rejet par le haut"}
+  return{s:s,t:t}}
+function flowRead(h1,h4,dir,plan,a,struct){
+  var n=h1.length;if(n<60||!plan||!(a>0))return null;
+  var w=h1.slice(Math.max(0,n-120)),N=w.length,price=w[N-1].c,i,it=[],sc=0,cat="vp",C={vp:0,aw:0,of:0,dv:0,pa:0};
+  function add(pts,k,t){sc+=pts;C[cat]+=pts;it.push({k:k,t:t,c:cat})}
+  /* volume profile */
+  var vp=vprofile(w,40),e=plan.entry,tp=plan.tp1,near=0.3*a;
+  var sup=dir>0?[["POC",vp.poc],["bas de la zone de valeur",vp.val]]:[["POC",vp.poc],["haut de la zone de valeur",vp.vah]];
+  var onLvl=sup.filter(function(x){return Math.abs(e-x[1])<=near})[0];
+  if(onLvl)add(1,"ok","Entrée sur le "+onLvl[0]+" ("+px(onLvl[1])+") : prix où beaucoup de volume s'est échangé, il sert souvent d'appui");
+  var wall=[["POC",vp.poc],[dir>0?"haut de la zone de valeur":"bas de la zone de valeur",dir>0?vp.vah:vp.val]].filter(function(x){return(x[1]-e)*dir>near&&(x[1]-price)*dir>0&&(tp-x[1])*dir>near})[0];
+  if(wall)add(-1,"no","Le "+wall[0]+" ("+px(wall[1])+") est entre l'entrée et l'objectif : zone de gros volume qui peut freiner le prix");
+  var inVa=price>=vp.val&&price<=vp.vah;
+  if(!inVa&&(price-(dir>0?vp.vah:vp.val))*dir>0)add(0,"ok","Prix sorti de la zone de valeur dans ton sens : le marché accepte des prix "+(dir>0?"plus hauts":"plus bas"));
+  cat="aw";
+  /* anchored VWAP from the highest high and the lowest low of the window */
+  var ih=0,il=0;for(i=1;i<N;i++){if(w[i].h>w[ih].h)ih=i;if(w[i].l<w[il].l)il=i}
+  var aH=avwap(w,ih),aL=avwap(w,il),vH=aH[N-1],vL=aL[N-1],ab=(price>vH?1:0)+(price>vL?1:0);
+  var aw={ih:ih,il:il,hi:vH,lo:vL,sH:aH,sL:aL};
+  if(dir>0?ab===2:ab===0)add(1,"ok","Prix "+(dir>0?"au-dessus":"en dessous")+" des deux VWAP ancrés (depuis le plus haut et le plus bas) : "+(dir>0?"acheteurs":"vendeurs")+" en gain");
+  else if(dir>0?ab===0:ab===2)add(-1,"no","Prix "+(dir>0?"sous":"au-dessus")+" des deux VWAP ancrés : ceux qui ont "+(dir>0?"acheté":"vendu")+" récemment sont en perte");
+  else add(0,"mid","Prix entre les deux VWAP ancrés ("+px(Math.min(vH,vL))+" et "+px(Math.max(vH,vL))+") : pas de camp dominant");
+  /* order flow: aggressive buyers minus aggressive sellers (taker volume), cumulated */
+  cat="of";
+  var cv=[],cum=0,ok=true;w.forEach(function(c){if(!isFinite(c.b)){ok=false;cum+=0}else cum+=2*c.b-c.q;cv.push(cum)});
+  var d24=null;
+  if(ok&&N>=48){var q=0,d=0;for(i=N-24;i<N;i++){q+=w[i].q;d+=2*w[i].b-w[i].q}d24=q>0?d/q:0;
+    if(d24*dir>=0.03)add(1,"ok","Flux d'ordres sur 24 h : "+(dir>0?"acheteurs":"vendeurs")+" agressifs majoritaires (delta "+sgn(d24*100,0)+" %)");
+    else if(d24*dir<=-0.03)add(-1,"no","Flux d'ordres sur 24 h contre toi : "+(dir>0?"vendeurs":"acheteurs")+" agressifs majoritaires (delta "+sgn(d24*100,0)+" %)");
+    else add(0,"mid","Flux d'ordres équilibré sur 24 h (delta "+sgn(d24*100,0)+" %)");
+    cat="dv";
+    /* divergence: price makes a new extreme over 12 hours but the cumulative delta does not follow */
+    var pH=-Infinity,pL=Infinity,qH=-Infinity,qL=Infinity,cH=-Infinity,cL=Infinity,kH=-Infinity,kL=Infinity;
+    for(i=N-24;i<N-12;i++){pH=Math.max(pH,w[i].h);pL=Math.min(pL,w[i].l);cH=Math.max(cH,cv[i]);cL=Math.min(cL,cv[i])}
+    for(i=N-12;i<N;i++){qH=Math.max(qH,w[i].h);qL=Math.min(qL,w[i].l);kH=Math.max(kH,cv[i]);kL=Math.min(kL,cv[i])}
+    if(qH>pH&&kH<cH)add(dir>0?-1:1,dir>0?"no":"ok","Divergence : nouveau plus haut sans hausse du delta cumulé, les acheteurs s'essoufflent");
+    else if(qL<pL&&kL>cL)add(dir>0?1:-1,dir>0?"ok":"no","Divergence : nouveau plus bas sans baisse du delta cumulé, les vendeurs s'essoufflent")}
+  cat="pa";
+  /* price action: last closed 4H and 1H candles, swing structure */
+  var n4=h4.length,a1=atr(w.slice(-60)),c4=paCandle(h4[n4-3],h4[n4-2],a,dir),c1=paCandle(w[N-3],w[N-2],a1,dir);
+  [[c4,"4H"],[c1,"1H"]].forEach(function(x){if(x[0].s)add(x[0].s,x[0].s>0?"ok":"no","Bougie "+x[1]+" : "+x[0].t+(x[0].s>0?", dans ton sens":", contre toi"))});
+  if(struct===2)add(0,"ok","Structure 4H "+(dir>0?"haussière : plus hauts et plus bas croissants":"baissière : plus hauts et plus bas décroissants"));
+  else if(struct===0)add(0,"no","Structure 4H contre toi : "+(dir>0?"plus hauts et plus bas décroissants":"plus hauts et plus bas croissants"));
+  var ord={no:0,mid:1,ok:2};it.sort(function(x,y){return ord[y.k]-ord[x.k]});
+  return{sc:sc,c:C,v:sc>=2?"ok":sc<=-2?"no":"mid",items:it,poc:vp.poc,vah:vp.vah,val:vp.val,d24:d24,awH:vH,awL:vL,
+    vp:{lo:vp.lo,st:vp.st,v:vp.v.map(function(x){return Math.round(x)}),vb:vp.vb.map(function(x){return Math.round(x)})},
+    k:w.map(function(c){return[c.o,c.h,c.l,c.c]}),cvd:cv.map(function(x){return Math.round(x)}),ih:ih,il:il,
+    sH:aH.map(function(x){return x===null?null:+x.toPrecision(7)}),sL:aL.map(function(x){return x===null?null:+x.toPrecision(7)})}}
 
 /* 15-minute evidence that the pullback is turning at the zone (the last candle of m is the one in progress) */
 function triggers(m,dir,z,a4){
@@ -517,7 +589,7 @@ function btStep(S,n){
       if(dir>0?c.l<=p.sl:c.h>=p.sl){var fill=dir>0?Math.min(c.o,p.sl):Math.max(c.o,p.sl);res={how:"sl",r:dir*(fill-e)/R};break}
       if(dir>0?c.h>=p.tp1:c.l<=p.tp1){res={how:"tp",r:Math.abs(p.tp1-e)/R};break}}
     if(!res){j=Math.min(j,N);res={how:j>=N?"open":"time",r:dir*(m[j].c-e)/R}}
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r-cost*e/R,score:r.score});
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r-cost*e/R,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null});
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}

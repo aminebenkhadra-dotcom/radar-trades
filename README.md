@@ -40,6 +40,21 @@ le résultat moyen. Les contrôles décrivent une configuration : ils ne prédis
 Le dossier `tools/backtest` contient les scripts qui ont produit ces chiffres ; `tools/engine.js` est le moteur, copié dans
 la page de l'appli par `node tools/inject.js`.
 
+## Volume profile, VWAP ancrés, flux d'ordres, price action
+
+Chaque setup affiche, sur les 5 derniers jours en 1H : le volume profile (POC, zone de valeur à 70 %), deux VWAP ancrés
+(depuis le plus haut et depuis le plus bas), le delta cumulé des ordres agressifs (volume taker) avec ses divergences, et la
+price action des dernières bougies 4H et 1H. Ces lectures ont été rejouées sur les setups « Prêt » des deux années :
+
+| Lecture au moment de l'entrée | Oct. 2024 à oct. 2025 | Nov. 2025 à oct. 2026 |
+|-------------------------------|-----------------------|-----------------------|
+| confirme le setup (score ≥ 2) | 254 · 29 % · −0,18 R  | 277 · 38 % · +0,10 R  |
+| mitigée                       | 2 143 · 33 % · −0,06 R | 1 569 · 35 % · +0,01 R |
+| contredit le setup (≤ −2)     | 950 · 31 % · −0,10 R  | 623 · 35 % · +0,02 R  |
+
+Aucun effet durable, ni ensemble ni composante par composante : ces lectures restent des aides visuelles et ne changent
+pas le statut « Prêt ».
+
 ## Données et clés
 
 L'appli lit les données de marché publiques de Binance. L'onglet Portefeuille demande des clés API **en lecture seule** :

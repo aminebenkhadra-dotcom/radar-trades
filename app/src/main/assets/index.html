@@ -328,6 +328,14 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
 .tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
 .tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
+/* volume profile, anchored VWAP, order flow */
+.fx{display:flex;flex-direction:column;gap:8px}
+.fxv{font-family:var(--display);font-weight:600;font-size:15px;color:var(--muted)} .fxv.ok{color:var(--good)} .fxv.no{color:var(--bad)}
+.detail canvas.vcv,.vcv{width:100%;height:230px;display:block;background:var(--sunk);border-radius:10px}
+.detail canvas.dcv,.dcv{width:100%;height:76px;display:block;background:var(--sunk);border-radius:10px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--muted)}
+.lg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.lg i.poc{background:var(--accent)} .lg i.va{background:var(--muted)} .lg i.ah{background:var(--bad)} .lg i.al{background:var(--good)} .lg i.vp{height:8px;width:8px;background:rgba(106,167,255,.55)}
 
 </style>
 </head>
@@ -449,7 +457,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Version 24.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Version 25.
     </footer>
 </div>
 <script>
@@ -655,7 +663,79 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   if(ctx&&ctx.btc&&sym!=="BTC"){f.btc4=ctx.btc.b4*dir;f.btcSh=ctx.btc.r4h*dir}else{f.btc4=null;f.btcSh=null}
 
   replan(r,opt);
+  r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
   return r}
+
+/* ---------- volume profile, anchored VWAP, order flow and price action, read on the last 5 days of 1H candles ---------- */
+/* volume at each price: every candle's volume spread evenly over its range; value area = the 70 % of volume around the POC */
+function vprofile(k,bins){
+  var lo=Infinity,hi=-Infinity,i,j;k.forEach(function(c){if(c.l<lo)lo=c.l;if(c.h>hi)hi=c.h});
+  var st=(hi-lo)/bins||1,v=[],vb=[],tot=0;for(i=0;i<bins;i++){v.push(0);vb.push(0)}
+  k.forEach(function(c){var a=Math.floor((c.l-lo)/st),b=Math.min(bins-1,Math.floor((c.h-lo)/st)),n=b-a+1,bq=isFinite(c.b)?c.b:c.q/2;
+    for(j=a;j<=b;j++){v[j]+=c.q/n;vb[j]+=bq/n}tot+=c.q});
+  var pi=0;for(i=1;i<bins;i++)if(v[i]>v[pi])pi=i;
+  var up=pi,dn=pi,acc=v[pi];
+  while(acc<0.7*tot&&(up<bins-1||dn>0)){var nu=up<bins-1?v[up+1]:-1,nd=dn>0?v[dn-1]:-1;if(nu>=nd){up++;acc+=nu}else{dn--;acc+=nd}}
+  return{lo:lo,hi:hi,st:st,v:v,vb:vb,poc:lo+(pi+0.5)*st,vah:lo+(up+1)*st,val:lo+dn*st,tot:tot}}
+/* volume-weighted average price from candle i0 to now (q is volume in dollars) */
+function avwap(k,i0){var sq=0,sb=0,out=[];for(var i=0;i<k.length;i++){if(i<i0){out.push(null);continue}var tp=(k[i].h+k[i].l+k[i].c)/3;sq+=k[i].q;sb+=k[i].q/tp;out.push(sb>0?sq/sb:null)}return out}
+/* candle pattern on one closed candle, read for a long (dir 1) or a short (dir -1): 1 for, -1 against, 0 none */
+function paCandle(k1,k0,a,dir){
+  if(!k1||!k0||!(a>0))return{s:0};
+  var body=Math.abs(k0.c-k0.o),rng=k0.h-k0.l,lw=Math.min(k0.o,k0.c)-k0.l,uw=k0.h-Math.max(k0.o,k0.c),b1=Math.abs(k1.c-k1.o);
+  var bullE=k0.c>k0.o&&k1.c<k1.o&&k0.c>=k1.o&&k0.o<=k1.c&&body>=Math.max(b1,0.3*a),bearE=k0.c<k0.o&&k1.c>k1.o&&k0.c<=k1.o&&k0.o>=k1.c&&body>=Math.max(b1,0.3*a);
+  var hammer=rng>=0.6*a&&lw>=2*body&&lw>=0.55*rng,star=rng>=0.6*a&&uw>=2*body&&uw>=0.55*rng;
+  var s=0,t="";
+  if(bullE){s=dir;t="avalement haussier"}else if(bearE){s=-dir;t="avalement baissier"}
+  else if(hammer){s=dir;t="mèche de rejet par le bas"}else if(star){s=-dir;t="mèche de rejet par le haut"}
+  return{s:s,t:t}}
+function flowRead(h1,h4,dir,plan,a,struct){
+  var n=h1.length;if(n<60||!plan||!(a>0))return null;
+  var w=h1.slice(Math.max(0,n-120)),N=w.length,price=w[N-1].c,i,it=[],sc=0,cat="vp",C={vp:0,aw:0,of:0,dv:0,pa:0};
+  function add(pts,k,t){sc+=pts;C[cat]+=pts;it.push({k:k,t:t,c:cat})}
+  /* volume profile */
+  var vp=vprofile(w,40),e=plan.entry,tp=plan.tp1,near=0.3*a;
+  var sup=dir>0?[["POC",vp.poc],["bas de la zone de valeur",vp.val]]:[["POC",vp.poc],["haut de la zone de valeur",vp.vah]];
+  var onLvl=sup.filter(function(x){return Math.abs(e-x[1])<=near})[0];
+  if(onLvl)add(1,"ok","Entrée sur le "+onLvl[0]+" ("+px(onLvl[1])+") : prix où beaucoup de volume s'est échangé, il sert souvent d'appui");
+  var wall=[["POC",vp.poc],[dir>0?"haut de la zone de valeur":"bas de la zone de valeur",dir>0?vp.vah:vp.val]].filter(function(x){return(x[1]-e)*dir>near&&(x[1]-price)*dir>0&&(tp-x[1])*dir>near})[0];
+  if(wall)add(-1,"no","Le "+wall[0]+" ("+px(wall[1])+") est entre l'entrée et l'objectif : zone de gros volume qui peut freiner le prix");
+  var inVa=price>=vp.val&&price<=vp.vah;
+  if(!inVa&&(price-(dir>0?vp.vah:vp.val))*dir>0)add(0,"ok","Prix sorti de la zone de valeur dans ton sens : le marché accepte des prix "+(dir>0?"plus hauts":"plus bas"));
+  cat="aw";
+  /* anchored VWAP from the highest high and the lowest low of the window */
+  var ih=0,il=0;for(i=1;i<N;i++){if(w[i].h>w[ih].h)ih=i;if(w[i].l<w[il].l)il=i}
+  var aH=avwap(w,ih),aL=avwap(w,il),vH=aH[N-1],vL=aL[N-1],ab=(price>vH?1:0)+(price>vL?1:0);
+  var aw={ih:ih,il:il,hi:vH,lo:vL,sH:aH,sL:aL};
+  if(dir>0?ab===2:ab===0)add(1,"ok","Prix "+(dir>0?"au-dessus":"en dessous")+" des deux VWAP ancrés (depuis le plus haut et le plus bas) : "+(dir>0?"acheteurs":"vendeurs")+" en gain");
+  else if(dir>0?ab===0:ab===2)add(-1,"no","Prix "+(dir>0?"sous":"au-dessus")+" des deux VWAP ancrés : ceux qui ont "+(dir>0?"acheté":"vendu")+" récemment sont en perte");
+  else add(0,"mid","Prix entre les deux VWAP ancrés ("+px(Math.min(vH,vL))+" et "+px(Math.max(vH,vL))+") : pas de camp dominant");
+  /* order flow: aggressive buyers minus aggressive sellers (taker volume), cumulated */
+  cat="of";
+  var cv=[],cum=0,ok=true;w.forEach(function(c){if(!isFinite(c.b)){ok=false;cum+=0}else cum+=2*c.b-c.q;cv.push(cum)});
+  var d24=null;
+  if(ok&&N>=48){var q=0,d=0;for(i=N-24;i<N;i++){q+=w[i].q;d+=2*w[i].b-w[i].q}d24=q>0?d/q:0;
+    if(d24*dir>=0.03)add(1,"ok","Flux d'ordres sur 24 h : "+(dir>0?"acheteurs":"vendeurs")+" agressifs majoritaires (delta "+sgn(d24*100,0)+" %)");
+    else if(d24*dir<=-0.03)add(-1,"no","Flux d'ordres sur 24 h contre toi : "+(dir>0?"vendeurs":"acheteurs")+" agressifs majoritaires (delta "+sgn(d24*100,0)+" %)");
+    else add(0,"mid","Flux d'ordres équilibré sur 24 h (delta "+sgn(d24*100,0)+" %)");
+    cat="dv";
+    /* divergence: price makes a new extreme over 12 hours but the cumulative delta does not follow */
+    var pH=-Infinity,pL=Infinity,qH=-Infinity,qL=Infinity,cH=-Infinity,cL=Infinity,kH=-Infinity,kL=Infinity;
+    for(i=N-24;i<N-12;i++){pH=Math.max(pH,w[i].h);pL=Math.min(pL,w[i].l);cH=Math.max(cH,cv[i]);cL=Math.min(cL,cv[i])}
+    for(i=N-12;i<N;i++){qH=Math.max(qH,w[i].h);qL=Math.min(qL,w[i].l);kH=Math.max(kH,cv[i]);kL=Math.min(kL,cv[i])}
+    if(qH>pH&&kH<cH)add(dir>0?-1:1,dir>0?"no":"ok","Divergence : nouveau plus haut sans hausse du delta cumulé, les acheteurs s'essoufflent");
+    else if(qL<pL&&kL>cL)add(dir>0?1:-1,dir>0?"ok":"no","Divergence : nouveau plus bas sans baisse du delta cumulé, les vendeurs s'essoufflent")}
+  cat="pa";
+  /* price action: last closed 4H and 1H candles, swing structure */
+  var n4=h4.length,a1=atr(w.slice(-60)),c4=paCandle(h4[n4-3],h4[n4-2],a,dir),c1=paCandle(w[N-3],w[N-2],a1,dir);
+  [[c4,"4H"],[c1,"1H"]].forEach(function(x){if(x[0].s)add(x[0].s,x[0].s>0?"ok":"no","Bougie "+x[1]+" : "+x[0].t+(x[0].s>0?", dans ton sens":", contre toi"))});
+  if(struct===2)add(0,"ok","Structure 4H "+(dir>0?"haussière : plus hauts et plus bas croissants":"baissière : plus hauts et plus bas décroissants"));
+  else if(struct===0)add(0,"no","Structure 4H contre toi : "+(dir>0?"plus hauts et plus bas décroissants":"plus hauts et plus bas croissants"));
+  var ord={no:0,mid:1,ok:2};it.sort(function(x,y){return ord[y.k]-ord[x.k]});
+  return{sc:sc,c:C,v:sc>=2?"ok":sc<=-2?"no":"mid",items:it,poc:vp.poc,vah:vp.vah,val:vp.val,d24:d24,awH:vH,awL:vL,
+    vp:{lo:vp.lo,st:vp.st,v:vp.v.map(function(x){return Math.round(x)}),vb:vp.vb.map(function(x){return Math.round(x)})},
+    k:w.map(function(c){return[c.o,c.h,c.l,c.c]}),cvd:cv.map(function(x){return Math.round(x)}),ih:ih,il:il,
+    sH:aH.map(function(x){return x===null?null:+x.toPrecision(7)}),sL:aL.map(function(x){return x===null?null:+x.toPrecision(7)})}}
 
 /* 15-minute evidence that the pullback is turning at the zone (the last candle of m is the one in progress) */
 function triggers(m,dir,z,a4){
@@ -996,7 +1076,7 @@ function btStep(S,n){
       if(dir>0?c.l<=p.sl:c.h>=p.sl){var fill=dir>0?Math.min(c.o,p.sl):Math.max(c.o,p.sl);res={how:"sl",r:dir*(fill-e)/R};break}
       if(dir>0?c.h>=p.tp1:c.l<=p.tp1){res={how:"tp",r:Math.abs(p.tp1-e)/R};break}}
     if(!res){j=Math.min(j,N);res={how:j>=N?"open":"time",r:dir*(m[j].c-e)/R}}
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r-cost*e/R,score:r.score});
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r-cost*e/R,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null});
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}
@@ -1206,7 +1286,7 @@ function card(r,n,force){
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+(r.st!=="ready"&&r.pct?" · "+r.pct+" %":"")+"</span></span>"
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan,z=sizing(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'
@@ -1215,7 +1295,7 @@ function card(r,n,force){
      +'<div><div class="cap">À saisir sur Binance · '+fr(+S.risk,1)+" % de risque, levier x"+esc(S.lev)+'</div><div class="size"><span>Quantité <b>'+fr(z.qty,z.qd)+" "+sy+"</b></span><span>Position <b>"+fr(z.notional,0)+" $</b></span><span>Marge à saisir <b>"+fr(z.notional/(+S.lev||1),2)+" USDT</b> ("+fr(z.m,0)+" %)</span><span>Perte au stop <b>"+fr(z.risk,2)+" $</b></span></div></div>"
      +'<div class="size"><span>Gain à TP1 <b class="pos">+'+fr(z.qty*Math.abs(p.tp1-p.entry),2)+' $</b></span><span>Gain à TP2 <b class="pos">+'+fr(z.qty*Math.abs(p.tp2-p.entry),2)+" $</b></span><span>Frais estimés <b>"+fr(z.fees,2)+" $</b>"+(r.costPct?" ("+fr(r.costPct,0)+" % du risque)":"")+"</span></div>"
      +z.w.map(function(w){return'<div class="warn">'+esc(w)+"</div>"}).join("")
-     +gatesView(r)+gauges(r)+bookView(r)+squeezeView(r.sq)
+     +gatesView(r)+flowView(r)+gauges(r)+bookView(r)+squeezeView(r.sq)
      +'<div class="acts"><button class="take" type="button" data-take="'+sy+'"'+(openTrades().some(function(t){return t.sym===r.sym})?" disabled>Déjà dans Mes trades":">J'ai pris ce trade")+'</button><button class="copy" type="button" data-copy="'+sy+'">Copier le plan</button></div></div>'}
   return h+"</article>"}
 function gauge(label,v){
@@ -1237,8 +1317,52 @@ function bookView(r){
   return h+"</div></div>"}
 function find(s){if(view==="one")return oneRes&&oneRes.sym===s?oneRes:null;for(var i=0;i<results.length;i++)if(results[i].sym===s)return results[i];return null}
 
+/* ---------- volume profile, anchored VWAP and order flow of a setup ---------- */
+/* measured on the "Prêt" setups of two separate years (tools/backtest, flow score at the moment of entry) */
+var FXV={ok:"confirment",mid:"mitigés",no:"contredisent"},FLOWREF="Testé sur deux ans de setups « Prêt » : quand ces signaux confirment, −0,18\u00a0R puis +0,10\u00a0R par trade ; quand ils contredisent, −0,10\u00a0R puis +0,02\u00a0R. Aucun effet durable : une lecture du marché, pas un filtre gagnant.";
+function flowView(r){
+  var f=r.flow;if(!f)return"";var side=r.dir>0?"le long":"le short";
+  return'<div class="fx"><div class="cap">Volume profile, VWAP ancrés, flux d\'ordres, price action · 5 derniers jours en 1H</div>'
+    +'<div class="fxv '+f.v+'">'+(f.v==="mid"?"Signaux mitigés pour "+side:"Volume et flux "+FXV[f.v]+" "+side)+" ("+sgn(f.sc,0)+")</div>"
+    +'<canvas class="vcv" id="vcv" aria-label="Bougies 1H avec volume profile et VWAP ancrés"></canvas>'
+    +'<div class="lg"><span><i class="vp"></i>volume par prix</span><span><i class="poc"></i>POC '+px(f.poc)+'</span><span><i class="va"></i>zone de valeur '+px(f.val)+" – "+px(f.vah)+'</span><span><i class="ah"></i>VWAP depuis le plus haut '+px(f.awH)+'</span><span><i class="al"></i>VWAP depuis le plus bas '+px(f.awL)+"</span></div>"
+    +'<div class="cap">Delta cumulé : achats agressifs moins ventes agressives</div><canvas class="dcv" id="dcv" aria-label="Delta cumulé sur 5 jours"></canvas>'
+    +'<ul class="why">'+f.items.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul>"
+    +(FLOWREF?'<div class="sub">'+FLOWREF+"</div>":"")+"</div>"}
+function drawFlow(r){
+  var f=r.flow,cv=document.querySelector("section.view:not([hidden]) canvas#vcv");if(!f||!cv||!cv.clientWidth)return;
+  var css=getComputedStyle(document.documentElement);function tk(n){return css.getPropertyValue(n).trim()}
+  var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
+  var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
+  var k=f.k,p=r.plan,vals=[];k.forEach(function(c){vals.push(c[1],c[2])});if(p)vals.push(p.entry,p.sl);
+  var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals),pad=(hi-lo)*0.05;lo-=pad;hi+=pad;
+  var AX=40,PW=Math.round((W-AX)*0.26),CW=W-AX-PW,cw=CW/k.length,y=function(v){return H-4-(v-lo)/(hi-lo)*(H-8)};
+  /* value area behind the candles */
+  g.fillStyle="rgba(127,127,127,.10)";g.fillRect(0,y(f.vah),CW+PW,y(f.val)-y(f.vah));
+  /* profile on the right of the candles; the darker part is aggressive buying */
+  var mx=Math.max.apply(null,f.vp.v)||1;
+  f.vp.v.forEach(function(v,i){var a=f.vp.lo+i*f.vp.st,b=a+f.vp.st,y0=y(b),y1=y(a),len=v/mx*(PW-6),poc=f.poc>=a&&f.poc<b,hh=Math.max(1,y1-y0-1);
+    g.fillStyle=poc?tk("--accent"):"rgba(106,167,255,.38)";g.fillRect(CW+PW-len,y0+0.5,len,hh);
+    if(!poc&&v>0){g.fillStyle="rgba(106,167,255,.85)";g.fillRect(CW+PW-len,y0+0.5,Math.max(0,f.vp.vb[i]/v*len),hh)}});
+  k.forEach(function(c,i){var x=i*cw+cw/2,up=c[3]>=c[0];g.strokeStyle=g.fillStyle=tk(up?"--good":"--bad");g.lineWidth=1;
+    g.beginPath();g.moveTo(x,y(c[1]));g.lineTo(x,y(c[2]));g.stroke();var t=y(Math.max(c[0],c[3])),b=y(Math.min(c[0],c[3]));g.fillRect(x-cw*0.3,t,cw*0.6,Math.max(1,b-t))});
+  function hl(v,col,dash,lw,label){if(!(v>lo&&v<hi))return;var yy=y(v);g.strokeStyle=g.fillStyle=col;g.setLineDash(dash);g.lineWidth=lw;g.beginPath();g.moveTo(0,yy);g.lineTo(CW+PW,yy);g.stroke();g.setLineDash([]);
+    if(label){g.font="600 10px "+(tk("--mono")||"monospace");g.textBaseline="middle";g.fillText(label,CW+PW+4,yy)}}
+  hl(f.vah,tk("--muted"),[3,3],1,"VAH");hl(f.val,tk("--muted"),[3,3],1,"VAL");hl(f.poc,tk("--accent"),[],1.4,"POC");
+  if(p){hl(p.entry,tk("--accent"),[5,4],1,"");hl(p.sl,tk("--bad"),[5,4],1,"")}
+  function ln(s,col){g.strokeStyle=col;g.lineWidth=1.8;g.beginPath();var on=false;s.forEach(function(v,i){if(v===null)return;var x=i*cw+cw/2;if(on)g.lineTo(x,y(v));else{g.moveTo(x,y(v));on=true}});g.stroke()}
+  ln(f.sH,tk("--bad"));ln(f.sL,tk("--good"));
+  /* cumulative delta under the candles, same time axis */
+  var dv=document.querySelector("section.view:not([hidden]) canvas#dcv");if(!dv||!dv.clientWidth)return;
+  var W2=dv.clientWidth,H2=dv.clientHeight;dv.width=W2*dp;dv.height=H2*dp;var d=dv.getContext("2d");d.scale(dp,dp);d.clearRect(0,0,W2,H2);
+  var c=f.cvd,a=Math.min(0,Math.min.apply(null,c)),b=Math.max(0,Math.max.apply(null,c)),yd=function(v){return H2-5-(v-a)/((b-a)||1)*(H2-10)},xd=function(i){return i*cw+cw/2};
+  d.strokeStyle=tk("--line");d.lineWidth=1;d.beginPath();d.moveTo(0,yd(0));d.lineTo(CW,yd(0));d.stroke();
+  var last=c[c.length-1];d.strokeStyle=tk(last>=0?"--good":"--bad");d.lineWidth=1.8;d.beginPath();c.forEach(function(v,i){if(i)d.lineTo(xd(i),yd(v));else d.moveTo(xd(i),yd(v))});d.stroke();
+  d.fillStyle=tk("--muted");d.font="500 10px "+(tk("--mono")||"monospace");d.textBaseline="middle";d.fillText((last>=0?"+":"−")+usd(Math.abs(last)),CW+PW+4,yd(last))}
+
 /* ---------- chart ---------- */
 function draw(r){
+  drawFlow(r);
   var cv=document.querySelector("section.view:not([hidden]) canvas#cv");if(!cv)return;var css=getComputedStyle(document.documentElement);
   function tk(n){return css.getPropertyValue(n).trim()}
   var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
@@ -1430,6 +1554,12 @@ function checkTrade(t){
     else if(bd===-dir)add(-2,"no","Tendance 1J contre ton trade");
     if(MKT&&MKT.side)add(0,MKT.side===dir?"ok":"mid",MKT.side===dir?"Dans le sens de la tendance du marché ("+MKT.label.toLowerCase()+")":"Contre la tendance du marché ("+MKT.label.toLowerCase()+")");
     var eng=judge(analyze(t.sym,d1,h4,h1,null,opts()),{quiet:true,strict:0,fee:+S.fee||0,lev:+S.lev||1});
+    /* volume profile, anchored VWAP, order flow and price action, read for the trade's own direction */
+    var a4f=atr(h4),fl=flowRead(h1,h4,dir,{entry:t.entry,tp1:t.tp>0?t.tp:t.entry+dir*3*a4f},a4f,null);
+    if(fl){var fneg=fl.items.filter(function(x){return x.k==="no"})[0],fpos=fl.items.filter(function(x){return x.k==="ok"})[0];
+      if(fl.v==="no")add(-1,"no","Volume et flux contre ton trade"+(fneg?" : "+fneg.t.charAt(0).toLowerCase()+fneg.t.slice(1):""));
+      else if(fl.v==="ok")add(1,"ok","Volume et flux dans ton sens"+(fpos?" : "+fpos.t.charAt(0).toLowerCase()+fpos.t.slice(1):""));
+      else add(0,"mid","Volume et flux mitigés (VWAP ancrés, delta, volume profile)")}
     if(eng.plan&&eng.dir===-dir&&eng.score>=50)add(-3,"no","Le scanner propose maintenant un "+(dir>0?"short":"long")+" sur cette crypto (score "+eng.score+")");
     else if(eng.plan&&eng.dir===dir)add(1,"ok","Le scanner voit toujours un setup "+(dir>0?"long":"short"));
     var risk=t.r0||Math.abs(t.entry-t.sl),rNow=risk?(price-t.entry)*dir/risk:0,left=risk?(price-t.sl)*dir/risk:1;
@@ -2614,7 +2744,7 @@ function paperRecord(list){
     var cat=r.st==="ready"?"ready":(+r.pct>=95?"near":null);if(!cat||open[r.full+r.dir])return;
     var e=+r.plan.entry,sl=+r.plan.sl,tp=+r.plan.tp1;if(!(e>0&&sl>0&&tp>0)||!(Math.abs(e-sl)>0))return;
     open[r.full+r.dir]=1;n++;
-    p.list.push({id:r.full+(r.dir>0?"L":"S")+now,sym:r.sym,full:r.full,dir:r.dir,cat:cat,t0:now,e:e,sl:sl,tp:tp,pct:+r.pct||0,ok:passed(r),tm:!!r.tm})});
+    p.list.push({id:r.full+(r.dir>0?"L":"S")+now,sym:r.sym,full:r.full,dir:r.dir,cat:cat,t0:now,e:e,sl:sl,tp:tp,pct:+r.pct||0,ok:passed(r),tm:!!r.tm,fl:r.flow?r.flow.sc:null})});
   if(p.list.length>800)p.list=p.list.slice(-800);
   if(n)paperSave(p);return n}
 /* closes the followed setups whose stop or TP1 has been reached (stop first when both are in the same candle) */
@@ -3128,7 +3258,7 @@ window.bgScan=function(t10,t50){
       var id=r.sym+(r.dir>0?"L":"S")+(rdy?"r":"n");if(seen[id])return;seen[id]=now;
       var mi=rdy?[]:missing(r);
       try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · "+passed(r)+"/6 contrôles",
-        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
+        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.flow&&r.flow.v!=="mid"?(r.flow.v==="ok"?"Volume et flux pour · ":"Volume et flux contre · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
     trades(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
   scan(m)};
