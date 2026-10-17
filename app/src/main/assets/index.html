@@ -465,7 +465,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. Version 28.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Version 29.
     </footer>
 </div>
 <script>
@@ -2400,22 +2400,42 @@ function holdings(){
     m.positions.forEach(function(p){if(p.mark&&!p.unit)expo+=p.size*p.mark})});
   list.sort(function(a,b){return b.usd-a.usd});
   return{list:list,tot:tot,expo:expo}}
+/* potential for the next bull run, from what separated winners and losers last cycle (tools/backtest/cycstudy.js):
+   of 105 Binance coins listed by 2020, 35 were gone by mid-2025; of the 70 left, 10 beat Bitcoin from the 2022 low to the 2025 high.
+   Big coins whose price had held up did best (8 of 22 beat Bitcoin); small coins that had collapsed, none (0 of 20).
+   Last cycle's multiple predicted nothing (rank correlation 0.04). */
+function bullPot(m,sym){
+  if(!m||!m.items||!m.items.length)return null;
+  var b=WRAP[sym]||sym;if(b==="BTC")return{k:"ref",t:"Référence",why:["Le Bitcoin est la référence du cycle : au dernier bull run, il a fait ×8 depuis le creux de 2022, mieux que 60 des 70 altcoins de 2020 encore cotées."]};
+  var big=m.rank&&m.rank<=50,small=!m.rank||m.rank>150,dd=m.dd,held=dd!==null&&dd>-90,crushed=dd!==null&&dd<=-90,why=[];
+  why.push(m.rank?"Taille : rang n°"+m.rank+(big?", dans les 50 premières":small?", hors des 150 premières":", entre la 51e et la 150e place"):"Taille inconnue");
+  if(dd!==null)why.push("Prix à "+fr(-dd,0)+" % sous son plus haut"+(m.ddLocal?" depuis sa cotation sur Binance Futures":" historique")+(held?" : il a mieux tenu que la moitié des altcoins au dernier creux":" : effondré"));
+  var k=big&&held?"ok":(small||!big)&&crushed?"no":"mid";
+  why.push(k==="ok"?"Profil des altcoins qui ont fait le mieux au dernier cycle : 8 sur 22 ont battu le Bitcoin, 7 sur 22 ont dépassé leur ancien record."
+    :k==="no"?"Profil des altcoins qui ont le moins profité du dernier cycle : aucune sur 20 n'a battu le Bitcoin ni retrouvé son ancien record."
+    :"Profil intermédiaire : au dernier cycle, 2 altcoins sur 28 de ce type ont battu le Bitcoin.");
+  return{k:k,t:k==="ok"?"Fort":k==="no"?"Faible":"Moyen",why:why}}
 /* recommendation for one holding, with the steps of the rule that produced it */
-function advise(m,w){
+function advise(m,w,bp){
   if(!m||!m.items.length)return{k:"mid",t:"Non évalué",why:"données indisponibles pour ce jeton",steps:["Pas assez de données (CoinGecko ou historique Binance) pour noter ce jeton."]};
   var tr=m.items.filter(function(x){return x.label==="Tendance long terme"})[0],tp=tr?tr.pts:null,s=m.score,st=[];
   st.push("Note de solidité "+s+"/100 : "+(s>=70?"70 ou plus, profil solide":s>=50?"entre 50 et 69, profil moyen":"sous 50, profil fragile ou spéculatif")+".");
   if(tp!==null)st.push("Tendance long terme "+tp+"/20 : "+(tp>=20?"haussière (prix au-dessus de ses moyennes 20 et 50 semaines)":tp<=8?"encore baissière (prix sous sa moyenne 50 semaines)":"hésitante")+".");
   st.push("Poids dans ton portefeuille : "+fr(w,0)+" %"+(w>25?", au-delà de 25 % une seule crypto pèse beaucoup":w>15?", au-delà de 15 %":"")+".");
+  if(bp)st.push("Potentiel pour le prochain bull run : "+bp.t.toLowerCase()+(bp.k==="ref"?" (le Bitcoin sert de référence)":"")+".");
+  var pF=bp&&bp.k==="ok",pW=bp&&bp.k==="no";
   function out(k,t,why,rule){st.push(rule);return{k:k,t:t,why:why,steps:st}}
   if(s>=70){
     if(tp!==null&&tp>=20&&s>=75&&w<15)return out("ok","Conserver, renforcement envisageable","profil solide et tendance long terme haussière","Règle : note d'au moins 75, tendance haussière et poids sous 15 % → conserver, et renforcer reste envisageable.");
+    if(pF&&tp!==null&&tp>8&&w<15)return out("ok","Conserver, renforcement envisageable","profil solide et bon potentiel pour le prochain bull run","Règle : profil solide, potentiel fort pour le prochain bull run, tendance qui n'est plus baissière et poids sous 15 % → conserver, et renforcer reste envisageable.");
     if(tp!==null&&tp<=8)return out("ok","Conserver","profil solide, mais tendance long terme encore baissière : aucun signal pour renforcer","Règle : profil solide mais tendance baissière → conserver sans renforcer tant que le prix reste sous ses moyennes longues.");
     return out("ok","Conserver","profil solide","Règle : note de 70 ou plus → conserver"+(w>=15?" ; pas de renforcement conseillé car elle pèse déjà "+fr(w,0)+" %":s<75?" ; renforcer demanderait une note d'au moins 75":"")+".")}
   if(s>=50){
+    if(pW&&w>10)return out("no","Alléger","profil moyen et faible potentiel pour le prochain bull run","Règle : profil moyen, potentiel faible pour le prochain bull run et plus de 10 % du portefeuille → alléger.");
     if(w>25)return out("mid","Alléger pour déconcentrer","profil moyen et "+fr(w,0)+" % du portefeuille","Règle : profil moyen et plus de 25 % du portefeuille → alléger pour moins dépendre d'une seule crypto.");
+    if(pF)return out("ok","Conserver","profil moyen mais bon potentiel pour le prochain bull run","Règle : note entre 50 et 69 mais potentiel fort pour le prochain bull run → conserver.");
     return out("mid","Conserver sous surveillance","profil moyen"+(tp!==null&&tp<=8?", tendance long terme baissière":""),"Règle : note entre 50 et 69 → conserver en surveillant ; elle passerait en « Alléger » au-delà de 25 % du portefeuille.")}
-  if(w>10)return out("no","Alléger","profil fragile et poids élevé ("+fr(w,0)+" %)","Règle : profil fragile et plus de 10 % du portefeuille → alléger.");
+  if(w>10||(pW&&w>3))return out("no","Alléger","profil fragile"+(pW?" et faible potentiel pour le prochain bull run":" et poids élevé ("+fr(w,0)+" %)"),pW?"Règle : profil fragile et potentiel faible pour le prochain bull run → alléger.":"Règle : profil fragile et plus de 10 % du portefeuille → alléger.");
   return out("no","À réévaluer","profil fragile","Règle : profil fragile mais poids limité → à réévaluer : regarde la grille ci-dessous pour voir ce qui pèse.")}
 function evaluatePf(){
   if(pfEvalBusy)return;
@@ -2443,7 +2463,7 @@ function evaluatePf(){
   }).then(function(p){
     var rows=p.out.sort(function(a,b){return b.h.usd-a.h.usd}),tot=H.tot||1,maj=0,stb=0,sw=0,ww=0,frag=0,fragN=[],down=0,leads=[];
     H.list.forEach(function(x){var b=WRAP[x.a]||x.a;if(STABLE[x.a])stb+=x.usd;else if(b==="BTC"||b==="ETH")maj+=x.usd});
-    rows.forEach(function(r){r.w=r.h.usd/tot*100;r.adv=advise(r.m,r.w);
+    rows.forEach(function(r){r.w=r.h.usd/tot*100;r.bp=bullPot(r.m,r.as||r.h.a);r.adv=advise(r.m,r.w,r.bp);
       if(r.m&&r.m.items.length){sw+=r.m.score*r.h.usd;ww+=r.h.usd;
         if(r.m.score<50){frag+=r.w;fragN.push(r.h.a)}
         var tr=r.m.items.filter(function(x){return x.label==="Tendance long terme"})[0];if(tr&&tr.pts<=8)down+=r.w}});
@@ -2455,6 +2475,9 @@ function evaluatePf(){
     if(stbP<5)leads.push({k:"mid",t:"Presque aucune réserve en stablecoins ("+fr(stbP,0)+" %) : pas de marge pour profiter d'une baisse ou absorber un appel de marge"});
     else if(stbP>60)leads.push({k:"mid",t:fr(stbP,0)+" % en stablecoins : peu exposé au marché, ce qui est un choix prudent"});
     if(H.expo>tot)leads.push({k:"no",t:"Tes positions futures représentent "+fr(H.expo/tot,1)+" fois la valeur du portefeuille : exposition élevée"});
+    var weak=0,weakN=[],strong=0;rows.forEach(function(r){if(r.bp&&r.bp.k==="no"){weak+=r.w;weakN.push(r.h.a)}if(r.bp&&(r.bp.k==="ok"||r.bp.k==="ref"))strong+=r.w});
+    if(weak>=15)leads.push({k:"no",t:fr(weak,0)+" % du portefeuille sur des cryptos à faible potentiel pour le prochain bull run ("+weakN.join(", ")+") : au dernier cycle, aucune crypto de ce profil n'a battu le Bitcoin"});
+    else if(strong>=50)leads.push({k:"ok",t:fr(strong,0)+" % du portefeuille sur le Bitcoin ou des cryptos à fort potentiel pour le prochain bull run"});
     if(!leads.length)leads.push({k:"ok",t:"Aucun déséquilibre majeur détecté par ces règles"});
     pfEval={at:Date.now(),rows:rows,tot:tot,avg:ww?Math.round(sw/ww):null,maj:majP,alt:altP,stb:stbP,leads:leads};
     pfEvalBusy=false;renderPf()
@@ -2471,7 +2494,7 @@ function evalView(){
       +'<div><div class="cap">Crypto par crypto · touche une ligne pour le détail</div>'+e.rows.map(function(r,i){
         var ok=r.m&&r.m.items.length,st=!ok?"":r.m.score>=70?"ready":r.m.score>=50?"watch":"wait",op=pfOpen===r.h.a;
         return'<button type="button" class="ev evb" data-pev="'+esc(r.h.a)+'" aria-expanded="'+op+'"><span class="ring" data-st="'+st+'" style="--v:'+(ok?r.m.score:0)+'"><b>'+(ok?r.m.score:"–")+"</b></span><span><b>"+esc(r.h.a)+"</b> <small>"+fr(r.w,0)+" % · "+usd0(r.h.usd)+(r.as?" · évalué comme "+r.as:"")+"</small>"
-          +'<span class="evt '+r.adv.k+'">'+r.adv.t+'</span><span class="sub">'+esc(r.adv.why.charAt(0).toUpperCase()+r.adv.why.slice(1))+'</span></span><span class="evc">'+(op?"▴":"▾")+"</span></button>"+(op?evDetail(r,i):"")}).join("")+"</div>"
+          +'<span class="evt '+r.adv.k+'">'+r.adv.t+'</span><span class="sub">'+esc(r.adv.why.charAt(0).toUpperCase()+r.adv.why.slice(1))+(r.bp?" · bull run : "+r.bp.t.toLowerCase():"")+'</span></span><span class="evc">'+(op?"▴":"▾")+"</span></button>"+(op?evDetail(r,i):"")}).join("")+"</div>"
       +'<div class="sub">Ces pistes sortent d\'une grille fixe (taille, dilution, liquidité, tendance sur plusieurs années, poids dans le portefeuille). Elles ignorent ton prix d\'achat, ton horizon, tes objectifs et ta fiscalité : ce ne sont pas des conseils personnalisés.</div>'}
   else h+='<div class="sub">Note chaque crypto de tes comptes sur sa solidité long terme, mesure l\'équilibre du portefeuille et propose des pistes d\'action.</div>';
   return h+'<div class="acts"><button class="take" type="button" data-pfe="1">'+(e?"Réévaluer":"Évaluer mes cryptos")+"</button>"+(e?'<button class="ghost" type="button" data-pfc="1">Copier la demande d\'avis pour Claude</button>':"")+"</div></article>"}
@@ -2485,6 +2508,7 @@ function evDetail(r,i){
   if(ok&&m.dd!==null)tiles.push([sgn(m.dd,0)+" %","depuis le plus haut"]);
   h+='<div class="funnel plain" style="grid-template-columns:repeat(2,minmax(0,1fr))">'+tiles.map(function(t){return"<div><b>"+t[0]+"</b><span>"+t[1]+"</span></div>"}).join("")+"</div>";
   if(held.where.length)h+='<div class="sub">Où : '+esc(held.where.join(" · "))+"</div>";
+  if(r.bp)h+='<div><div class="cap">Potentiel pour le prochain bull run · <b class="'+(r.bp.k==="ok"||r.bp.k==="ref"?"pos":r.bp.k==="no"?"neg":"")+'">'+r.bp.t+'</b></div><ul class="why">'+r.bp.why.map(function(x,j){return'<li class="'+(j<r.bp.why.length-1?"mid":r.bp.k==="no"?"no":r.bp.k==="mid"?"mid":"")+'">'+esc(x)+"</li>"}).join("")+'</ul><div class="sub" style="margin-top:4px">Mesuré sur un seul cycle (105 cryptos cotées depuis 2020, dont 35 disparues) : une tendance, pas une garantie.</div></div>';
   if(ok){h+='<div><div class="cap">Grille de notation · '+m.score+"/100</div>"+m.items.slice().sort(function(a,b){return ord[a.k]-ord[b.k]}).map(function(x){
       return'<div class="gr"><span><b>'+x.label+"</b> "+esc(x.text)+'</span><em class="'+(x.k==="ok"?"pos":x.k==="no"?"neg":"")+'">'+x.pts+"/"+x.max+'</em><i><u class="'+x.k+'" style="width:'+Math.round(x.pts/x.max*100)+'%"></u></i></div>'}).join("")+"</div>";
     if(m.k)h+='<div><div class="cap">Prix hebdomadaire · moyennes 20 semaines (jaune) et 50 semaines (gris)</div><canvas class="mcv" id="evc-'+i+'" aria-label="Prix hebdomadaire de '+esc(r.h.a)+'"></canvas></div>';

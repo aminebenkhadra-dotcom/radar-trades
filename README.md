@@ -62,6 +62,15 @@ deux années, elle a prédit la part de TP atteints avant le stop à 2 points pr
 est le temps médian qu'ont mis les setups gagnants pour un TP aussi éloigné, mesuré en ATR 1H : environ 10 h pour 2 à 3 ATR,
 17 h pour 3 à 4, 25 h pour 4 à 5, 34 h pour 5 à 6 (`tools/backtest/timing26.js`).
 
+## Potentiel pour le prochain bull run
+
+Mesuré sur le dernier cycle (`tools/backtest/cycles.js` et `cycstudy.js`, bougies mensuelles de data.binance.vision) : des
+105 cryptos cotées en USDT sur Binance depuis 2020, 35 avaient disparu mi-2025. Des 70 restantes, 10 ont fait mieux que le
+Bitcoin entre le creux de 2022 et le sommet de 2025, et 8 ont dépassé leur record de 2021. La hausse du cycle précédent ne
+prédisait rien (corrélation de rang 0,04). Ce qui a compté : la taille (volume) et la tenue du prix face à l'ancien record.
+Grosses et prix tenu : 8 sur 22 ont battu le Bitcoin ; petites et effondrées : 0 sur 20. Un seul cycle mesuré : une
+tendance, pas une garantie.
+
 ## Données et clés
 
 L'appli lit les données de marché publiques de Binance. L'onglet Portefeuille demande des clés API **en lecture seule** :
