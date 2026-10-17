@@ -328,6 +328,20 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
 .tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
 .tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
+/* capital split */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#9aa5a3}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#5f6f6c}}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#5f6f6c}
+.capw{position:relative;width:200px;height:200px;margin:0 auto}
+.dnt{width:200px;height:200px;display:block}
+.capc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.capc b{font-family:var(--mono);font-size:17px} .capc span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em} .capc em{font-style:normal;font-family:var(--mono);font-size:11px;margin-top:3px;max-width:88px}
+.capc em.pos{color:var(--good)} .capc em.neg{color:var(--bad)}
+.capl{display:flex;flex-direction:column}
+.capr{display:grid;grid-template-columns:12px minmax(0,1fr) auto 4.2em;gap:2px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.capr>i{width:12px;height:12px;border-radius:3px} .capr b{font-family:var(--display);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.capr em{font-style:normal;text-align:right;font-weight:600} .capr small{grid-column:2/-1;font-size:11.5px;color:var(--muted)} .capr small.pos{color:var(--good)} .capr small.neg{color:var(--bad)}
+.capr u{grid-column:2/-1;height:4px;border-radius:2px;background:var(--sunk);overflow:hidden} .capr s{display:block;height:100%;border-radius:2px}
 /* optimisation of open trades */
 .opd{background:var(--sunk);border-color:transparent} .opd:empty{display:none} .opd summary{font-size:14px} .opd summary b{font-family:var(--body);font-size:12px;margin-left:6px}
 .opl{list-style:none;margin:0;padding:0 0 8px;display:flex;flex-direction:column;gap:8px}
@@ -383,6 +397,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="news" aria-selected="false">Actus</button>
     <button type="button" role="tab" data-v="res" aria-selected="false">Résultats</button>
     <button type="button" role="tab" data-v="pf" aria-selected="false">Portefeuille</button>
+    <button type="button" role="tab" data-v="cap" aria-selected="false">Capital</button>
     <button type="button" role="tab" data-v="earn" aria-selected="false">Earn</button>
     <button type="button" role="tab" data-v="sim" aria-selected="false">Simulateur</button>
     <button type="button" role="tab" data-v="hbtc" aria-selected="false">Heatmap BTC</button>
@@ -411,6 +426,10 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <section class="view" id="view-news" hidden></section>
   <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
+  <section class="view" id="view-cap" hidden>
+    <h2 style="margin:0">Répartition du capital</h2>
+    <div class="stack" id="cap-out" style="gap:14px"></div>
+  </section>
   <section class="view" id="view-sim" hidden>
     <h2 style="margin:0">Simulateur de prix moyen</h2>
     <form class="askf" id="sim-form"><input id="sim-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Crypto, par exemple SOL" aria-label="Crypto"><button class="take" type="submit">Simuler</button></form>
@@ -483,7 +502,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. Version 33.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. Version 34.
     </footer>
 </div>
 <script>
@@ -1531,10 +1550,10 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"||v==="cap"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-cap").hidden=view!=="cap";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
@@ -1547,6 +1566,7 @@ function setView(v){
   else if(view==="mkt"||view==="cyc"){statusLine();renderMkt();loadMkt(false)}
   else if(view==="earn"){statusLine();renderEarn();if(CANPF&&!Object.keys(pf).length)loadAllPf()}
   else if(view==="sim"){statusLine();renderSim();if(CANPF&&!Object.keys(pf).length)loadAllPf()}
+  else if(view==="cap"){statusLine();renderCap();if(CANPF&&!Object.keys(pf).length)loadAllPf()}
   else{statusLine();renderTrades();tick();liveTick(true);checkDue()}}
 function when(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 
@@ -2578,7 +2598,7 @@ function loadPf(ex){
   if(pfBusy[ex])return;var has=false;try{has=Android.hasKeys(ex)}catch(e){}
   if(!has){delete pf[ex];renderPf();return}
   pfBusy[ex]=true;renderPf();
-  LOADERS[ex]().then(function(m){return addManual(ex,m)}).then(function(m){m.at=Date.now();pf[ex]=m},function(e){pf[ex]={err:apiMsg(e)}}).then(function(){pfBusy[ex]=false;renderPf();if(view==="earn")renderEarn()})}
+  LOADERS[ex]().then(function(m){return addManual(ex,m)}).then(function(m){m.at=Date.now();pf[ex]=m},function(e){pf[ex]={err:apiMsg(e)}}).then(function(){pfBusy[ex]=false;renderPf();if(view==="earn")renderEarn();if(view==="cap")renderCap();if(view==="sim")renderSim()})}
 function loadAllPf(){if(CANPF)EXS.forEach(function(x){loadPf(x[0])});else renderPf()}
 function usd0(v){return fr(v,v>=1000?0:2)+" $"}
 function renderPf(){
@@ -2886,6 +2906,49 @@ $("view-pf").addEventListener("click",function(e){
   var d=e.target.closest("[data-invdel]");if(d){var pr=d.dataset.invdel.split(":"),o=costs();if(o[pr[0]]){o[pr[0]].splice(+pr[1],1);if(!o[pr[0]].length)delete o[pr[0]];saveCosts(o)}invOpen=pr[0];renderPf();return}
   var g=e.target.closest("[data-simgo]");if(g){setView("sim");simLoad(g.dataset.simgo);try{scrollTo(0,0)}catch(x){}}},true);
 
+/* ---------- capital: how the money is spread across the cryptos, by amount invested or by value today ---------- */
+var CAPM="inv";
+function capData(){
+  var rows=invRows(),H=holdings(),stab=0;
+  H.list.forEach(function(x){if(STABLE[x.a])stab+=x.usd});
+  var inv=rows.filter(function(r){return r.c.q>0}).map(function(r){return{a:r.a,v:r.c.inv,val:r.val,res:r.res,pct:r.pct}}),
+    val=rows.filter(function(r){return r.val>=1}).map(function(r){return{a:r.a,v:r.val,res:r.c.q>0?r.res:null,pct:r.c.q>0?r.pct:null}});
+  if(stab>=1)val.push({a:"Stablecoins",v:stab,res:null,stable:true});
+  var miss=rows.filter(function(r){return!(r.c.q>0)&&r.val>=1});
+  return{inv:inv,val:val,miss:miss,missV:miss.reduce(function(s,r){return s+r.val},0),stab:stab}}
+function donut(list,tot){
+  var R=70,r=46,cx=90,cy=90,a0=-Math.PI/2,h='<svg viewBox="0 0 180 180" class="dnt" role="img" aria-label="Répartition du capital">';
+  if(list.length===1)return h+'<circle cx="90" cy="90" r="'+((R+r)/2)+'" fill="none" stroke="var(--s1)" stroke-width="'+(R-r)+'"/></svg>';
+  list.forEach(function(x,i){var f=x.v/tot,a1=a0+f*2*Math.PI,lg=f>0.5?1:0;
+    function pt(rad,a){return(cx+rad*Math.cos(a)).toFixed(2)+" "+(cy+rad*Math.sin(a)).toFixed(2)}
+    h+='<path d="M'+pt(R,a0)+" A"+R+" "+R+" 0 "+lg+" 1 "+pt(R,a1)+" L"+pt(r,a1)+" A"+r+" "+r+" 0 "+lg+" 0 "+pt(r,a0)+' Z" fill="var('+x.col+')" stroke="var(--surface)" stroke-width="2"/>';a0=a1});
+  return h+"</svg>"}
+function renderCap(){
+  var el=$("cap-out");if(!el)return;var D=capData(),L=CAPM==="inv"?D.inv:D.val,h="";
+  h+='<div class="filters"><button type="button" data-capm="inv" aria-pressed="'+(CAPM==="inv")+'">Capital investi</button><button type="button" data-capm="val" aria-pressed="'+(CAPM==="val")+'">Valeur actuelle</button></div>';
+  if(!L.length){el.innerHTML=h+'<div class="empty">'+(CAPM==="inv"?"Aucun achat renseigné. Dans Portefeuille → Mon investissement, indique la quantité achetée et le prix de chaque crypto.":CANPF?"Connecte un compte dans l'onglet Portefeuille pour voir la répartition.":"Cette fonction demande la dernière version de l'application.")+'</div><div class="acts"><button class="ghost" type="button" data-go="pf">Aller au Portefeuille</button></div>';return}
+  L=L.slice().sort(function(a,b){return b.v-a.v});var tot=L.reduce(function(s,x){return s+x.v},0),top=L.slice(0,7),rest=L.slice(7);
+  if(rest.length)top.push({a:"Autres ("+rest.length+")",v:rest.reduce(function(s,x){return s+x.v},0),other:true});
+  /* each crypto keeps its colour in both views: slots follow the order by value today */
+  var cm={},k=0;D.val.slice().sort(function(a,b){return b.v-a.v}).forEach(function(x){if(!x.stable&&k<7)cm[x.a]="--s"+(++k)});
+  top.forEach(function(x){x.col=x.other?"--muted":x.stable?"--s8":cm[x.a]||"--muted"});
+  var resT=CAPM==="inv"?D.inv.reduce(function(s,x){return s+x.res},0):null;
+  h+='<article class="card tr"><div class="capw">'+donut(top,tot)+'<div class="capc"><b>'+usd0(tot)+"</b><span>"+(CAPM==="inv"?"investis":"aujourd'hui")+"</span>"
+    +(resT!==null?'<em class="'+(resT>=0?"pos":"neg")+'">'+sgn(resT,0)+" $ · "+sgn(tot?resT/tot*100:0,1)+" %</em>":"")+"</div></div>"
+    +'<div class="capl">'+top.map(function(x){var p=x.v/tot*100;
+      return'<div class="capr"><i style="background:var('+x.col+')"></i><b>'+esc(x.a)+'</b><span class="num">'+usd0(x.v)+'</span><em class="num">'+fr(p,p<10?1:0)+" %</em>"
+        +(x.res!==null&&x.res!==undefined&&!x.other?'<small class="'+(x.res>=0?"pos":"neg")+'">'+(CAPM==="inv"?"vaut "+usd0(x.val)+" · ":"")+sgn(x.pct,1)+" %</small>":x.stable?"<small>réserve, hors investissement</small>":"")
+        +'<u><s style="width:'+Math.max(1,p).toFixed(1)+'%;background:var('+x.col+')"></s></u></div>'}).join("")+"</div>";
+  /* concentration, in plain words */
+  var big=top[0],t3=L.slice(0,3).reduce(function(s,x){return s+x.v},0)/tot*100,notes=[];
+  if(big&&!big.other&&big.v/tot>0.4)notes.push(esc(big.a)+" représente "+fr(big.v/tot*100,0)+" % du capital : une seule crypto porte l'essentiel du risque.");
+  if(L.length>=4)notes.push("Les 3 premières lignes font "+fr(t3,0)+" % du total.");
+  if(CAPM==="inv"&&D.miss.length)notes.push(D.miss.length+(D.miss.length>1?" cryptos":" crypto")+" sans prix d'achat ("+usd0(D.missV)+" aujourd'hui) ne sont pas comptées : "+D.miss.slice(0,6).map(function(r){return esc(r.a)}).join(", ")+(D.miss.length>6?"…":".")) ;
+  if(CAPM==="inv"&&D.stab>=1)notes.push("Stablecoins (réserve) : "+usd0(D.stab)+", hors capital investi.");
+  if(notes.length)h+='<ul class="why">'+notes.map(function(n){return'<li class="mid"><span>'+n+"</span></li>"}).join("")+"</ul>";
+  h+='<div class="acts"><button class="ghost" type="button" data-go="pf">Modifier mes achats</button></div></article>';
+  el.innerHTML=h}
+$("view-cap").addEventListener("click",function(e){var b=e.target.closest("[data-capm]");if(b){CAPM=b.dataset.capm;renderCap()}});
 /* ---------- average price simulator: what one or more new purchases do to the average price ---------- */
 var SIM={a:"",qty:0,avg:0,px:0,buys:[{m:"",p:""}],target:"",P:null,busy:false,err:""};
 function simLoad(a){
@@ -3595,7 +3658,7 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===3&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|hbtc|heth|mkt|cyc|tmp)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|cap|hbtc|heth|mkt|cyc|tmp)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
