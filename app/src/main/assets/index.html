@@ -328,6 +328,11 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
 .tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
 .tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
+/* optimisation of open trades */
+.opd{background:var(--sunk);border-color:transparent} .opd:empty{display:none} .opd summary{font-size:14px} .opd summary b{font-family:var(--body);font-size:12px;margin-left:6px}
+.opl{list-style:none;margin:0;padding:0 0 8px;display:flex;flex-direction:column;gap:8px}
+.opl li{display:flex;flex-direction:column;gap:2px;border-left:3px solid var(--good);padding:2px 0 2px 10px;font-size:13.5px}
+.opl li.mid{border-color:var(--accent)} .opl li.no{border-color:var(--bad)} .opl li b{font-family:var(--display);font-size:14.5px} .opl li span{color:var(--muted)}
 /* my investment */
 .ivr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 0;color:inherit}
 .ivr>span>b{font-family:var(--display);font-size:16px} .ivr .sub{display:block}
@@ -478,7 +483,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Version 32.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. Version 33.
     </footer>
 </div>
 <script>
@@ -1355,6 +1360,39 @@ function bookView(r){
   return h+"</div></div>"}
 function find(s){if(view==="one")return oneRes&&oneRes.sym===s?oneRes:null;for(var i=0;i<results.length;i++)if(results[i].sym===s)return results[i];return null}
 
+/* ---------- optimisation of an open trade: size, fees, profit taking, trailing stop, funding ----------
+   Management rules replayed on 20 000 setups over two years (tools/backtest/manage.js): taking half at +1R with the stop at break-even,
+   or a trailing stop at 2 ATR 1H after +1R, left the average result unchanged (differences under 0.01 R) but raised the share of
+   trades ending positive from 34 % to 50 % (half at +1R) or about 40 % (trailing, break-even). */
+function optItems(t,price){
+  var it=[],h=health[t.id],a1=h&&!h.err&&h.atr,d=t.dir,e=t.entry,sl=t.sl,tp=t.tp,R=sl>0?Math.abs(e-sl):0,qty=+t.qty||0;
+  var acc=(t.live&&LV.acct)||+S.account||0,riskU=R*qty,goal=+S.risk||2,fee=(+S.fee||0)/100;
+  if(!(price>0))return it;
+  /* no stop: a level at 3 ATR 1H from the entry, and the size that keeps the planned risk */
+  if(!R&&a1){var ss=e-d*3*a1;if((price-ss)*d<=0)ss=price-d*3*a1;var dist=Math.abs(e-ss);
+    it.push({k:"no",h:"Placer un stop",t:"Repère : "+px(ss)+" (3 ATR 1H de l'entrée, hors du bruit habituel)."+(acc&&qty?" Avec ce stop, perte max ≈ "+fr(dist*qty,2)+" $ ("+fr(dist*qty/acc*100,1)+" % du compte)"+(dist*qty/acc*100>goal*1.5?" : réduis la position à "+q4i(acc*goal/100/dist)+" pour rester à "+fr(goal,1)+" %.":"."):"")})}
+  /* size */
+  if(R&&acc&&qty){var rp=riskU/acc*100;
+    if(rp>goal*1.5)it.push({k:"no",h:"Réduire la taille",t:"Au stop tu perdrais "+fr(riskU,2)+" $, soit "+fr(rp,1)+" % du compte, au lieu de "+fr(goal,1)+" % prévus. Ramène la position à "+q4i(qty*goal/rp)+" pour revenir à "+fr(goal,1)+" %."})}
+  /* fees against the risk */
+  if(R&&fee>0){var fs=2*fee*e/R*100;
+    if(fs>=15)it.push({k:"mid",h:"Stop très serré",t:"Les frais aller-retour coûtent "+fr(fs,0)+" % de ce que tu risques"+(a1&&R<a1?", et le stop est à moins d'une bougie 1H moyenne : un mouvement ordinaire peut le toucher":"")+". Un stop plus large avec une taille réduite garde le même risque et pèse moins en frais."})}
+  /* profit taking and trailing stop, once a stop exists */
+  if(R){var r=(price-e)*d/R,one=e+d*R,beDone=(sl-e)*d>=0;
+    if(r<1)it.push({k:"ok",h:"Plan à +1R ("+px(one)+")",t:"Option : encaisser la moitié à "+px(one)+" et monter le stop au break-even. Sur deux ans de setups, 50 % des trades finissent alors positifs au lieu de 34 %, pour le même résultat moyen : moins de séries de pertes, pas plus de gain."});
+    else{it.push({k:"ok",h:"Sécuriser une partie",t:"Le trade est à "+sgn(r,1)+" R. Option : encaisser la moitié maintenant"+(beDone?"":" et monter le stop au break-even")+" : même résultat moyen sur deux ans, mais un trade gagnant qui ne peut plus devenir perdant."});
+      if(a1){var tr=price-d*2*a1;if((tr-sl)*d>0)it.push({k:"ok",h:"Stop suiveur",t:"Option : suivre le prix avec un stop à 2 ATR 1H, soit "+px(tr)+" aujourd'hui (à remonter quand le prix progresse). Testé sur deux ans : même résultat moyen, 40 % de trades positifs au lieu de 34 %."})}}}
+  /* funding paid while waiting for the target */
+  var f=h&&!h.err?h.fund:null;
+  if(f!==null&&f!==undefined&&f*d>0&&qty){var day=Math.abs(f)*3*qty*price,left=tp>0?(tp-price)*d:0,tt=left>0&&a1?tpTime(left,a1):null,days=tt?tt.med/24:1,cost=day*days;
+    if(R&&cost>=0.05*riskU)it.push({k:"mid",h:"Funding à payer",t:"Funding de "+fr(f*100,3)+" % toutes les 8 h contre toi : ≈ "+fr(day,2)+" $ par jour, ≈ "+fr(cost,2)+" $ d'ici le TP ("+fr(cost/riskU,2)+" R)."})}
+  return it}
+function paintOpt(t,price){
+  var el=$("op-"+t.id);if(!el)return;var it=optItems(t,price),k=it.map(function(x){return x.h+x.t}).join("|");
+  if(el.dataset.k===k)return;el.dataset.k=k;
+  if(!it.length){el.innerHTML="";return}
+  el.innerHTML='<summary>Optimisation · '+it.length+(it.length>1?" conseils":" conseil")+(it.some(function(x){return x.k==="no"})?' <b class="neg">à corriger</b>':"")+"</summary>"
+    +'<ul class="opl">'+it.map(function(x){return'<li class="'+x.k+'"><b>'+esc(x.h)+"</b><span>"+esc(x.t)+"</span></li>"}).join("")+'</ul><div class="sub" style="padding-bottom:12px">Options de gestion mesurées sur deux ans de setups : elles changent la régularité des résultats, pas le gain moyen. L\'appli ne modifie rien sur Binance.</div>'}
 /* ---------- reliability and expected time to the target ---------- */
 function oddsChip(r){var p=r.plan,o=tpOdds(p.entry,p.sl,p.tp1,r.dir),t=tpTime(Math.abs(p.tp1-p.entry),r.a1);
   return o===null?"":"<span>TP1 "+Math.round(o*100)+" %"+(t?" · ~"+hrs(t.med):"")+"</span>"}
@@ -1526,7 +1564,7 @@ function renderTrades(){
       +'<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
       +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(t.sl)+'</span><span id="px-'+id+'">–</span><span>TP '+px(t.tp)+"</span></div></div>"
-      +'<div class="funnel plain two" id="od-'+id+'"></div>'+vpBox(id)
+      +'<div class="funnel plain two" id="od-'+id+'"></div><details class="set opd" id="op-'+id+'"></details>'+vpBox(id)
       +'<div class="warn" id="al-'+id+'" hidden></div>'
       +'<div class="grid"><label>Entrée<input inputmode="decimal" id="e-'+id+'" data-id="'+id+'" data-f="entry" value="'+t.entry+'"></label>'
       +'<label>Quantité<input inputmode="decimal" id="q-'+id+'" data-id="'+id+'" data-f="qty" value="'+t.qty+'"></label>'
@@ -1554,7 +1592,7 @@ function totals(){
   a.textContent=ok?sgn(sum,2)+" $":"–";a.className=ok?(sum>=0?"pos":"neg"):"";
   b.textContent=sgn(done,2)+" $";b.className=done>=0?"pos":"neg"}
 function paint(t){
-  var p=lastPx[t.full],n=$("net-"+t.id);paintBE(t,p);paintOdds(t,p);if(!n||p===undefined)return;
+  var p=lastPx[t.full],n=$("net-"+t.id);paintBE(t,p);paintOdds(t,p);paintOpt(t,p);if(!n||p===undefined)return;
   var v=pnl(t,p),acc=+S.account||0;
   n.textContent=sgn(v.net,2)+" $";n.className="net "+(v.net>=0?"pos":"neg");
   $("sub-"+t.id).textContent=(acc?sgn(v.net/acc*100,2)+" % du compte · ":"")+(v.risk?sgn(v.net/v.risk,2)+" R · ":"")+"brut "+sgn(v.gross,2)+" $ · frais −"+fr(v.fee,2)+" $";
@@ -1676,7 +1714,7 @@ function checkTrade(t){
       tp=after.length?{act:"up",px:after[0].p-dir*0.1*a4,why:"Prix proche de l'objectif, tendance 1J et 4H intactes, prochain niveau vers "+px(after[0].p)}
         :{act:"up",px:t.tp+dir*Math.max(r0,a4),why:"Prix proche de l'objectif, tendance 1J et 4H intactes, aucun niveau au-delà : objectif repoussé d'un cran"};
     else if(before.length)tp={act:"keep",why:"Une "+lvl+" vers "+px(before[0].p)+" sur le chemin, mais la tendance reste solide"};
-    return{v:v,sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl}})}
+    return{v:v,sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
 function paintTP(t){
   var el=$("tp-"+t.id);if(!el)return;var h=health[t.id],a=h&&!h.err&&h.tp;
   if(!a||a.act==="hit"||a.act==="none"){el.className="be";el.innerHTML="";return}
@@ -1699,7 +1737,7 @@ function runHealth(t,force){
   if(healthBusy[t.id])return Promise.resolve();
   var h=health[t.id];if(!force&&h&&!h.err&&Date.now()-h.at<5*60e3)return Promise.resolve();
   healthBusy[t.id]=true;paintHealth(t);
-  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full]);paintTP(t);paintOdds(t,lastPx[t.full]);paintVP(t)})}
+  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full]);paintTP(t);paintOdds(t,lastPx[t.full]);paintOpt(t,lastPx[t.full]);paintVP(t)})}
 function checkDue(){
   if(view!=="trades"||document.hidden)return;
   healthQueue(liveTrades().concat(openTrades()),false)}
@@ -1851,7 +1889,7 @@ function liveCard(p){
   h+='<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
     +'<div><div class="cap">Gain ou perte latent</div><div class="net" id="ln-'+id+'">–</div><div class="sub" id="ls-'+id+'"></div></div>';
   if(p.sl>0&&p.tp>0)h+='<div><div class="rail" id="lr-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(p.sl)+'</span><span id="lp-'+id+'">–</span><span>TP '+px(p.tp)+"</span></div></div>";
-  h+='<div class="funnel plain two" id="od-'+id+'"></div>';
+  h+='<div class="funnel plain two" id="od-'+id+'"></div><details class="set opd" id="op-'+id+'"></details>';
   h+='<div class="pil four lvt"><div><span>Taille</span><b>'+fr(p.qty,p.qty>=100?0:p.qty>=1?3:4)+"</b><small>"+usd0(p.notional)+" · marge "+usd0(p.margin)+"</small></div>"
     +"<div><span>Entrée</span><b>"+px(p.entry)+"</b><small>break-even "+(p.be>0?px(p.be):"–")+"</small></div>"
     +'<div><span>Liquidation</span><b>'+(p.liq>0?px(p.liq):"aucune")+'</b><small id="lq-'+id+'">'+(p.liq>0?"":"marge suffisante")+"</small></div>"
@@ -1868,7 +1906,7 @@ function paintLive(p){
   var rail=$("lr-"+id);if(rail){var span=p.tp-p.sl,pos=Math.max(0,Math.min(1,(p.mark-p.sl)/span)),e=Math.max(0,Math.min(1,(p.entry-p.sl)/span));
     rail.style.setProperty("--e",(e*100).toFixed(1)+"%");rail.querySelector("i").style.left=(pos*100).toFixed(1)+"%"}
   var q=$("lq-"+id);if(q&&p.liq>0){var d=Math.abs(p.mark-p.liq)/p.mark*100;q.textContent="à "+fr(d,1)+" % du prix";q.className=d<5?"neg":""}
-  var lt=liveTrade(p);paintBE(lt,p.mark);paintOdds(lt,p.mark)}
+  var lt=liveTrade(p);paintBE(lt,p.mark);paintOdds(lt,p.mark);paintOpt(lt,p.mark)}
 function liveTotals(){
   var L=LV.list||[],a=$("lv-pnl"),b=$("lv-mg"),st=$("lv-st"),s=0,mg=0;if(st)st.textContent=lvStatus();if(!a)return;
   L.forEach(function(p){s+=p.pnl;mg+=p.margin});

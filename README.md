@@ -71,6 +71,13 @@ prédisait rien (corrélation de rang 0,04). Ce qui a compté : la taille (volum
 Grosses et prix tenu : 8 sur 22 ont battu le Bitcoin ; petites et effondrées : 0 sur 20. Un seul cycle mesuré : une
 tendance, pas une garantie.
 
+## Gestion des trades ouverts
+
+`tools/backtest/manage.js` rejoue 20 000 setups des deux années avec plusieurs gestions : stop au break-even à +1R, +1,5R ou
++2R, moitié encaissée à +1R, stop suiveur à 2 ou 3 ATR 1H, TP à 1R ou 1,5R. Aucune ne change le résultat moyen de plus de
+0,01 R. Elles changent la part de trades positifs : 34 % avec stop et TP fixes, environ 40 % avec break-even ou stop suiveur,
+50 % en encaissant la moitié à +1R. L'onglet Mes trades les propose comme options, avec la taille, les frais et le funding.
+
 ## Données et clés
 
 L'appli lit les données de marché publiques de Binance. L'onglet Portefeuille demande des clés API **en lecture seule** :
