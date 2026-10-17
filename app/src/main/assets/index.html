@@ -328,6 +328,13 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
 .tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
 .tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
+/* my investment */
+.ivr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 0;color:inherit}
+.ivr>span>b{font-family:var(--display);font-size:16px} .ivr .sub{display:block}
+.ivn{text-align:right} .ivn b{display:block;font-family:var(--mono);font-size:15px} .ivn small{font-family:var(--mono);font-size:12px;color:var(--muted)} .ivn .pos{color:var(--good)} .ivn .neg{color:var(--bad)}
+.ivd{display:flex;flex-direction:column;gap:10px;padding-bottom:12px}
+.ivb{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--sunk);gap:2px} .ivb i{display:block;height:100%} .ivb i.pos{background:var(--good)} .ivb i.neg{background:var(--bad)} .ivb i.er{background:var(--accent)}
+.invf{padding-bottom:0}
 /* portfolio review detail */
 .evb{width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);color:inherit;grid-template-columns:auto minmax(0,1fr) auto}
 .evc{color:var(--muted);font-size:13px}
@@ -372,6 +379,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="res" aria-selected="false">Résultats</button>
     <button type="button" role="tab" data-v="pf" aria-selected="false">Portefeuille</button>
     <button type="button" role="tab" data-v="earn" aria-selected="false">Earn</button>
+    <button type="button" role="tab" data-v="sim" aria-selected="false">Simulateur</button>
     <button type="button" role="tab" data-v="hbtc" aria-selected="false">Heatmap BTC</button>
     <button type="button" role="tab" data-v="heth" aria-selected="false">Heatmap ETH</button>
   </div>
@@ -398,6 +406,11 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <section class="view" id="view-news" hidden></section>
   <section class="view" id="view-res" hidden></section>
   <section class="view" id="view-pf" hidden></section>
+  <section class="view" id="view-sim" hidden>
+    <h2 style="margin:0">Simulateur de prix moyen</h2>
+    <form class="askf" id="sim-form"><input id="sim-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Crypto, par exemple SOL" aria-label="Crypto"><button class="take" type="submit">Simuler</button></form>
+    <div class="stack" id="sim-out" style="gap:14px"></div>
+  </section>
   <section class="view" id="view-earn" hidden>
     <h2 style="margin:0">Earn et staking</h2>
     <form class="askf" id="earn-form"><input id="earn-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Crypto, par exemple SOL" aria-label="Crypto"><button class="take" type="submit">Voir</button></form>
@@ -465,7 +478,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Version 30.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Version 31.
     </footer>
 </div>
 <script>
@@ -1480,10 +1493,10 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1)})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
@@ -1495,6 +1508,7 @@ function setView(v){
   else if(view==="fund"){statusLine();drawWeekly()}
   else if(view==="mkt"||view==="cyc"){statusLine();renderMkt();loadMkt(false)}
   else if(view==="earn"){statusLine();renderEarn();if(CANPF&&!Object.keys(pf).length)loadAllPf()}
+  else if(view==="sim"){statusLine();renderSim();if(CANPF&&!Object.keys(pf).length)loadAllPf()}
   else{statusLine();renderTrades();tick();liveTick(true);checkDue()}}
 function when(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}
 
@@ -2538,7 +2552,7 @@ function renderPf(){
     h+='<article class="card tr"><div><div class="cap">Valeur totale estimée</div><div class="net">'+usd0(tot)+"</div></div>";
     if(parts.length>1&&tot>0)h+='<div class="alloc">'+parts.map(function(p,i){return'<i class="c'+i+'" style="width:'+(p[1]/tot*100).toFixed(1)+'%"></i>'}).join("")+"</div>"
       +'<div class="size">'+parts.map(function(p,i){return'<span><i class="dot c'+i+'"></i>'+p[0]+" <b>"+fr(p[1]/tot*100,0)+" %</b></span>"}).join("")+"</div>";
-    h+="</article>"+evalView()}
+    h+="</article>"+invView()+evalView()}
   EXS.forEach(function(x){
     var ex=x[0],m=pf[ex],has=false;try{has=Android.hasKeys(ex)}catch(e){}
     h+='<article class="card tr"><div class="trh"><span class="sym">'+x[1]+'</span><span class="sub" style="margin-left:auto">'+(pfBusy[ex]?"Lecture en cours…":has?(m&&m.at?"à "+new Date(m.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"connecté"):"non connecté")+"</span></div>";
@@ -2779,6 +2793,130 @@ $("view-earn").addEventListener("click",function(e){
   var c=e.target.closest("[data-ec]");if(c){loadEarn(c.dataset.ec);try{scrollTo(0,0)}catch(x){}return}
   var o=e.target.closest("[data-eo]");if(o&&EARN.a){EARN.sel[EARN.a]=+o.dataset.eo;renderEarn();return}
   if(e.target.closest("[data-eall]"))earnAll()});
+
+/* ---------- my investment: purchases typed in by the user, compared with today's holdings; the extra coins come from Earn ---------- */
+var invOpen=null;
+function costs(){try{var o=JSON.parse(localStorage.getItem("radar-cost")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return{}}}
+function saveCosts(o){try{localStorage.setItem("radar-cost",JSON.stringify(o))}catch(e){}}
+function costOf(a){var l=costs()[a]||[],q=0,inv=0;l.forEach(function(x){q+=+x.q||0;inv+=(+x.q||0)*(+x.p||0)});return{lots:l,q:q,inv:inv,avg:q>0?inv/q:0}}
+function q4i(v){return v===0?"0":fr(v,v>=1000?0:v>=1?2:v>=0.01?4:6)}
+/* one line per coin held (or with purchases typed in): quantity now, price now, what was bought and at what price */
+function invRows(){
+  var H=holdings(),by={},rows=[],C=costs();
+  H.list.forEach(function(x){if(STABLE[x.a]||!(x.usd>=1))return;by[x.a]={a:x.a,qty:x.qty,px:x.qty>0?x.usd/x.qty:0}});
+  Object.keys(C).forEach(function(a){if(!by[a]&&(C[a]||[]).length)by[a]={a:a,qty:0,px:0}});
+  Object.keys(by).forEach(function(a){var r=by[a],c=costOf(a);r.c=c;r.val=r.qty*r.px;
+    if(c.q>0){var kept=Math.min(r.qty,c.q);r.cost=r.qty>c.q?c.inv/r.qty:c.avg;r.earned=Math.max(0,r.qty-c.q);r.earnUsd=r.earned*r.px;r.priceGain=kept*(r.px-c.avg);r.res=r.val-c.inv;r.pct=c.inv>0?r.res/c.inv*100:0;r.short=r.qty<c.q*0.999}
+    rows.push(r)});
+  rows.sort(function(x,y){return(y.c.q>0)-(x.c.q>0)||y.val-x.val});return rows}
+function invView(){
+  var rows=invRows();if(!rows.length)return"";
+  var T={inv:0,val:0,earn:0,pg:0},n=0;rows.forEach(function(r){if(r.c.q>0){n++;T.inv+=r.c.inv;T.val+=r.val;T.earn+=r.earnUsd;T.pg+=r.priceGain}});
+  var res=T.val-T.inv,h='<article class="card tr"><div class="trh"><span class="sym">Mon investissement</span><span class="sub" style="margin-left:auto">'+n+" / "+rows.length+" cryptos renseignées</span></div>";
+  if(n){h+='<div class="funnel plain" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><b>'+usd0(T.inv)+"</b><span>investi</span></div><div><b>"+usd0(T.val)+"</b><span>valeur aujourd'hui</span></div>"
+      +'<div><b class="'+(res>=0?"pos":"neg")+'">'+sgn(res,2)+" $</b><span>résultat, "+sgn(T.inv?res/T.inv*100:0,1)+" %</span></div>"
+      +'<div><b class="pos">+'+fr(T.earn,2)+" $</b><span>généré par Earn</span></div></div>"
+      +'<div class="ivb"><i class="pg '+(T.pg>=0?"pos":"neg")+'" style="width:'+Math.min(100,Math.abs(T.pg)/Math.max(1,Math.abs(T.pg)+T.earn)*100).toFixed(1)+'%"></i><i class="er" style="width:'+Math.min(100,T.earn/Math.max(1,Math.abs(T.pg)+T.earn)*100).toFixed(1)+'%"></i></div>'
+      +'<div class="lg"><span><i class="'+(T.pg>=0?"al":"ah")+'"></i>prix : '+sgn(T.pg,2)+' $</span><span><i class="poc"></i>Earn : +'+fr(T.earn,2)+" $</span></div>"}
+  else h+='<div class="sub">Indique pour chaque crypto la quantité achetée et ton prix d\'achat : l\'appli calcule ton résultat, et ce que tu as en plus aujourd\'hui est compté comme gagné avec Earn.</div>';
+  h+=rows.map(function(r){var c=r.c,op=invOpen===r.a;
+    var line=c.q>0?'<span class="sub">'+q4i(c.q)+" achetés à "+px(c.avg)+" · "+usd0(c.inv)+" investis"+(r.earned>0?" · +"+q4i(r.earned)+" "+esc(r.a)+" gagnés avec Earn":"")+"</span>"
+      :'<span class="sub">'+q4i(r.qty)+" "+esc(r.a)+" · prix d'achat non renseigné</span>";
+    var right=c.q>0?'<b class="'+(r.res>=0?"pos":"neg")+'">'+sgn(r.res,2)+' $</b><small class="'+(r.res>=0?"pos":"neg")+'">'+sgn(r.pct,1)+" %</small>":'<b>'+usd0(r.val)+"</b><small>à renseigner</small>";
+    var h2='<button type="button" class="ivr" data-inv="'+esc(r.a)+'" aria-expanded="'+op+'"><span><b>'+esc(r.a)+"</b> "+line+'</span><span class="ivn">'+right+"</span></button>";
+    if(op){h2+='<div class="ivd">';
+      if(c.q>0)h2+='<div class="funnel plain" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><b>'+px(c.avg)+"</b><span>prix moyen d'achat</span></div><div><b>"+(r.px?px(r.px):"–")+"</b><span>prix actuel"+(r.px&&c.avg?" · "+sgn((r.px/c.avg-1)*100,1)+" %":"")+"</span></div>"
+        +'<div><b class="'+(r.priceGain>=0?"pos":"neg")+'">'+sgn(r.priceGain,2)+" $</b><span>gain ou perte sur le prix</span></div><div><b class=\"pos\">+"+fr(r.earnUsd,2)+" $</b><span>Earn : +"+q4i(r.earned)+" "+esc(r.a)+"</span></div></div>"
+        +(r.earned>0?'<div class="sub">Grâce à Earn, ton prix de revient réel descend à <b>'+px(r.cost)+"</b> ("+usd0(c.inv)+" pour "+q4i(r.qty)+" "+esc(r.a)+").</div>":"")
+        +(r.short?'<div class="sub">Tu détiens moins que ce que tu as acheté ('+q4i(r.qty)+" sur "+q4i(c.q)+") : vente partielle ou crypto sur un compte non connecté ? Le résultat compte seulement ce que tu détiens encore.</div>":"");
+      h2+=c.lots.map(function(l,i){return'<div class="pos1"><span>Achat '+(i+1)+" : <b>"+q4i(+l.q)+" "+esc(r.a)+"</b> à <b>"+px(+l.p)+"</b> = "+usd0(l.q*l.p)+'</span><button class="ghost danger" type="button" style="margin-left:auto" data-invdel="'+esc(r.a)+":"+i+'">Retirer</button></div>'}).join("")
+        +'<form class="grid invf" data-a="'+esc(r.a)+'"><label>Quantité achetée<input name="q" inputmode="decimal" autocomplete="off" placeholder="'+(c.q>0?"":q4i(r.qty))+'"></label>'
+        +'<label>ou montant ($)<input name="m" inputmode="decimal" autocomplete="off"></label><label class="wide">Prix d\'achat ($)<input name="p" inputmode="decimal" autocomplete="off"></label>'
+        +'<label class="wide"><button class="take" type="submit">'+(c.q>0?"Ajouter un autre achat":"Enregistrer mon achat")+'</button></label><div class="warn wide" hidden></div></form>'
+        +'<div class="acts"><button class="ghost" type="button" data-simgo="'+esc(r.a)+'">Simuler un nouvel achat</button></div></div>'}
+    return h2}).join("");
+  return h+'<div class="sub">Les quantités au-delà de ton achat sont comptées comme gagnées avec Earn (intérêts, staking). Si tu as aussi acheté entre-temps, ajoute ces achats pour que le calcul reste juste. Les montants restent sur ce téléphone.</div></article>'}
+$("view-pf").addEventListener("submit",function(e){
+  var f=e.target.closest("form.invf");if(!f)return;e.preventDefault();e.stopImmediatePropagation();
+  var a=f.dataset.a,q=num(f.elements.q.value),m=num(f.elements.m.value),p=num(f.elements.p.value),w=f.querySelector(".warn");
+  if(!(p>0)){w.hidden=false;w.textContent="Indique ton prix d'achat.";return}
+  if(!(q>0)&&m>0)q=m/p;
+  if(!(q>0)){w.hidden=false;w.textContent="Indique la quantité achetée ou le montant investi.";return}
+  var o=costs();(o[a]=o[a]||[]).push({q:+q.toPrecision(10),p:p,t:Date.now()});saveCosts(o);invOpen=a;renderPf()},true);
+$("view-pf").addEventListener("click",function(e){
+  var b=e.target.closest("[data-inv]");if(b){invOpen=invOpen===b.dataset.inv?null:b.dataset.inv;renderPf();return}
+  var d=e.target.closest("[data-invdel]");if(d){var pr=d.dataset.invdel.split(":"),o=costs();if(o[pr[0]]){o[pr[0]].splice(+pr[1],1);if(!o[pr[0]].length)delete o[pr[0]];saveCosts(o)}invOpen=pr[0];renderPf();return}
+  var g=e.target.closest("[data-simgo]");if(g){setView("sim");simLoad(g.dataset.simgo);try{scrollTo(0,0)}catch(x){}}},true);
+
+/* ---------- average price simulator: what one or more new purchases do to the average price ---------- */
+var SIM={a:"",qty:0,avg:0,px:0,buys:[{m:"",p:""}],target:"",P:null,busy:false,err:""};
+function simLoad(a){
+  a=String(a||"").toUpperCase().replace(/[^A-Z0-9]/g,"");if(a.length>4&&/USDT$/.test(a))a=a.slice(0,-4);if(!a)return;
+  var r=invRows().filter(function(x){return x.a===a})[0],c=costOf(a);
+  SIM.a=a;SIM.qty=r?r.qty:c.q;SIM.avg=c.q>0?(r&&r.qty>c.q?c.inv/r.qty:c.avg):0;SIM.px=r&&r.px?r.px:0;SIM.buys=[{m:"",p:""}];SIM.target="";SIM.err="";
+  renderSim();
+  SIM.busy=true;pubPrices("bspot").then(function(P){SIM.busy=false;var b=WRAP[a]||a,p=P[b+"USDT"]||(P[b+"BTC"]&&P.BTCUSDT?P[b+"BTC"]*P.BTCUSDT:0);
+    if(p)SIM.px=p;else if(!SIM.px)SIM.err="Prix de "+a+" introuvable sur Binance : saisis les prix toi-même.";renderSim()})}
+/* the result of the planned purchases */
+function simCalc(){
+  var q0=+SIM.qty||0,a0=+SIM.avg||0,c0=q0*a0,q=q0,c=c0,add=0,ok=true;
+  SIM.buys.forEach(function(b){var m=num(b.m),p=num(b.p)||SIM.px;if(!(m>0))return;if(!(p>0)){ok=false;return}q+=m/p;c+=m;add+=m});
+  return{q0:q0,a0:a0,c0:c0,q:q,c:c,add:add,avg:q>0?c/q:0,ok:ok}}
+function renderSim(){
+  var el=$("sim-out");if(!el)return;var mine=invRows().filter(function(r){return r.qty>0||r.c.q>0}).slice(0,24),h="";
+  if(mine.length)h+='<div class="filters">'+mine.map(function(r){return'<button type="button" data-sima="'+esc(r.a)+'" aria-pressed="'+(r.a===SIM.a)+'">'+esc(r.a)+"</button>"}).join("")+"</div>";
+  if(!SIM.a){el.innerHTML=h+'<div class="empty">Choisis une de tes cryptos ou saisis un symbole : l\'appli calcule ton nouveau prix moyen si tu en achètes encore.</div>';return}
+  var R=simCalc(),px0=SIM.px;
+  h+='<article class="card tr"><div class="trh"><span class="sym">'+esc(SIM.a)+'</span><span class="sub" style="margin-left:auto">'+(SIM.busy?"lecture du prix…":px0?"prix actuel "+px(px0):"")+"</span></div>"
+    +(SIM.err?'<div class="warn">'+esc(SIM.err)+"</div>":"")
+    +'<div class="cap">Ta position aujourd\'hui</div><div class="grid" style="padding:0"><label>Quantité détenue<input id="sim-q" inputmode="decimal" value="'+(SIM.qty?+(+SIM.qty).toPrecision(8):"")+'"></label><label>Prix de revient (Earn compris)<input id="sim-avg" inputmode="decimal" value="'+(SIM.avg?+(+SIM.avg).toPrecision(7):"")+'"></label></div>'
+    +'<div class="cap">Achats envisagés</div>'+SIM.buys.map(function(b,i){return'<div class="grid simb" style="padding:0"><label>Montant ($)<input data-simm="'+i+'" inputmode="decimal" value="'+esc(b.m)+'"></label><label>Prix d\'achat'+(i?"":"")+'<input data-simp="'+i+'" inputmode="decimal" placeholder="'+(px0?+px0.toPrecision(6):"")+'" value="'+esc(b.p)+'"></label></div>'}).join("")
+    +(SIM.buys.length<4?'<div class="acts"><button class="ghost" type="button" data-simadd="1">+ Achat à un autre prix</button></div>':"")
+    +'<div id="sim-res"></div></article>';
+  h+='<article class="card tr"><div class="cap">Combien acheter pour viser un prix moyen ?</div><div class="grid" style="padding:0"><label>Prix moyen visé<input id="sim-t" inputmode="decimal" value="'+esc(SIM.target)+'"></label><label>Prix d\'achat<input id="sim-tp" inputmode="decimal" placeholder="'+(px0?+px0.toPrecision(6):"")+'"></label></div><div id="sim-tr" class="sub"></div></article>';
+  h+='<div class="sub">Acheter plus bas fait baisser ton prix moyen, mais augmente la somme exposée à cette crypto. Simulation de calcul, frais non compris : ce n\'est pas un conseil d\'achat.</div>';
+  el.innerHTML=h;simPaint()}
+function simPaint(){
+  var out=$("sim-res");if(!out)return;var R=simCalc(),p=SIM.px;
+  if(!R.add){out.innerHTML='<div class="sub">Indique un montant à acheter.</div>';simTarget();return}
+  var be0=R.a0&&p?(R.a0/p-1)*100:null,be1=R.avg&&p?(R.avg/p-1)*100:null;
+  out.innerHTML='<div class="funnel plain" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><b class="pos">'+px(R.avg)+"</b><span>nouveau prix moyen"+(R.a0?" (avant "+px(R.a0)+", "+sgn((R.avg/R.a0-1)*100,1)+" %)":"")+"</span></div>"
+    +"<div><b>"+q4i(R.q)+"</b><span>"+esc(SIM.a)+" au total (+"+q4i(R.q-R.q0)+")</span></div>"
+    +"<div><b>"+usd0(R.c)+"</b><span>investi au total (+"+usd0(R.add)+")</span></div>"
+    +"<div><b class=\""+(be1!==null&&be1<=0?"pos":"")+"\">"+(be1===null?"–":be1<=0?"en gain":"+"+fr(be1,1)+" %")+"</b><span>"+(be1===null?"":be1<=0?"au prix actuel tu serais en gain":"de hausse pour revenir à l'équilibre")+(be0!==null&&be0>0?" (au lieu de +"+fr(be0,1)+" %)":"")+"</span></div></div>"
+    +(p?'<div class="size"><span>Valeur au prix actuel <b>'+usd0(R.q*p)+'</b></span><span>Résultat <b class="'+(R.q*p-R.c>=0?"pos":"neg")+'">'+sgn(R.q*p-R.c,2)+" $</b></span></div>":"")
+    +'<div><div class="cap">Prix moyen selon le montant acheté au premier prix</div><canvas id="sim-cv" class="mcv" aria-label="Prix moyen selon le montant acheté"></canvas></div>';
+  simDraw();simTarget()}
+function simTarget(){
+  var el=$("sim-tr");if(!el)return;var T=num(($("sim-t")||{}).value),P=num(($("sim-tp")||{}).value)||SIM.px,q=+SIM.qty||0,a=+SIM.avg||0;
+  if(!(T>0)){el.textContent="Indique le prix moyen que tu veux atteindre.";return}
+  if(!(q>0&&a>0)){el.textContent="Renseigne d'abord ta quantité et ton prix moyen actuels.";return}
+  if(!(P>0)){el.textContent="Indique un prix d'achat.";return}
+  if(T>=a){el.textContent="Le prix moyen visé doit être sous ton prix moyen actuel ("+px(a)+").";return}
+  if(P>=T){el.textContent="Impossible : en achetant à "+px(P)+", ton prix moyen ne descendra jamais sous "+px(P)+". Vise un prix moyen plus haut ou un prix d'achat plus bas.";return}
+  var A=(T*q-q*a)/(1-T/P);
+  el.innerHTML="Il faut acheter <b>"+usd0(A)+"</b> à "+px(P)+" (soit "+q4i(A/P)+" "+esc(SIM.a)+") pour ramener ton prix moyen à <b>"+px(T)+"</b>. Tu aurais alors "+usd0(q*a+A)+" investis."}
+function simDraw(){
+  var cv=$("sim-cv");if(!cv||!cv.clientWidth)return;var css=getComputedStyle(document.documentElement);function tk(v){return css.getPropertyValue(v).trim()}
+  var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
+  var b=SIM.buys[0],P=num(b.p)||SIM.px,q0=+SIM.qty||0,a0=+SIM.avg||0,R=simCalc(),mx=Math.max(R.add*2,q0*a0||R.add*2,1);if(!(P>0))return;
+  var pts=[];for(var i=0;i<=60;i++){var m=mx*i/60,q=q0+m/P,c=q0*a0+m;pts.push([m,q>0?c/q:P])}
+  var vals=pts.map(function(x){return x[1]}).concat([P,SIM.px||P]);if(a0)vals.push(a0);var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals),pad=(hi-lo)*0.1||hi*0.02;lo-=pad;hi+=pad;
+  var AX=58,pw=W-AX,y=function(v){return H-18-(v-lo)/(hi-lo)*(H-26)},x=function(m){return m/mx*pw};
+  function hl(v,col,lab){var yy=y(v);g.strokeStyle=g.fillStyle=col;g.setLineDash([4,4]);g.lineWidth=1;g.beginPath();g.moveTo(0,yy);g.lineTo(pw,yy);g.stroke();g.setLineDash([]);g.font="500 10px "+(tk("--mono")||"monospace");g.textBaseline="middle";g.fillText(lab,pw+4,yy)}
+  if(SIM.px)hl(SIM.px,tk("--muted"),"prix");if(P!==SIM.px)hl(P,tk("--accent"),"achat");
+  g.strokeStyle=tk("--good");g.lineWidth=2;g.beginPath();pts.forEach(function(t,i){if(i)g.lineTo(x(t[0]),y(t[1]));else g.moveTo(x(t[0]),y(t[1]))});g.stroke();
+  if(R.add){var yy=y(R.avg),xx=x(Math.min(R.add,mx));g.fillStyle=tk("--ink");g.beginPath();g.arc(xx,yy,4,0,7);g.fill()}
+  g.fillStyle=tk("--muted");g.font="500 10px "+(tk("--mono")||"monospace");g.textBaseline="alphabetic";g.fillText("0 $",0,H-3);var t2=usd0(mx);g.fillText(t2,pw-g.measureText(t2).width,H-3);
+  g.textBaseline="middle";g.fillText(px(pts[0][1]),pw+4,y(pts[0][1])-10)}
+$("view-sim").addEventListener("click",function(e){
+  var c=e.target.closest("[data-sima]");if(c){simLoad(c.dataset.sima);return}
+  if(e.target.closest("[data-simadd]")){SIM.buys.push({m:"",p:""});renderSim()}});
+$("view-sim").addEventListener("input",function(e){
+  var t=e.target;if(t.dataset.simm!==undefined)SIM.buys[+t.dataset.simm].m=t.value;else if(t.dataset.simp!==undefined)SIM.buys[+t.dataset.simp].p=t.value;
+  else if(t.id==="sim-q")SIM.qty=num(t.value)||0;else if(t.id==="sim-avg")SIM.avg=num(t.value)||0;else if(t.id==="sim-t")SIM.target=t.value;
+  if(t.id==="sim-t"||t.id==="sim-tp")simTarget();else simPaint()});
+$("sim-form").addEventListener("submit",function(e){e.preventDefault();simLoad($("sim-sym").value);$("sim-sym").blur()});
 
 /* ---------- results recap: realised futures results from Binance, or the app's own journal ---------- */
 var resSrc=null,resDays=30,resData=null,resBusy=false,resErr="";
@@ -3419,7 +3557,7 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===3&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|hbtc|heth|mkt|cyc|tmp)$/.test(v))setView(v)};
+window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|hbtc|heth|mkt|cyc|tmp)$/.test(v))setView(v)};
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
