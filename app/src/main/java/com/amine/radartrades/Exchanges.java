@@ -114,6 +114,9 @@ final class Exchanges {
             case "val": path = "/api/v5/asset/asset-valuation?ccy=USDT"; break;
             case "fund": path = "/api/v5/asset/balances"; break;
             case "pos": path = "/api/v5/account/positions"; break;
+            case "save": path = "/api/v5/finance/savings/balance"; break;
+            case "stake": path = "/api/v5/finance/staking-defi/orders-active"; break;
+            case "fixed": path = "/api/v5/finance/fixed-loan/lending-orders-list"; break;
             default: return new String[]{"400", "{\"msg\":\"Requête inconnue\"}"};
         }
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);

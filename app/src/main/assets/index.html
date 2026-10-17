@@ -458,7 +458,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Version 26.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Version 27.
     </footer>
 </div>
 <script>
@@ -2298,6 +2298,7 @@ function usdOf(P,a,q){
   var p=P[a+"USDT"];if(p)return q*p;
   if(a.indexOf("LD")===0&&a.length>3)return usdOf(P,a.slice(2),q);
   if(P[a+"BTC"]&&P.BTCUSDT)return q*P[a+"BTC"]*P.BTCUSDT;
+  if(WRAP[a])return usdOf(P,WRAP[a],q);
   return 0}
 function apiMsg(e){
   var d=e&&e.data,m=d&&(d.msg||d.message)||e&&e.body||"";
@@ -2344,15 +2345,27 @@ function loadMexc(){
     m.total=spot+fut;return m})}
 function loadOkx(){
   function ok(d){if(!d||String(d.code)!=="0")throw{status:200,data:d};return d.data||[]}
-  return Promise.all([xapi("okx","bal").then(ok),soft(xapi("okx","val").then(ok)),soft(xapi("okx","fund").then(ok)),soft(xapi("okx","pos").then(ok)),pubPrices("bspot")]).then(function(a){
-    var m=mkModel(),b=a[0][0]||{},P=a[4],trade=+b.totalEq||0,fund=0;
-    pushAssets(m,(b.details||[]).map(function(x){return{a:x.ccy,qty:+x.eq||0,usd:+x.eqUsd||0,w:"Trading"}}));
-    if(Array.isArray(a[2]))pushAssets(m,a[2].map(function(x){var q=+x.bal||0,u=usdOf(P,x.ccy,q);fund+=u;return{a:x.ccy,qty:q,usd:u,w:"Funding"}}));
+  return Promise.all([xapi("okx","bal").then(ok),soft(xapi("okx","val").then(ok)),soft(xapi("okx","fund").then(ok)),soft(xapi("okx","pos").then(ok)),pubPrices("bspot"),
+    soft(xapi("okx","save").then(ok)),soft(xapi("okx","stake").then(ok)),soft(xapi("okx","fixed").then(ok))]).then(function(a){
+    var m=mkModel(),b=a[0][0]||{},P=a[4],trade=+b.totalEq||0,fund=0,earn=0,by={},order=[];
+    /* one line per coin, whatever OKX account holds it */
+    function put(ccy,q,u,w){if(!(q>0))return 0;var c=String(ccy).toUpperCase(),o=by[c];if(!o){o=by[c]={a:c,qty:0,usd:0,ws:[]};order.push(o)}
+      if(!(u>0))u=usdOf(P,c,q);o.qty+=q;o.usd+=u;if(o.ws.indexOf(w)<0)o.ws.push(w);return u}
+    (b.details||[]).forEach(function(x){put(x.ccy,+x.eq||0,+x.eqUsd||0,"Trading")});
+    if(Array.isArray(a[2]))a[2].forEach(function(x){fund+=put(x.ccy,+x.bal||0,0,"Funding")});
+    /* Earn: Simple Earn flexible, on-chain staking and DeFi, fixed-term lending */
+    var en=0;
+    if(Array.isArray(a[5]))a[5].forEach(function(x){var q=+x.amt||0;if(q>0){earn+=put(x.ccy,q,0,"Earn flexible");en++}});
+    if(Array.isArray(a[6]))a[6].forEach(function(o){(o.investData||[]).forEach(function(x){var q=+x.amt||0;if(q>0){earn+=put(x.ccy||o.ccy,q,0,"Earn on-chain"+(+o.term>0?" "+o.term+" j":""));en++}})});
+    if(Array.isArray(a[7]))a[7].forEach(function(x){if(/expired|settled|cancel/i.test(String(x.state||"")))return;var q=+x.amt||0;if(q>0){earn+=put(x.ccy,q,0,"Earn à terme");en++}});
+    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + ")}}));
     var v=Array.isArray(a[1])&&a[1][0];
     if(v&&v.details){var d=v.details;trade=+d.trading||trade;fund=+d.funding||fund;
-      m.wallets.push(["Trading",trade],["Funding",fund]);if(+d.earn>0)m.wallets.push(["Earn",+d.earn]);
-      m.total=+v.totalBal||trade+fund+(+d.earn||0)}
-    else{m.wallets.push(["Trading",trade],["Funding",fund]);m.total=trade+fund}
+      m.wallets.push(["Trading",trade],["Funding",fund]);if(+d.earn>0||earn>0)m.wallets.push(["Earn",+d.earn>0?+d.earn:earn]);
+      m.total=+v.totalBal||trade+fund+(+d.earn||earn)}
+    else{m.wallets.push(["Trading",trade],["Funding",fund]);if(earn>0)m.wallets.push(["Earn",earn]);m.total=trade+fund+earn}
+    if(v&&v.details&&+v.details.earn>1&&!en)m.notes.push("Earn : total lu, mais le détail par crypto n'a pas pu être lu (droit de lecture « Earn » manquant sur la clé ?)");
+    [[a[5],"Simple Earn"],[a[6],"On-chain Earn"],[a[7],"Earn à terme"]].forEach(function(z){if(z[0]&&z[0].__err)m.notes.push(z[1]+" non lu")});
     if(Array.isArray(a[3]))a[3].forEach(function(p){var q=+p.pos;if(!q)return;
       m.positions.push({sym:p.instId,dir:p.posSide==="short"||(p.posSide==="net"&&q<0)?-1:1,size:Math.abs(q),unit:"contrats",entry:+p.avgPx,mark:+p.markPx,pnl:+p.upl,liq:+p.liqPx,lev:p.lever})});
     return m})}
@@ -2371,7 +2384,7 @@ function addManual(ex,m){
     m.total+=sum;m.wallets.push(["Saisi à la main",sum]);return m})}
 /* ---------- portfolio review: long-term profile of each holding, balance of the whole, rule-based leads ---------- */
 var pfEval=null,pfEvalBusy=false,pfEvalErr="";
-var WRAP={BNSOL:"SOL",WBETH:"ETH",BETH:"ETH",STETH:"ETH",WBTC:"BTC",BTCB:"BTC"};
+var WRAP={OKSOL:"SOL",JITOSOL:"SOL",BNSOL:"SOL",WBETH:"ETH",BETH:"ETH",STETH:"ETH",WBTC:"BTC",BTCB:"BTC"};
 function holdings(){
   var by={},list=[],tot=0,expo=0;
   EXS.forEach(function(x){var m=pf[x[0]];if(!m||m.err)return;
