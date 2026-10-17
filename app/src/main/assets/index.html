@@ -328,6 +328,10 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
 .tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
 .tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
+/* where each coin sits */
+.zbt{width:100%;background:none;border:0;color:inherit;text-align:left;cursor:pointer}
+.astd{background:var(--sunk);border-radius:8px;padding:8px 10px;margin:2px 0 6px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.astd>div:not(.sub){display:flex;justify-content:space-between;gap:10px} .astd b{font-family:var(--mono)} .astt{border-top:1px solid var(--line);padding-top:4px}
 /* capital split */
 :root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#9aa5a3}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#5f6f6c}}
@@ -502,7 +506,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. Version 34.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. Version 35.
     </footer>
 </div>
 <script>
@@ -2397,16 +2401,20 @@ function loadBinance(){
       if(!(q>0))return 0;var base=String(asset).toUpperCase();
       if(base.indexOf("LD")===0&&base.length>3&&!P[base+"USDT"]){base=base.slice(2);w="Earn flexible"}
       var u=usdOf(P,base,q),o=by[base];
-      if(!o){o=by[base]={a:base,qty:0,usd:0,ws:[],fq:0};order.push(o)}
-      o.qty+=q;o.usd+=u;if(w==="Futures")o.fq+=q;if(o.ws.indexOf(w)<0)o.ws.push(w);return u}
-    (a[0].balances||[]).forEach(function(b){spot+=put(b.asset,(+b.free||0)+(+b.locked||0),"Spot")});
+      if(!o){o=by[base]={a:base,qty:0,usd:0,ws:[],fq:0,parts:[]};order.push(o)}
+      o.qty+=q;o.usd+=u;if(w==="Futures")o.fq+=q;var wl=w.replace(/ \(.*\)$/,"");if(o.ws.indexOf(wl)<0)o.ws.push(wl);o.parts.push([w,q]);return u}
+    /* where each coin sits, line by line, so the total can be checked against Binance's own screens */
+    (a[0].balances||[]).forEach(function(b){spot+=put(b.asset,+b.free||0,"Spot (disponible)");spot+=put(b.asset,+b.locked||0,"Spot (en ordre)")});
     if(Array.isArray(a[1]))a[1].forEach(function(b){fund+=put(b.asset,(+b.free||0)+(+b.locked||0)+(+b.freeze||0),"Funding")});
-    [a[6],a[7]].forEach(function(e){if(e&&!e.__err&&Array.isArray(e.rows))e.rows.forEach(function(x){earn+=put(x.asset,+x.amount||0,"Earn bloqué")})});
+    var seenPos={};
+    [[a[6],"Earn bloqué"],[a[7],"On-chain"]].forEach(function(z){var e=z[0];if(e&&!e.__err&&Array.isArray(e.rows))e.rows.forEach(function(x){
+      var id=z[1]+(x.positionId||"");if(x.positionId&&seenPos[id])return;seenPos[id]=1;
+      earn+=put(x.asset,+x.amount||0,z[1]+" ("+(x.duration?x.duration+" j":"")+(x.status&&x.status!=="HOLDING"?(x.duration?", ":"")+String(x.status).toLowerCase():"")+")")})});
     if(a[2]&&!a[2].__err){fut=+a[2].totalMarginBalance||0;put("USDT",+a[2].totalWalletBalance||0,"Futures")}
     else m.notes.push("Compte Futures non lu");
     if(Array.isArray(a[3]))a[3].forEach(function(p){var q=+p.positionAmt;if(!q)return;
       m.positions.push({sym:p.symbol,dir:q>0?1:-1,size:Math.abs(q),entry:+p.entryPrice,mark:+p.markPrice,pnl:+p.unRealizedProfit,liq:+p.liquidationPrice,lev:p.leverage})});
-    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + "),fq:o.fq}}));
+    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + "),fq:o.fq,parts:o.parts}}));
     var W=Array.isArray(a[5])?a[5]:null,btc=P.BTCUSDT||0,tot=0;
     if(W&&btc){W.forEach(function(w){var v=(+w.balance||0)*btc;if(v>=1){m.wallets.push([w.walletName,v]);tot+=v}})}
     if(tot>0)m.total=tot;
@@ -2429,8 +2437,8 @@ function loadOkx(){
     soft(xapi("okx","save").then(ok)),soft(xapi("okx","stake").then(ok)),soft(xapi("okx","fixed").then(ok))]).then(function(a){
     var m=mkModel(),b=a[0][0]||{},P=a[4],trade=+b.totalEq||0,fund=0,earn=0,by={},order=[];
     /* one line per coin, whatever OKX account holds it */
-    function put(ccy,q,u,w){if(!(q>0))return 0;var c=String(ccy).toUpperCase(),o=by[c];if(!o){o=by[c]={a:c,qty:0,usd:0,ws:[]};order.push(o)}
-      if(!(u>0))u=usdOf(P,c,q);o.qty+=q;o.usd+=u;if(o.ws.indexOf(w)<0)o.ws.push(w);return u}
+    function put(ccy,q,u,w){if(!(q>0))return 0;var c=String(ccy).toUpperCase(),o=by[c];if(!o){o=by[c]={a:c,qty:0,usd:0,ws:[],parts:[]};order.push(o)}
+      if(!(u>0))u=usdOf(P,c,q);o.qty+=q;o.usd+=u;if(o.ws.indexOf(w)<0)o.ws.push(w);o.parts.push([w,q]);return u}
     (b.details||[]).forEach(function(x){put(x.ccy,+x.eq||0,+x.eqUsd||0,"Trading")});
     if(Array.isArray(a[2]))a[2].forEach(function(x){fund+=put(x.ccy,+x.bal||0,0,"Funding")});
     /* Earn: Simple Earn flexible, on-chain staking and DeFi, fixed-term lending */
@@ -2438,7 +2446,7 @@ function loadOkx(){
     if(Array.isArray(a[5]))a[5].forEach(function(x){var q=+x.amt||0;if(q>0){earn+=put(x.ccy,q,0,"Earn flexible");en++}});
     if(Array.isArray(a[6]))a[6].forEach(function(o){(o.investData||[]).forEach(function(x){var q=+x.amt||0;if(q>0){earn+=put(x.ccy||o.ccy,q,0,"Earn on-chain"+(+o.term>0?" "+o.term+" j":""));en++}})});
     if(Array.isArray(a[7]))a[7].forEach(function(x){if(/expired|settled|cancel/i.test(String(x.state||"")))return;var q=+x.amt||0;if(q>0){earn+=put(x.ccy,q,0,"Earn à terme");en++}});
-    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + ")}}));
+    pushAssets(m,order.map(function(o){return{a:o.a,qty:o.qty,usd:o.usd,w:o.ws.join(" + "),parts:o.parts}}));
     var v=Array.isArray(a[1])&&a[1][0];
     if(v&&v.details){var d=v.details;trade=+d.trading||trade;fund=+d.funding||fund;
       m.wallets.push(["Trading",trade],["Funding",fund]);if(+d.earn>0||earn>0)m.wallets.push(["Earn",+d.earn>0?+d.earn:earn]);
@@ -2460,7 +2468,7 @@ function addManual(ex,m){
     list.forEach(function(x){
       var u=usdOf(P,x.a,x.qty),o=null;sum+=u;
       m.assets.forEach(function(y){if(y.a===x.a)o=y});
-      if(o){o.qty+=x.qty;o.usd+=u;o.w+=" + saisi"}else m.assets.push({a:x.a,qty:x.qty,usd:u,w:"Saisi à la main"})});
+      if(o){o.qty+=x.qty;o.usd+=u;o.w+=" + saisi";(o.parts=o.parts||[]).push(["Saisi à la main",x.qty])}else m.assets.push({a:x.a,qty:x.qty,usd:u,w:"Saisi à la main",parts:[["Saisi à la main",x.qty]]})});
     m.total+=sum;m.wallets.push(["Saisi à la main",sum]);return m})}
 /* ---------- portfolio review: long-term profile of each holding, balance of the whole, rule-based leads ---------- */
 var pfEval=null,pfEvalBusy=false,pfEvalErr="";
@@ -2571,7 +2579,7 @@ function evalView(){
   else h+='<div class="sub">Note chaque crypto de tes comptes sur sa solidité long terme, mesure l\'équilibre du portefeuille et propose des pistes d\'action.</div>';
   return h+'<div class="acts"><button class="take" type="button" data-pfe="1">'+(e?"Réévaluer":"Évaluer mes cryptos")+"</button>"+(e?'<button class="ghost" type="button" data-pfc="1">Copier la demande d\'avis pour Claude</button>':"")+"</div></article>"}
 /* detail of one evaluated holding: why the recommendation, the scoring grid, the position, the weekly chart */
-var pfOpen=null,pfAll={};
+var pfOpen=null,pfAll={},astOpen=null;
 function evDetail(r,i){
   var m=r.m,ok=m&&m.items.length,held=heldOf(r.h.a),ord={ok:0,mid:1,no:2},h='<div class="evd">';
   h+='<div><div class="cap">Pourquoi « '+esc(r.adv.t)+" »</div><ol class=\"steps\">"+r.adv.steps.map(function(x){return"<li><span>"+esc(x)+"</span></li>"}).join("")+"</ol></div>";
@@ -2624,7 +2632,9 @@ function renderPf(){
       h+='<div><div class="net sm" style="font-size:22px">'+usd0(m.total)+'</div><div class="size" style="margin-top:6px">'+m.wallets.map(function(w){return"<span>"+w[0]+" <b>"+usd0(w[1])+"</b></span>"}).join("")+"</div></div>";
       var as=m.assets.slice().sort(function(a,b){return b.usd-a.usd}),allA=pfAll[ex],top=allA?as:as.slice(0,8),mx=top.length?top[0].usd:0;
       if(top.length)h+='<div><div class="cap">'+(allA?"Tous les actifs ("+as.length+")":"Principaux actifs")+"</div>"+top.map(function(a){
-        return'<div class="z"><b>'+esc(a.a)+"</b><span>"+fr(a.qty,a.qty>=100?0:a.qty>=1?3:6)+" · "+a.w+'</span><span class="zb" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><i style="width:'+(mx?Math.max(3,a.usd/mx*60):3).toFixed(0)+'%"></i><b style="color:var(--ink)">'+(a.usd?usd0(a.usd):"n. c.")+"</b></span></div>"}).join("")
+        var key=ex+":"+a.a,op=astOpen===key,pp=a.parts||[];
+        return'<button type="button" class="z zbt" data-ast="'+esc(key)+'" aria-expanded="'+op+'"><b>'+esc(a.a)+"</b><span>"+fr(a.qty,a.qty>=100?0:a.qty>=1?3:6)+" · "+a.w+'</span><span class="zb" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><i style="width:'+(mx?Math.max(3,a.usd/mx*60):3).toFixed(0)+'%"></i><b style="color:var(--ink)">'+(a.usd?usd0(a.usd):"n. c.")+"</b></span></button>"
+          +(op?'<div class="astd">'+pp.map(function(x){return"<div><span>"+esc(x[0])+"</span><b>"+fr(x[1],x[1]>=100?2:x[1]>=1?4:8)+"</b></div>"}).join("")+'<div class="astt"><span>Total dans l\'appli</span><b>'+fr(a.qty,a.qty>=100?2:a.qty>=1?4:8)+" "+esc(a.a)+'</b></div><div class="sub">Sur Binance, chaque portefeuille (Spot, Financement, Earn) s\'affiche à part : compare ligne par ligne. Si une ligne ne correspond à rien chez Binance, dis-moi laquelle.</div></div>':"")}).join("")
         +(as.length>8?'<button class="ghost" type="button" data-pfall="'+ex+'" style="margin-top:6px">'+(allA?"Réduire la liste":"Voir les "+(as.length-8)+" autres actifs")+"</button>":"")+"</div>";
       if(m.positions.length)h+='<div><div class="cap">Positions futures ouvertes</div>'+m.positions.map(function(p){
         return'<div class="pos1"><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+"</span><b>"+esc(p.sym)+"</b>"+(p.lev?"<span>x"+esc(p.lev)+"</span>":"")
@@ -2656,6 +2666,7 @@ $("view-pf").addEventListener("submit",function(e){
   loadPf(ex)});
 $("view-pf").addEventListener("click",function(e){
   if(e.target.closest("[data-pfe]")){evaluatePf();return}
+  var at=e.target.closest("[data-ast]");if(at){astOpen=astOpen===at.dataset.ast?null:at.dataset.ast;renderPf();return}
   var pa=e.target.closest("[data-pfall]");if(pa){pfAll[pa.dataset.pfall]=!pfAll[pa.dataset.pfall];renderPf();return}
   var pv=e.target.closest("[data-pev]");if(pv){pfOpen=pfOpen===pv.dataset.pev?null:pv.dataset.pev;renderPf();var nb=document.querySelector('[data-pev="'+pv.dataset.pev+'"]');if(nb&&pfOpen)nb.scrollIntoView({block:"start",behavior:"smooth"});return}
   var pfd=e.target.closest("[data-pfund]");if(pfd){setView("fund");$("fund-sym").value=pfd.dataset.pfund;fundamental(pfd.dataset.pfund);try{scrollTo(0,0)}catch(x){}return}
@@ -2883,6 +2894,8 @@ function invView(){
     var right=c.q>0?'<b class="'+(r.res>=0?"pos":"neg")+'">'+sgn(r.res,2)+' $</b><small class="'+(r.res>=0?"pos":"neg")+'">'+sgn(r.pct,1)+" %</small>":'<b>'+usd0(r.val)+"</b><small>à renseigner</small>";
     var h2='<button type="button" class="ivr" data-inv="'+esc(r.a)+'" aria-expanded="'+op+'"><span><b>'+esc(r.a)+"</b> "+line+'</span><span class="ivn">'+right+"</span></button>";
     if(op){h2+='<div class="ivd">';
+      var wq=[];EXS.forEach(function(x){var m=pf[x[0]];if(!m||m.err)return;m.assets.forEach(function(s2){if(s2.a===r.a&&s2.qty>0)wq.push(x[1]+" "+q4i(s2.qty)+" ("+s2.w+")")})});
+      if(wq.length)h2+='<div class="sub">Quantité comptée : '+esc(wq.join(" + "))+(wq.length>1?" = "+q4i(r.qty)+" "+esc(r.a)+" au total, toutes plateformes":"")+"</div>";
       if(c.q>0)h2+='<div class="funnel plain" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><b>'+px(c.avg)+"</b><span>prix moyen d'achat</span></div><div><b>"+(r.px?px(r.px):"–")+"</b><span>prix actuel"+(r.px&&c.avg?" · "+sgn((r.px/c.avg-1)*100,1)+" %":"")+"</span></div>"
         +'<div><b class="'+(r.priceGain>=0?"pos":"neg")+'">'+sgn(r.priceGain,2)+" $</b><span>gain ou perte sur le prix</span></div><div><b class=\"pos\">+"+fr(r.earnUsd,2)+" $</b><span>Earn : +"+q4i(r.earned)+" "+esc(r.a)+"</span></div></div>"
         +(r.earned>0?'<div class="sub">Grâce à Earn, ton prix de revient réel descend à <b>'+px(r.cost)+"</b> ("+usd0(c.inv)+" pour "+q4i(r.qty)+" "+esc(r.a)+").</div>":"")
