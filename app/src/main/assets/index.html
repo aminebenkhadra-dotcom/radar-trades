@@ -445,6 +445,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <summary>Réglages</summary>
     <div class="grid">
       <label>Compte (USDT)<input id="f-account" inputmode="decimal"></label>
+      <label class="wide chk"><input type="checkbox" id="f-acsync"> Compte = mon solde Binance Futures, mis à jour tout seul (gains et pertes réalisés compris)</label>
       <label>Risque / trade %<input id="f-risk" inputmode="decimal"></label>
       <label>Levier x<input id="f-lev" inputmode="decimal"></label>
       <label>Marge max %<input id="f-margin" inputmode="decimal"></label>
@@ -457,14 +458,14 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Version 25.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Version 26.
     </footer>
 </div>
 <script>
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal"};
+var DEF={acsync:true,account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal"};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -664,7 +665,23 @@ function analyze(sym,d1,h4,h1,ctx,opt){
 
   replan(r,opt);
   r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
+  r.a1=atr(h1);
   return r}
+
+/* ---------- reliability and time to target ---------- */
+/* chance that the target comes before the stop: distance to the stop over the stop-to-target span.
+   Replayed on 26 000 setups over two years, this predicted the share of trades reaching TP1 within 2 points (33 % predicted, 33 to 34 % observed). */
+function tpOdds(price,sl,tp,dir){
+  if(!(sl>0)||!(tp>0)||!(price>0))return null;
+  var den=(tp-sl)*dir;if(!(den>0))return null;
+  return Math.max(0,Math.min(1,(price-sl)*dir/den))}
+/* hours the winning setups took to reach TP1, by TP distance in 1H ATR: [up to, median, quarter, three quarters] (same two years) */
+var TTP=[[2,5.5,2.3,10.5],[3,9.5,4.3,17.3],[4,16.5,8.3,30.5],[5,25.3,12.8,51.5],[6,33.8,16.8,65.3],[8,41.8,19.5,74.3],[10,51.3,26.8,93.5]];
+function tpTime(dist,a1){
+  if(!(dist>0)||!(a1>0))return null;var k=dist/a1;
+  for(var i=0;i<TTP.length;i++)if(k<TTP[i][0])return{k:k,med:TTP[i][1],lo:TTP[i][2],hi:TTP[i][3]};
+  var x=k/9;return{k:k,med:51.3*x,lo:26.8*x,hi:93.5*x,far:true}}
+function hrs(h){if(h<1)return"moins d'1 h";if(h<24)return Math.round(h)+" h";var d=Math.floor(h/24),r=Math.round(h-24*d);if(r===24){d++;r=0}return d+" j"+(r&&d<4?" "+r+" h":"")}
 
 /* ---------- volume profile, anchored VWAP, order flow and price action, read on the last 5 days of 1H candles ---------- */
 /* volume at each price: every candle's volume spread evenly over its range; value area = the 70 % of volume around the POC */
@@ -1286,7 +1303,7 @@ function card(r,n,force){
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+(r.st!=="ready"&&r.pct?" · "+r.pct+" %":"")+"</span></span>"
    +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+oddsChip(r)+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan,z=sizing(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'
@@ -1295,6 +1312,7 @@ function card(r,n,force){
      +'<div><div class="cap">À saisir sur Binance · '+fr(+S.risk,1)+" % de risque, levier x"+esc(S.lev)+'</div><div class="size"><span>Quantité <b>'+fr(z.qty,z.qd)+" "+sy+"</b></span><span>Position <b>"+fr(z.notional,0)+" $</b></span><span>Marge à saisir <b>"+fr(z.notional/(+S.lev||1),2)+" USDT</b> ("+fr(z.m,0)+" %)</span><span>Perte au stop <b>"+fr(z.risk,2)+" $</b></span></div></div>"
      +'<div class="size"><span>Gain à TP1 <b class="pos">+'+fr(z.qty*Math.abs(p.tp1-p.entry),2)+' $</b></span><span>Gain à TP2 <b class="pos">+'+fr(z.qty*Math.abs(p.tp2-p.entry),2)+" $</b></span><span>Frais estimés <b>"+fr(z.fees,2)+" $</b>"+(r.costPct?" ("+fr(r.costPct,0)+" % du risque)":"")+"</span></div>"
      +z.w.map(function(w){return'<div class="warn">'+esc(w)+"</div>"}).join("")
+     +oddsSetup(r)
      +gatesView(r)+flowView(r)+gauges(r)+bookView(r)+squeezeView(r.sq)
      +'<div class="acts"><button class="take" type="button" data-take="'+sy+'"'+(openTrades().some(function(t){return t.sym===r.sym})?" disabled>Déjà dans Mes trades":">J'ai pris ce trade")+'</button><button class="copy" type="button" data-copy="'+sy+'">Copier le plan</button></div></div>'}
   return h+"</article>"}
@@ -1317,6 +1335,36 @@ function bookView(r){
   return h+"</div></div>"}
 function find(s){if(view==="one")return oneRes&&oneRes.sym===s?oneRes:null;for(var i=0;i<results.length;i++)if(results[i].sym===s)return results[i];return null}
 
+/* ---------- reliability and expected time to the target ---------- */
+function oddsChip(r){var p=r.plan,o=tpOdds(p.entry,p.sl,p.tp1,r.dir),t=tpTime(Math.abs(p.tp1-p.entry),r.a1);
+  return o===null?"":"<span>TP1 "+Math.round(o*100)+" %"+(t?" · ~"+hrs(t.med):"")+"</span>"}
+function oddsSetup(r){
+  var p=r.plan,o=tpOdds(p.entry,p.sl,p.tp1,r.dir),t=tpTime(Math.abs(p.tp1-p.entry),r.a1);if(o===null)return"";
+  return'<div><div class="funnel plain two"><div><b>'+Math.round(o*100)+' %</b><span>fiabilité : chance que TP1 arrive avant le stop</span></div>'
+    +"<div><b>"+(t?"~"+hrs(t.med):"–")+"</b><span>"+(t?"pour atteindre TP1, souvent entre "+hrs(t.lo)+" et "+hrs(t.hi):"durée inconnue, relance le scan")+"</span></div></div>"
+    +'<div class="sub" style="margin-top:6px">Fiabilité = distance au stop ÷ (distance au stop + distance au TP). Sur deux ans de setups, elle a prédit la part de TP atteints à 2 points près. Durée : le temps qu\'ont mis les setups gagnants pour un TP aussi éloigné. Les 95 % ou 100 % du statut comptent les contrôles validés : ce n\'est pas une probabilité.</div></div>'}
+/* live reliability and remaining time of an open trade, from the current price */
+function paintOdds(t,price){
+  var el=$("od-"+t.id);if(!el)return;var h=health[t.id],a1=h&&!h.err&&h.atr;
+  var o=price>0?tpOdds(price,t.sl,t.tp,t.dir):null,left=price>0&&t.tp>0?(t.tp-price)*t.dir:null,tt=left>0?tpTime(left,a1):null,age=(Date.now()-t.t)/36e5;
+  var k=(o===null?"-":Math.round(o*100))+"|"+(tt?Math.round(tt.med):"-")+"|"+Math.round(age)+"|"+(left!==null&&left<=0);if(el.dataset.k===k)return;el.dataset.k=k;
+  el.innerHTML='<div><b class="'+(o===null?"":o>=0.5?"pos":o<0.25?"neg":"")+'">'+(o===null?"–":Math.round(o*100)+" %")+"</b><span>"+(o===null?(!(t.sl>0)?"fiabilité : place un stop pour la calculer":!(t.tp>0)?"fiabilité : place un TP pour la calculer":"fiabilité"):"fiabilité : TP avant le stop")+"</span></div>"
+    +"<div><b>"+(left!==null&&left<=0?"atteint":tt?"~"+hrs(tt.med):"–")+"</b><span>"+(tt?"jusqu'au TP · souvent "+hrs(tt.lo)+" à "+hrs(tt.hi):left!==null&&left<=0?"le prix a dépassé le TP":t.tp>0?"jusqu'au TP : calcul après la vérification":"pas de TP placé")+(age>=1?" · ouvert depuis "+hrs(age):"")+"</span></div>"}
+/* the volume profile of a trade, drawn when its panel is opened */
+var vpOpen={};
+function vpBox(id){return'<details class="set vpd" id="vpd-'+id+'" data-vp="'+id+'"'+(vpOpen[id]?" open":"")+'><summary>Volume profile du trade</summary><div class="fx" id="vpx-'+id+'"></div></details>'}
+function paintVP(t){
+  var box=$("vpx-"+t.id),d=$("vpd-"+t.id);if(!box||!d||!d.open)return;var h=health[t.id],f=h&&!h.err&&h.flow;
+  if(!f){box.innerHTML='<div class="sub" style="padding-bottom:12px">'+(healthBusy[t.id]?"Calcul en cours…":"Disponible après la vérification du trade.")+"</div>";return}
+  box.innerHTML='<div class="fxv '+f.v+'">'+(f.v==="mid"?"Signaux mitigés pour ton "+(t.dir>0?"long":"short"):"Volume et flux "+FXV[f.v]+" ton "+(t.dir>0?"long":"short"))+" ("+sgn(f.sc,0)+")</div>"
+    +'<canvas class="vcv" id="vcv-'+t.id+'" aria-label="Bougies 1H avec volume profile, VWAP ancrés, entrée, stop et TP"></canvas>'
+    +'<div class="lg"><span><i class="poc"></i>POC '+px(f.poc)+'</span><span><i class="va"></i>zone de valeur '+px(f.val)+" – "+px(f.vah)+'</span><span><i class="ah"></i>VWAP du plus haut '+px(f.awH)+'</span><span><i class="al"></i>VWAP du plus bas '+px(f.awL)+'</span><span>pointillés : entrée, stop, TP</span></div>'
+    +'<div class="cap">Delta cumulé : achats agressifs moins ventes agressives</div><canvas class="dcv" id="dcv-'+t.id+'" aria-label="Delta cumulé sur 5 jours"></canvas>'
+    +'<ul class="why" style="padding-bottom:12px">'+f.items.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul>";
+  drawFlowOn($("vcv-"+t.id),$("dcv-"+t.id),f,{entry:t.entry,sl:t.sl,tp:t.tp})}
+function tradeOf(id){if(String(id).indexOf("bn")===0){var lt=liveTrades();for(var i=0;i<lt.length;i++)if(lt[i].id===id)return lt[i];return null}return trade(id)}
+$("view-trades").addEventListener("toggle",function(e){var d=e.target;if(!d||!d.dataset||!d.dataset.vp)return;vpOpen[d.dataset.vp]=d.open;var t=tradeOf(d.dataset.vp);if(t&&d.open)paintVP(t)},true);
+
 /* ---------- volume profile, anchored VWAP and order flow of a setup ---------- */
 /* measured on the "Prêt" setups of two separate years (tools/backtest, flow score at the moment of entry) */
 var FXV={ok:"confirment",mid:"mitigés",no:"contredisent"},FLOWREF="Testé sur deux ans de setups « Prêt » : quand ces signaux confirment, −0,18\u00a0R puis +0,10\u00a0R par trade ; quand ils contredisent, −0,10\u00a0R puis +0,02\u00a0R. Aucun effet durable : une lecture du marché, pas un filtre gagnant.";
@@ -1330,11 +1378,13 @@ function flowView(r){
     +'<ul class="why">'+f.items.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul>"
     +(FLOWREF?'<div class="sub">'+FLOWREF+"</div>":"")+"</div>"}
 function drawFlow(r){
-  var f=r.flow,cv=document.querySelector("section.view:not([hidden]) canvas#vcv");if(!f||!cv||!cv.clientWidth)return;
+  drawFlowOn(document.querySelector("section.view:not([hidden]) canvas#vcv"),document.querySelector("section.view:not([hidden]) canvas#dcv"),r.flow,r.plan?{entry:r.plan.entry,sl:r.plan.sl}:null)}
+function drawFlowOn(cv,dv,f,p){
+  if(!f||!cv||!cv.clientWidth)return;
   var css=getComputedStyle(document.documentElement);function tk(n){return css.getPropertyValue(n).trim()}
   var W=cv.clientWidth,H=cv.clientHeight,dp=window.devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;
   var g=cv.getContext("2d");g.scale(dp,dp);g.clearRect(0,0,W,H);
-  var k=f.k,p=r.plan,vals=[];k.forEach(function(c){vals.push(c[1],c[2])});if(p)vals.push(p.entry,p.sl);
+  var k=f.k,vals=[];k.forEach(function(c){vals.push(c[1],c[2])});if(p)[p.entry,p.sl,p.tp].forEach(function(v){if(v>0)vals.push(v)});
   var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals),pad=(hi-lo)*0.05;lo-=pad;hi+=pad;
   var AX=40,PW=Math.round((W-AX)*0.26),CW=W-AX-PW,cw=CW/k.length,y=function(v){return H-4-(v-lo)/(hi-lo)*(H-8)};
   /* value area behind the candles */
@@ -1349,11 +1399,11 @@ function drawFlow(r){
   function hl(v,col,dash,lw,label){if(!(v>lo&&v<hi))return;var yy=y(v);g.strokeStyle=g.fillStyle=col;g.setLineDash(dash);g.lineWidth=lw;g.beginPath();g.moveTo(0,yy);g.lineTo(CW+PW,yy);g.stroke();g.setLineDash([]);
     if(label){g.font="600 10px "+(tk("--mono")||"monospace");g.textBaseline="middle";g.fillText(label,CW+PW+4,yy)}}
   hl(f.vah,tk("--muted"),[3,3],1,"VAH");hl(f.val,tk("--muted"),[3,3],1,"VAL");hl(f.poc,tk("--accent"),[],1.4,"POC");
-  if(p){hl(p.entry,tk("--accent"),[5,4],1,"");hl(p.sl,tk("--bad"),[5,4],1,"")}
+  if(p){hl(p.entry,tk("--accent"),[5,4],1,"");if(p.sl>0)hl(p.sl,tk("--bad"),[5,4],1,"");if(p.tp>0)hl(p.tp,tk("--good"),[5,4],1,"")}
   function ln(s,col){g.strokeStyle=col;g.lineWidth=1.8;g.beginPath();var on=false;s.forEach(function(v,i){if(v===null)return;var x=i*cw+cw/2;if(on)g.lineTo(x,y(v));else{g.moveTo(x,y(v));on=true}});g.stroke()}
   ln(f.sH,tk("--bad"));ln(f.sL,tk("--good"));
   /* cumulative delta under the candles, same time axis */
-  var dv=document.querySelector("section.view:not([hidden]) canvas#dcv");if(!dv||!dv.clientWidth)return;
+  if(!dv||!dv.clientWidth)return;
   var W2=dv.clientWidth,H2=dv.clientHeight;dv.width=W2*dp;dv.height=H2*dp;var d=dv.getContext("2d");d.scale(dp,dp);d.clearRect(0,0,W2,H2);
   var c=f.cvd,a=Math.min(0,Math.min.apply(null,c)),b=Math.max(0,Math.max.apply(null,c)),yd=function(v){return H2-5-(v-a)/((b-a)||1)*(H2-10)},xd=function(i){return i*cw+cw/2};
   d.strokeStyle=tk("--line");d.lineWidth=1;d.beginPath();d.moveTo(0,yd(0));d.lineTo(CW,yd(0));d.stroke();
@@ -1455,6 +1505,7 @@ function renderTrades(){
       +'<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
       +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(t.sl)+'</span><span id="px-'+id+'">–</span><span>TP '+px(t.tp)+"</span></div></div>"
+      +'<div class="funnel plain two" id="od-'+id+'"></div>'+vpBox(id)
       +'<div class="warn" id="al-'+id+'" hidden></div>'
       +'<div class="grid"><label>Entrée<input inputmode="decimal" id="e-'+id+'" data-id="'+id+'" data-f="entry" value="'+t.entry+'"></label>'
       +'<label>Quantité<input inputmode="decimal" id="q-'+id+'" data-id="'+id+'" data-f="qty" value="'+t.qty+'"></label>'
@@ -1472,7 +1523,7 @@ function renderTrades(){
     +'<button class="ghost danger" type="button" data-wipe="1">Effacer l\'historique</button>';
   $("view-trades").innerHTML=h;armed={};
   renderLive();
-  op.forEach(paint);op.forEach(paintHealth);op.forEach(paintTP);totals()}
+  op.forEach(paint);op.forEach(paintHealth);op.forEach(paintTP);op.forEach(paintVP);totals()}
 function tcount(){$("tcount").textContent=(openTrades().length+(LV.list?LV.list.length:0))||""}
 function totals(){
   var op=openTrades(),sum=0,ok=op.length>0;
@@ -1482,7 +1533,7 @@ function totals(){
   a.textContent=ok?sgn(sum,2)+" $":"–";a.className=ok?(sum>=0?"pos":"neg"):"";
   b.textContent=sgn(done,2)+" $";b.className=done>=0?"pos":"neg"}
 function paint(t){
-  var p=lastPx[t.full],n=$("net-"+t.id);paintBE(t,p);if(!n||p===undefined)return;
+  var p=lastPx[t.full],n=$("net-"+t.id);paintBE(t,p);paintOdds(t,p);if(!n||p===undefined)return;
   var v=pnl(t,p),acc=+S.account||0;
   n.textContent=sgn(v.net,2)+" $";n.className="net "+(v.net>=0?"pos":"neg");
   $("sub-"+t.id).textContent=(acc?sgn(v.net/acc*100,2)+" % du compte · ":"")+(v.risk?sgn(v.net/v.risk,2)+" R · ":"")+"brut "+sgn(v.gross,2)+" $ · frais −"+fr(v.fee,2)+" $";
@@ -1604,7 +1655,7 @@ function checkTrade(t){
       tp=after.length?{act:"up",px:after[0].p-dir*0.1*a4,why:"Prix proche de l'objectif, tendance 1J et 4H intactes, prochain niveau vers "+px(after[0].p)}
         :{act:"up",px:t.tp+dir*Math.max(r0,a4),why:"Prix proche de l'objectif, tendance 1J et 4H intactes, aucun niveau au-delà : objectif repoussé d'un cran"};
     else if(before.length)tp={act:"keep",why:"Une "+lvl+" vers "+px(before[0].p)+" sur le chemin, mais la tendance reste solide"};
-    return{v:v,sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp}})}
+    return{v:v,sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl}})}
 function paintTP(t){
   var el=$("tp-"+t.id);if(!el)return;var h=health[t.id],a=h&&!h.err&&h.tp;
   if(!a||a.act==="hit"||a.act==="none"){el.className="be";el.innerHTML="";return}
@@ -1627,7 +1678,7 @@ function runHealth(t,force){
   if(healthBusy[t.id])return Promise.resolve();
   var h=health[t.id];if(!force&&h&&!h.err&&Date.now()-h.at<5*60e3)return Promise.resolve();
   healthBusy[t.id]=true;paintHealth(t);
-  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full]);paintTP(t)})}
+  return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full]);paintTP(t);paintOdds(t,lastPx[t.full]);paintVP(t)})}
 function checkDue(){
   if(view!=="trades"||document.hidden)return;
   healthQueue(liveTrades().concat(openTrades()),false)}
@@ -1640,7 +1691,7 @@ function healthQueue(list,force){
   (function next(){var x=hq.shift();if(!x){hqOn=false;return}runHealth(x.t,x.f).then(next)})()}
 
 /* ---------- Binance Futures read live: open positions with the stop and target orders placed on Binance ---------- */
-var LV={list:null,err:"",ordErr:"",at:0,busy:false,ord:{},ordAt:0,sig:"",ps:{},acct:0,acctAt:0,incAt:0,incBusy:false},LVS=liveMem();
+var LV={real:null,realAt:0,realBusy:false,list:null,err:"",ordErr:"",at:0,busy:false,ord:{},ordAt:0,sig:"",ps:{},acct:0,acctAt:0,incAt:0,incBusy:false},LVS=liveMem();
 function liveMem(){try{var o=JSON.parse(localStorage.getItem("radar-live")||"{}");return o&&typeof o==="object"?o:{}}catch(e){return{}}}
 function saveLive(){try{localStorage.setItem("radar-live",JSON.stringify(LVS))}catch(e){}}
 function hasBn(){if(!CANPF)return false;try{return!!Android.hasKeys("binance")}catch(e){return false}}
@@ -1715,11 +1766,32 @@ function liveTick(force){
   if(LV.busy||document.hidden||view!=="trades"||!hasBn())return;
   if(!force&&Date.now()-LV.at<4500)return;
   LV.busy=true;
-  if(Date.now()-LV.acctAt>60e3)soft(xapi("binance","fut")).then(function(f){if(f&&!f.__err&&+f.totalWalletBalance>0){LV.acct=+f.totalWalletBalance;LV.acctAt=Date.now()}});
+  if(Date.now()-LV.acctAt>60e3)acctSync();
+  if(Date.now()-LV.realAt>5*60e3)liveReal();
   liveFetch(force).then(function(L){LV.list=L;LV.at=Date.now();LV.err="";LV.busy=false;paintLiveAll();liveIncome().then(paintLiveAll)},
     function(e){LV.busy=false;LV.err=apiMsg(e);if(view==="trades")renderLive()})}
 setInterval(function(){liveTick(false)},5000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)liveTick(true)});
+/* futures wallet balance: shown with the positions, and used as the account size when the setting asks for it */
+function acctSync(){
+  if(!hasBn())return;LV.acctAt=Date.now();
+  soft(xapi("binance","fut")).then(function(f){if(!f||f.__err||!(+f.totalWalletBalance>0))return;
+    LV.acct=+f.totalWalletBalance;
+    if(S.acsync){var v=Math.round(LV.acct*100)/100;if(v!==+S.account){S.account=v;$("f-account").value=v;saveSettings();if(view==="trades"){openTrades().forEach(paint);totals()}}}
+    if(view==="trades")renderLive()})}
+/* realised result of the last 30 days on Binance Futures: every closed trade, fees and funding included, even those closed while the app was shut */
+function liveReal(){
+  if(LV.realBusy||!hasBn())return;LV.realBusy=true;LV.realAt=Date.now();
+  Promise.all(["REALIZED_PNL","COMMISSION","FUNDING_FEE"].map(function(k){return xapi("binance","inc:"+k+":30")})).then(function(a){
+    LV.realBusy=false;LV.real={at:Date.now(),m:incomeStats(a[0],a[1],a[2])};if(view==="trades")renderLive()},
+    function(){LV.realBusy=false})}
+function realView(){
+  var m=LV.real&&LV.real.m;if(!m)return"";var ex=m.exits.slice(0,30);
+  return'<details class="set"><summary>Historique Binance · 30 jours · '+m.n+(m.n>1?" trades clôturés":" trade clôturé")+" · "+sgn(m.parts.net,2)+" $</summary>"
+    +'<div class="funnel plain" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b class="'+(m.parts.gross>=0?"pos":"neg")+'">'+sgn(m.parts.gross,2)+' $</b><span>gains et pertes</span></div><div><b class="neg">'+sgn(m.parts.fees,2)+' $</b><span>frais</span></div><div><b class="'+(m.parts.fund>=0?"pos":"neg")+'">'+sgn(m.parts.fund,2)+" $</b><span>funding</span></div></div>"
+    +(m.n?'<div class="sub" style="margin-top:8px">'+m.wins+" gagnants sur "+m.n+" ("+fr(m.wins/m.n*100,0)+" %)"+(m.avgW?" · gain moyen +"+fr(m.avgW,2)+" $":"")+(m.avgL?" · perte moyenne −"+fr(m.avgL,2)+" $":"")+"</div>":"")
+    +ex.map(function(x){return'<div class="cl1"><b>'+esc(x.sym)+'</b><span class="sub">'+when(x.t)+'</span><b class="'+(x.pnl>=0?"pos":"neg")+'">'+sgn(x.pnl,2)+" $</b></div>"}).join("")
+    +'<div class="sub" style="padding:8px 0 12px">Montants par trade hors frais ; le total en haut inclut frais et funding. Le détail complet est dans l\'onglet Résultats.</div></details>'}
 function lvStatus(){return LV.at?"lu à "+new Date(LV.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"lecture…"}
 function paintLiveAll(){
   if(view!=="trades")return;
@@ -1741,11 +1813,14 @@ function renderLive(){
   if(LV.err)h+='<div class="warn">'+esc(LV.err)+"</div>";
   if(LV.ordErr)h+='<div class="warn">Ordres stop et TP non lus : '+esc(LV.ordErr)+"</div>";
   if(!L){el.innerHTML=h+(LV.err?"":'<div class="empty">Lecture de tes positions…</div>');return}
-  if(L.length)h+='<div class="funnel plain two" id="lv-sum"><div><b id="lv-pnl">–</b><span>latent, '+L.length+(L.length>1?" positions":" position")+'</span></div><div><b id="lv-mg">–</b><span>marge engagée</span></div></div>';
-  else h+='<div class="sub" id="lv-sum">Aucune position ouverte sur Binance Futures. Dès que tu en ouvres une, elle apparaît ici avec son stop et son objectif.</div>';
-  h+=L.map(liveCard).join("")+closedView();
+  var rm=LV.real&&LV.real.m,rn=rm?rm.parts.net:null;
+  h+='<div class="funnel plain" id="lv-sum" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b id="lv-pnl">'+(L.length?"–":"0 $")+'</b><span id="lv-mg">latent'+(L.length?", "+L.length+(L.length>1?" positions":" position"):"")+'</span></div>'
+    +'<div><b class="'+(rn===null?"":rn>=0?"pos":"neg")+'">'+(rn===null?"…":sgn(rn,2)+" $")+"</b><span>réalisé 30 jours, frais compris</span></div>"
+    +'<div><b>'+(LV.acct?usd0(LV.acct):"–")+"</b><span>solde Futures</span></div></div>";
+  if(!L.length)h+='<div class="sub">Aucune position ouverte sur Binance Futures. Dès que tu en ouvres une, elle apparaît ici avec son stop et son objectif.</div>';
+  h+=L.map(liveCard).join("")+closedView()+realView();
   el.innerHTML=h;
-  L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p)});liveTotals()}
+  L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p);paintVP(t)});liveTotals()}
 function liveCard(p){
   var t=liveTrade(p),id=t.id,acc=LV.acct||+S.account||0,risk=p.sl>0?(p.sl-p.entry)*p.dir*p.qty:null;
   var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="ldot" title="Suivi en direct"></span></div>';
@@ -1755,13 +1830,14 @@ function liveCard(p){
   h+='<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
     +'<div><div class="cap">Gain ou perte latent</div><div class="net" id="ln-'+id+'">–</div><div class="sub" id="ls-'+id+'"></div></div>';
   if(p.sl>0&&p.tp>0)h+='<div><div class="rail" id="lr-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(p.sl)+'</span><span id="lp-'+id+'">–</span><span>TP '+px(p.tp)+"</span></div></div>";
+  h+='<div class="funnel plain two" id="od-'+id+'"></div>';
   h+='<div class="pil four lvt"><div><span>Taille</span><b>'+fr(p.qty,p.qty>=100?0:p.qty>=1?3:4)+"</b><small>"+usd0(p.notional)+" · marge "+usd0(p.margin)+"</small></div>"
     +"<div><span>Entrée</span><b>"+px(p.entry)+"</b><small>break-even "+(p.be>0?px(p.be):"–")+"</small></div>"
     +'<div><span>Liquidation</span><b>'+(p.liq>0?px(p.liq):"aucune")+'</b><small id="lq-'+id+'">'+(p.liq>0?"":"marge suffisante")+"</small></div>"
     +'<div><span>Au stop</span><b class="'+(risk===null?"neg":risk>=0?"pos":"neg")+'">'+(risk===null?"aucun":sgn(risk,2)+" $")+"</b><small>"
     +(risk===null?"perte non limitée":risk>=0?"gain verrouillé":acc?fr(-risk/acc*100,1)+" % du compte":"perte si touché")
     +(p.sls.length>1?" · "+p.sls.length+" stops":"")+(p.tp>0?" · TP "+px(p.tp)+(p.tps.length>1?" (+"+(p.tps.length-1)+")":""):" · pas de TP")+"</small></div></div>";
-  return h+"</article>"}
+  return h+vpBox(id)+"</article>"}
 function paintLive(p){
   var id="bn"+lkey(p),n=$("ln-"+id);if(!n)return;
   var m=LVS[lkey(p)]||{},roe=p.margin?p.pnl/p.margin*100:null,r=m.r0?(p.mark-p.entry)*p.dir/m.r0:null;
@@ -1771,11 +1847,11 @@ function paintLive(p){
   var rail=$("lr-"+id);if(rail){var span=p.tp-p.sl,pos=Math.max(0,Math.min(1,(p.mark-p.sl)/span)),e=Math.max(0,Math.min(1,(p.entry-p.sl)/span));
     rail.style.setProperty("--e",(e*100).toFixed(1)+"%");rail.querySelector("i").style.left=(pos*100).toFixed(1)+"%"}
   var q=$("lq-"+id);if(q&&p.liq>0){var d=Math.abs(p.mark-p.liq)/p.mark*100;q.textContent="à "+fr(d,1)+" % du prix";q.className=d<5?"neg":""}
-  paintBE(liveTrade(p),p.mark)}
+  var lt=liveTrade(p);paintBE(lt,p.mark);paintOdds(lt,p.mark)}
 function liveTotals(){
   var L=LV.list||[],a=$("lv-pnl"),b=$("lv-mg"),st=$("lv-st"),s=0,mg=0;if(st)st.textContent=lvStatus();if(!a)return;
   L.forEach(function(p){s+=p.pnl;mg+=p.margin});
-  a.textContent=sgn(s,2)+" $";a.className=s>=0?"pos":"neg";b.textContent=usd0(mg)}
+  a.textContent=sgn(s,2)+" $";a.className=s>=0?"pos":"neg";if(b&&L.length)b.textContent="latent, "+L.length+(L.length>1?" positions":" position")+" · marge "+usd0(mg)}
 function closedView(){
   var c=(LVS._c||[]).slice().reverse();if(!c.length)return"";
   return'<div><div class="cap">Fermées ces dernières 24 h</div>'+c.map(function(x){
@@ -1802,6 +1878,7 @@ $("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);el
   el.addEventListener("change",function(){
     if(f[0]==="exclude"){S.exclude=el.value.toUpperCase().replace(/[^A-Z0-9,; ]/g,"");el.value=S.exclude}
     else{var v=parseFloat(String(el.value).replace(",","."));if(!(v>=0)||(v===0&&f[0]!=="minvol"&&f[0]!=="fee"))v=DEF[f[0]];S[f[0]]=v;el.value=v}
+    if(f[0]==="account"){S.acsync=false;$("f-acsync").checked=false}
     saveSettings();if(f[0]==="fee"||f[0]==="lev")rejudge();if(view==="trades"){openTrades().forEach(paint);totals()}else if(view==="one")renderOne();else render()})});
 window.addEventListener("resize",function(){if(view==="heat")drawHeat();if(view==="fund")drawWeekly();if(view==="res")drawRes();if(view==="one"&&oneRes)drawBT(oneRes.sym);if(view==="mkt"||view==="cyc")drawMkt();if(view==="scan"&&mode==="10")drawBT("TOP10");if(view==="one"&&oneRes&&oneRes.plan)draw(oneRes);if(openSym){var r=find(openSym);if(r)draw(r)}});
 try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",render)}catch(e){}
@@ -1818,6 +1895,9 @@ $("p-strict").addEventListener("change",function(){S.strict=+this.value;saveSett
   var el=$(f[1]);el.value=S[f[0]];
   el.addEventListener("change",function(){var v=parseFloat(String(el.value).replace(",","."));if(!(v>=f[2]&&v<=f[3]))v=DEF[f[0]];S[f[0]]=v;el.value=v;saveSettings();rejudge()})});
 precRef();
+$("f-acsync").checked=!!S.acsync;
+$("f-acsync").addEventListener("change",function(){S.acsync=this.checked;saveSettings();if(S.acsync){LV.acctAt=0;acctSync()}});
+if(!BG)setTimeout(acctSync,1500);
 
 /* ---------- squeeze risk: crowded side (funding, account ratio), rising open interest, nearby liquidation pools ---------- */
 function gdata(path){return fetch("/futures/data/"+path).then(function(r){if(!r.ok)throw{code:"http"};return r.json()})}

@@ -55,6 +55,13 @@ price action des dernières bougies 4H et 1H. Ces lectures ont été rejouées s
 Aucun effet durable, ni ensemble ni composante par composante : ces lectures restent des aides visuelles et ne changent
 pas le statut « Prêt ».
 
+## Fiabilité et durée jusqu'au TP
+
+La fiabilité affichée est la distance au stop divisée par la distance entre le stop et le TP. Rejouée sur 26 000 setups des
+deux années, elle a prédit la part de TP atteints avant le stop à 2 points près (33 % prévus, 33 à 34 % observés). La durée
+est le temps médian qu'ont mis les setups gagnants pour un TP aussi éloigné, mesuré en ATR 1H : environ 10 h pour 2 à 3 ATR,
+17 h pour 3 à 4, 25 h pour 4 à 5, 34 h pour 5 à 6 (`tools/backtest/timing26.js`).
+
 ## Données et clés
 
 L'appli lit les données de marché publiques de Binance. L'onglet Portefeuille demande des clés API **en lecture seule** :
