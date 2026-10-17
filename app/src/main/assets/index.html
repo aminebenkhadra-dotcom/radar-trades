@@ -465,7 +465,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Version 29.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Version 30.
     </footer>
 </div>
 <script>
@@ -2439,7 +2439,7 @@ function advise(m,w,bp){
   return out("no","À réévaluer","profil fragile","Règle : profil fragile mais poids limité → à réévaluer : regarde la grille ci-dessous pour voir ce qui pèse.")}
 function evaluatePf(){
   if(pfEvalBusy)return;
-  var H=holdings(),coins=H.list.filter(function(x){return!STABLE[x.a]&&x.usd>=20}).slice(0,12);
+  var H=holdings(),coins=H.list.filter(function(x){return!STABLE[x.a]&&x.usd>=1}).slice(0,40);
   if(!coins.length){pfEvalErr="Aucune crypto à évaluer : connecte un compte ou ajoute des actifs.";renderPf();return}
   pfEvalBusy=true;pfEvalErr="";renderPf();
   var syms=[];coins.forEach(function(x){var b=(WRAP[x.a]||x.a).replace(/^(1000000|1000|1M)/,"").toLowerCase();if(syms.indexOf(b)<0)syms.push(b)});
@@ -2493,13 +2493,13 @@ function evalView(){
       +'<div><div class="cap">Pistes d\'action sur l\'ensemble</div><ul class="why">'+e.leads.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></div>"
       +'<div><div class="cap">Crypto par crypto · touche une ligne pour le détail</div>'+e.rows.map(function(r,i){
         var ok=r.m&&r.m.items.length,st=!ok?"":r.m.score>=70?"ready":r.m.score>=50?"watch":"wait",op=pfOpen===r.h.a;
-        return'<button type="button" class="ev evb" data-pev="'+esc(r.h.a)+'" aria-expanded="'+op+'"><span class="ring" data-st="'+st+'" style="--v:'+(ok?r.m.score:0)+'"><b>'+(ok?r.m.score:"–")+"</b></span><span><b>"+esc(r.h.a)+"</b> <small>"+fr(r.w,0)+" % · "+usd0(r.h.usd)+(r.as?" · évalué comme "+r.as:"")+"</small>"
+        return'<button type="button" class="ev evb" data-pev="'+esc(r.h.a)+'" aria-expanded="'+op+'"><span class="ring" data-st="'+st+'" style="--v:'+(ok?r.m.score:0)+'"><b>'+(ok?r.m.score:"–")+"</b></span><span><b>"+esc(r.h.a)+"</b> <small>"+(r.w<1?"<1":fr(r.w,0))+" % · "+usd0(r.h.usd)+(r.as?" · évalué comme "+r.as:"")+"</small>"
           +'<span class="evt '+r.adv.k+'">'+r.adv.t+'</span><span class="sub">'+esc(r.adv.why.charAt(0).toUpperCase()+r.adv.why.slice(1))+(r.bp?" · bull run : "+r.bp.t.toLowerCase():"")+'</span></span><span class="evc">'+(op?"▴":"▾")+"</span></button>"+(op?evDetail(r,i):"")}).join("")+"</div>"
       +'<div class="sub">Ces pistes sortent d\'une grille fixe (taille, dilution, liquidité, tendance sur plusieurs années, poids dans le portefeuille). Elles ignorent ton prix d\'achat, ton horizon, tes objectifs et ta fiscalité : ce ne sont pas des conseils personnalisés.</div>'}
   else h+='<div class="sub">Note chaque crypto de tes comptes sur sa solidité long terme, mesure l\'équilibre du portefeuille et propose des pistes d\'action.</div>';
   return h+'<div class="acts"><button class="take" type="button" data-pfe="1">'+(e?"Réévaluer":"Évaluer mes cryptos")+"</button>"+(e?'<button class="ghost" type="button" data-pfc="1">Copier la demande d\'avis pour Claude</button>':"")+"</div></article>"}
 /* detail of one evaluated holding: why the recommendation, the scoring grid, the position, the weekly chart */
-var pfOpen=null;
+var pfOpen=null,pfAll={};
 function evDetail(r,i){
   var m=r.m,ok=m&&m.items.length,held=heldOf(r.h.a),ord={ok:0,mid:1,no:2},h='<div class="evd">';
   h+='<div><div class="cap">Pourquoi « '+esc(r.adv.t)+" »</div><ol class=\"steps\">"+r.adv.steps.map(function(x){return"<li><span>"+esc(x)+"</span></li>"}).join("")+"</ol></div>";
@@ -2550,10 +2550,10 @@ function renderPf(){
     else if(m&&m.err){h+='<div class="warn">'+esc(m.err)+"</div>"}
     else if(m){
       h+='<div><div class="net sm" style="font-size:22px">'+usd0(m.total)+'</div><div class="size" style="margin-top:6px">'+m.wallets.map(function(w){return"<span>"+w[0]+" <b>"+usd0(w[1])+"</b></span>"}).join("")+"</div></div>";
-      var as=m.assets.slice().sort(function(a,b){return b.usd-a.usd}),top=as.slice(0,8),mx=top.length?top[0].usd:0;
-      if(top.length)h+='<div><div class="cap">Principaux actifs</div>'+top.map(function(a){
+      var as=m.assets.slice().sort(function(a,b){return b.usd-a.usd}),allA=pfAll[ex],top=allA?as:as.slice(0,8),mx=top.length?top[0].usd:0;
+      if(top.length)h+='<div><div class="cap">'+(allA?"Tous les actifs ("+as.length+")":"Principaux actifs")+"</div>"+top.map(function(a){
         return'<div class="z"><b>'+esc(a.a)+"</b><span>"+fr(a.qty,a.qty>=100?0:a.qty>=1?3:6)+" · "+a.w+'</span><span class="zb" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><i style="width:'+(mx?Math.max(3,a.usd/mx*60):3).toFixed(0)+'%"></i><b style="color:var(--ink)">'+(a.usd?usd0(a.usd):"n. c.")+"</b></span></div>"}).join("")
-        +(as.length>8?'<div class="sub">+ '+(as.length-8)+" autres actifs</div>":"")+"</div>";
+        +(as.length>8?'<button class="ghost" type="button" data-pfall="'+ex+'" style="margin-top:6px">'+(allA?"Réduire la liste":"Voir les "+(as.length-8)+" autres actifs")+"</button>":"")+"</div>";
       if(m.positions.length)h+='<div><div class="cap">Positions futures ouvertes</div>'+m.positions.map(function(p){
         return'<div class="pos1"><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+"</span><b>"+esc(p.sym)+"</b>"+(p.lev?"<span>x"+esc(p.lev)+"</span>":"")
           +(isFinite(p.pnl)?'<b class="'+(p.pnl>=0?"pos":"neg")+'" style="margin-left:auto">'+sgn(p.pnl,2)+" $</b>":"")
@@ -2584,6 +2584,7 @@ $("view-pf").addEventListener("submit",function(e){
   loadPf(ex)});
 $("view-pf").addEventListener("click",function(e){
   if(e.target.closest("[data-pfe]")){evaluatePf();return}
+  var pa=e.target.closest("[data-pfall]");if(pa){pfAll[pa.dataset.pfall]=!pfAll[pa.dataset.pfall];renderPf();return}
   var pv=e.target.closest("[data-pev]");if(pv){pfOpen=pfOpen===pv.dataset.pev?null:pv.dataset.pev;renderPf();var nb=document.querySelector('[data-pev="'+pv.dataset.pev+'"]');if(nb&&pfOpen)nb.scrollIntoView({block:"start",behavior:"smooth"});return}
   var pfd=e.target.closest("[data-pfund]");if(pfd){setView("fund");$("fund-sym").value=pfd.dataset.pfund;fundamental(pfd.dataset.pfund);try{scrollTo(0,0)}catch(x){}return}
   var pea=e.target.closest("[data-pearn]");if(pea){setView("earn");loadEarn(pea.dataset.pearn);try{scrollTo(0,0)}catch(x){}return}
@@ -2675,10 +2676,10 @@ function loadEarn(a){
   EARN.a=a;EARN.err="";EARN.busy=true;$("earn-sym").value=a;renderEarn();
   earnData(a).then(function(d){EARN.busy=false;var b=earnTop(d,heldOf(a));EARN.sel[a]=b?Math.max(0,d.opts.indexOf(b)):0;renderEarn()},function(e){EARN.busy=false;EARN.err=why(e);renderEarn()})}
 /* coins worth at least 10 $ outside the Futures margin, biggest first */
-function idleCoins(){return holdings().list.map(function(x){var h=heldOf(x.a);return{a:x.a,qty:h.qty,usd:h.usd}}).filter(function(x){return x.usd>=10}).sort(function(x,y){return y.usd-x.usd}).slice(0,10)}
+function idleCoins(){return holdings().list.map(function(x){var h=heldOf(x.a);return{a:x.a,qty:h.qty,usd:h.usd}}).filter(function(x){return x.usd>=1}).sort(function(x,y){return y.usd-x.usd}).slice(0,40)}
 function earnAll(){
   if(EARN.pfBusy)return;
-  var coins=idleCoins();
+  var coins=idleCoins().slice(0,25);
   if(!coins.length){EARN.pf={at:Date.now(),rows:[],none:true};renderEarn();return}
   EARN.pfBusy=true;EARN.pfN=0;renderEarn();
   pool(coins,2,function(c){return earnData(c.a).then(function(d){return{c:c,d:d}})},function(dn){EARN.pfN=dn;var s=$("ey-st");if(s)s.textContent=dn+"/"+coins.length})
@@ -2753,7 +2754,7 @@ function earnPfView(){
   var h='<article class="card tr"><div class="trh"><span class="sym">Faire travailler mon portefeuille</span>'+(EARN.pfBusy?'<span class="sub" style="margin-left:auto" id="ey-st">'+EARN.pfN+"</span>":e&&e.at?'<span class="sub" style="margin-left:auto">à '+new Date(e.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+"</span>":"")+"</div>";
   if(!n)return h+'<div class="sub">'+(CANPF?"Connecte au moins un compte en lecture seule dans l'onglet Portefeuille : l'appli cherchera le meilleur rendement pour chacune de tes cryptos.":"Cette fonction demande la dernière version de l'application.")+"</div></article>";
   if(EARN.pfBusy)return h+'<div class="sub">Recherche des offres pour chacune de tes cryptos…</div></article>';
-  if(e&&e.none)h+='<div class="sub">Aucune crypto de plus de 10 $ trouvée dans tes comptes.</div>';
+  if(e&&e.none)h+='<div class="sub">Aucune crypto trouvée dans tes comptes.</div>';
   else if(e){
     h+=Math.abs(e.tb-e.tf)<0.5?'<div class="funnel plain two"><div><b class="pos">≈ '+usd0(e.tb)+'</b><span>par an au meilleur taux</span></div><div><b>sans blocage</b><span>les meilleures offres se retirent à tout moment</span></div></div>'
       :'<div class="funnel plain two"><div><b class="pos">≈ '+usd0(e.tb)+'</b><span>par an au meilleur taux</span></div><div><b class="pos">≈ '+usd0(e.tf)+"</b><span>par an sans rien bloquer</span></div></div>";
