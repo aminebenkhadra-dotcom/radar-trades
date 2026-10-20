@@ -65,7 +65,7 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         String tab = intent == null ? null : intent.getStringExtra(EXTRA_TAB);
-        if (tab != null && web != null && tab.matches("[a-z0-9]{1,8}")) {
+        if (tab != null && web != null && tab.matches("[a-z0-9]{1,8}(~[A-Za-z0-9]{1,30})?")) {
             web.evaluateJavascript("window.openTab&&window.openTab('" + tab + "')", null);
         }
     }

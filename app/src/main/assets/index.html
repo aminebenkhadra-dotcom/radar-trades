@@ -328,6 +328,19 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .tfr b{font-family:var(--display);font-size:14px} .tfr span{font-family:var(--mono);font-size:12.5px;font-weight:600}
 .tfr i{grid-column:1/-1;display:block;height:5px;border-radius:3px;min-width:3px}
 .tfr i.pos{background:var(--good)} .tfr i.neg{background:var(--bad)}
+/* top 3 ready setups */
+.r3{border:1.5px solid var(--good);background:linear-gradient(180deg,var(--good-soft),transparent 70%),var(--surface);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 0 0 4px var(--good-soft)}
+.r3.none{border-color:var(--line);box-shadow:none;background:var(--surface)}
+.r3h{display:flex;align-items:center;gap:8px} .r3h b{font-family:var(--display);font-size:17px;color:var(--good)} .r3.none .r3h b{color:var(--muted)}
+.r3t{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 10px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;color:inherit}
+.r3t .n{width:28px;height:28px;border-radius:50%;background:var(--good);color:var(--bg);display:grid;place-items:center;font-weight:700;font-family:var(--mono)}
+.r3t.near .n{background:var(--accent)}
+.r3t .sym{font-size:17px} .r3t .pl{font-family:var(--mono);font-size:12px;color:var(--muted);grid-column:2/-1}
+.r3t .kp{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.r3t .kp em{font-style:normal;font-size:12px;font-weight:600;color:var(--good)} .r3t.near .kp em{color:var(--accent)}
+.card.flash{animation:fl 1.8s ease-out}
+@keyframes fl{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.card.flash{animation:none;outline:2px solid var(--accent)}}
 /* where each coin sits */
 .zbt{width:100%;background:none;border:0;color:inherit;text-align:left;cursor:pointer}
 .astd{background:var(--sunk);border-radius:8px;padding:8px 10px;margin:2px 0 6px;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
@@ -413,6 +426,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 
   <section class="view" id="view-scan">
   <button class="mline" type="button" id="mkt-line" hidden></button>
+  <div id="ready3"></div>
   <div class="funnel" id="funnel" hidden></div>
 
   <h2 id="top-h">Top 3 à surveiller</h2>
@@ -506,7 +520,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. Version 36.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. En tête des listes, les 3 meilleurs setups prêts ; une notification ouvre directement le setup ou le trade concerné. Version 37.
     </footer>
 </div>
 <script>
@@ -1282,7 +1296,7 @@ function statusLine(){
   else setStatus("Binance Futures USDT")}
 function finish(){
   busy=false;$("scan").disabled=false;$("app").classList.remove("scanning");$("bar").hidden=true;
-  statusLine();render();
+  statusLine();render();focusNow();
   if(onScanDone){var cb=onScanDone;onScanDone=null;cb()}}
 
 /* ---------- formatting ---------- */
@@ -1323,7 +1337,7 @@ function render(){
   var g1=setups.filter(function(r){return r.dir===side}),g2=setups.filter(function(r){return r.dir!==side});
   function head(dir,n){var lab=(dir>0?"Longs":"Shorts")+" · "+n;
     return ms&&ms.side?lab+(dir===ms.side?" · dans le sens du marché":" · contre la tendance du marché"):lab}
-  mktLine();
+  mktLine();ready3(setups);
   $("top-h").textContent=g1.length||!g2.length?head(side,g1.length):head(-side,g2.length);
   var first=g1.length||!g2.length?g1:g2,second=first===g1?g2:[];
   $("top").innerHTML=first.length?first.map(function(r,i){return card(r,i+1)}).join(""):'<div class="empty">'+(busy?"Scan en cours…":live?"Aucun setup propre pour l\'instant. Relance un scan plus tard.":"Appuie sur Scanner pour lancer le premier scan.")+'</div>';
@@ -1335,6 +1349,18 @@ function render(){
   if(showBt){if(!bl.firstChild||bl.dataset.k!==String(BT.TOP10&&BT.TOP10.st)){bl.innerHTML=btCard("TOP10");bl.dataset.k=String(BT.TOP10&&BT.TOP10.st);drawBT("TOP10")}}
   else{bl.innerHTML="";bl.dataset.k=""}
   if(openSym){var r=find(openSym);if(r&&r.plan)draw(r)}}
+/* the three best setups that are ready now (completed with the closest ones at 95 % when fewer than three are ready) */
+function ready3(setups){
+  var el=$("ready3");if(!el)return;
+  var rd=setups.filter(function(r){return r.st==="ready"}).sort(rank),near=setups.filter(function(r){return r.st!=="ready"&&r.pct>=95}).sort(rank);
+  var list=rd.slice(0,3),fill=list.length<3?near.slice(0,3-list.length):[];
+  if(!list.length&&!fill.length){el.innerHTML=results.length&&!busy?'<div class="r3 none"><div class="r3h"><b>Aucun setup prêt pour l\'instant</b></div><div class="sub">Les setups prêts apparaîtront ici, en tête de liste.</div></div>':"";return}
+  function tile(r,i,isNear){var p=r.plan,o=tpOdds(p.entry,p.sl,p.tp1,r.dir),t=tpTime(Math.abs(p.tp1-p.entry),r.a1);
+    return'<button type="button" class="r3t'+(isNear?" near":"")+'" data-r3="'+esc(r.sym)+'"><span class="n">'+(i+1)+'</span><span><span class="sym">'+esc(r.sym)+'<small>USDT</small></span> <span class="pill '+(r.dir>0?"long":"short")+'">'+(r.dir>0?"Long":"Short")+"</span></span>"
+      +'<span class="kp"><em>'+(isNear?"presque prêt · "+r.pct+" %":"Prêt · "+passed(r)+"/6")+"</em></span>"
+      +'<span class="pl">Entrée '+pp(r,p.entry)+" · Stop "+pp(r,p.sl)+" · TP1 "+pp(r,p.tp1)+(o!==null?" · fiabilité "+Math.round(o*100)+" %":"")+(t?" · ~"+hrs(t.med):"")+"</span></button>"}
+  el.innerHTML='<div class="r3"><div class="r3h"><b>'+(rd.length?"Top "+Math.min(3,rd.length)+(rd.length>1?" setups prêts":" setup prêt"):"Aucun setup prêt")+'</b><span class="sub" style="margin-left:auto">'+(rd.length>3?rd.length+" prêts au total":fill.length?"complété par les plus proches":"")+"</span></div>"
+    +list.map(function(r,i){return tile(r,i,false)}).join("")+fill.map(function(r,i){return tile(r,list.length+i,true)}).join("")+"</div>"}
 function cardNone(r,n){
   var sy=esc(r.sym),last=r.why&&r.why.length?r.why[r.why.length-1].t:"";
   return'<article class="card"><div class="row"><span class="ring"><b>–</b></span>'
@@ -1606,7 +1632,7 @@ function renderTrades(){
     +'<button class="ghost danger" type="button" data-wipe="1">Effacer l\'historique</button>';
   $("view-trades").innerHTML=h;armed={};
   renderLive();
-  op.forEach(paint);op.forEach(paintHealth);op.forEach(paintTP);op.forEach(paintVP);totals()}
+  op.forEach(paint);op.forEach(paintHealth);op.forEach(paintTP);op.forEach(paintVP);totals();focusNow()}
 function tcount(){$("tcount").textContent=(openTrades().length+(LV.list?LV.list.length:0))||""}
 function totals(){
   var op=openTrades(),sum=0,ok=op.length>0;
@@ -1903,7 +1929,7 @@ function renderLive(){
   if(!L.length)h+='<div class="sub">Aucune position ouverte sur Binance Futures. Dès que tu en ouvres une, elle apparaît ici avec son stop et son objectif.</div>';
   h+=L.map(liveCard).join("")+closedView()+realView();
   el.innerHTML=h;
-  L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p);paintVP(t)});liveTotals()}
+  L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p);paintVP(t)});liveTotals();focusNow()}
 function liveCard(p){
   var t=liveTrade(p),id=t.id,acc=LV.acct||+S.account||0,risk=p.sl>0?(p.sl-p.entry)*p.dir*p.qty:null;
   var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="ldot" title="Suivi en direct"></span></div>';
@@ -1944,6 +1970,7 @@ function closedView(){
 
 /* ---------- events ---------- */
 $("app").addEventListener("click",function(e){
+  var r3=e.target.closest("[data-r3]");if(r3){openSym=r3.dataset.r3;render();var sy=r3.dataset.r3;setTimeout(function(){var b=document.querySelector('#view-scan button.row[data-s="'+sy+'"]');if(b)flash(b.closest("article"))},100);return}
   var go=e.target.closest("[data-go]");if(go){setView(go.dataset.go);try{scrollTo(0,0)}catch(x){}return}
   var bt=e.target.closest("[data-bt]");if(bt){runBT(bt.dataset.bt);return}
   var tk=e.target.closest("[data-take]");
@@ -3619,7 +3646,9 @@ window.bgScan=function(t10,t50){
   function trades(msg){
     var op=S.atr?openTrades():[],lv=S.atr&&hasBn();if(!op.length&&!lv)return end(msg);
     var prev={},i=0,bad=0,nl=0;try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
-    function note(title,text,tag){try{Android.notify(title,text,tag,"trades")}catch(e){}}
+    /* the notification opens the trade it is about: the tag carries the trade id after a short prefix */
+    function note(title,text,tag){var id=/^(ns|sx|lq)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"";
+      try{Android.notify(title,text,tag,"trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:""))}catch(e){}}
     (lv?liveFetch().then(function(L){return liveIncome().then(function(){return L})}).catch(function(){return null}):Promise.resolve(null)).then(function(L){
       if(L){nl=L.length;LV.list=L;
         L.forEach(function(p){var k=lkey(p),nm=p.sym+" · "+(p.dir>0?"long":"short");
@@ -3665,7 +3694,7 @@ window.bgScan=function(t10,t50){
       var id=r.sym+(r.dir>0?"L":"S")+(rdy?"r":"n");if(seen[id])return;seen[id]=now;
       var mi=rdy?[]:missing(r);
       try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · "+passed(r)+"/6 contrôles",
-        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.flow&&r.flow.v!=="mid"?(r.flow.v==="ok"?"Volume et flux pour · ":"Volume et flux contre · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m)}catch(e){}});
+        (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.flow&&r.flow.v!=="mid"?(r.flow.v==="ok"?"Volume et flux pour · ":"Volume et flux contre · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m+"~"+r.sym)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
     trades(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
   scan(m)};
@@ -3675,13 +3704,23 @@ function loadStores(){
   ["all","10","50"].forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===3&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
-window.openTab=function(v){if(/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|cap|hbtc|heth|mkt|cyc|tmp)$/.test(v))setView(v)};
+/* "50~SOL" opens the Top 50 on the SOL setup, "trades~id" opens that trade: used by the notifications */
+var focusWant=null;
+window.openTab=function(v){var p=String(v||"").split("~"),t=p[0],x=p[1]||"";
+  if(!/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|cap|hbtc|heth|mkt|cyc|tmp)$/.test(t))return;
+  focusWant=x&&/^[A-Za-z0-9]{1,30}$/.test(x)?{v:t,x:x,at:Date.now()}:null;setView(t);focusNow()};
+function flash(el){if(!el)return;try{el.scrollIntoView({block:"center",behavior:"smooth"})}catch(e){el.scrollIntoView()}el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}
+function focusNow(){
+  var f=focusWant;if(!f)return;if(Date.now()-f.at>120e3){focusWant=null;return}
+  if(f.v==="trades"){var el=$("hl-"+f.x);if(el){focusWant=null;setTimeout(function(){flash(el.closest("article"))},150)}return}
+  var r=null;results.forEach(function(x){if(x.sym===f.x&&x.plan)r=x});if(!r)return;
+  focusWant=null;openSym=r.sym;render();setTimeout(function(){var b=document.querySelector('#view-scan button.row[data-s="'+r.sym+'"]');if(b)flash(b.closest("article"))},150)}
 document.addEventListener("visibilitychange",function(){
   if(document.hidden||BG)return;loadStores();alertStatus();
   if(view==="scan"&&!busy){useStore(mode);statusLine();render()}});
 loadStores();
 banner("");tcount();alertStatus();
-if(!BG){var h0=location.hash.slice(1);setView(/^(all|10|50|trades)$/.test(h0)?h0:"all")}
+if(!BG){var h0=decodeURIComponent(location.hash.slice(1));if(/^[a-z0-9]{1,8}(~[A-Za-z0-9]{1,30})?$/.test(h0)&&/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|cap|hbtc|heth|mkt|cyc|tmp)(~|$)/.test(h0))window.openTab(h0);else setView("all")}
 })();
 </script>
 </body>
