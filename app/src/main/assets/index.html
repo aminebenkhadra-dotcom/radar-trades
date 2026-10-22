@@ -252,6 +252,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .mline{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px}
 .mline b{font-family:var(--display);font-size:15px}
 .mline .mst{display:block;font-size:12px;color:var(--muted);margin-top:2px} .mline .mst.pos{color:var(--good)} .mline .mst.neg{color:var(--bad)}
+.pil.four.tri{grid-template-columns:repeat(3,minmax(0,1fr))}
 .flip{font-size:12.5px;color:var(--muted);margin-top:6px} .flip b{color:var(--ink);font-family:var(--mono)}
 .mline.up{border-color:var(--good);background:var(--good-soft)} .mline.up b{color:var(--good)}
 .mline.dn{border-color:var(--bad);background:var(--bad-soft)} .mline.dn b{color:var(--bad)}
@@ -523,7 +524,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. En tête des listes, les 3 meilleurs setups prêts ; une notification ouvre directement le setup ou le trade concerné. Un filtre permet de n'afficher que les longs ou que les shorts. Le bandeau de tendance distingue le fond (1 à 5 mois) et les 7 derniers jours. Version 39.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. En tête des listes, les 3 meilleurs setups prêts ; une notification ouvre directement le setup ou le trade concerné. Un filtre permet de n'afficher que les longs ou que les shorts. Le bandeau de tendance distingue le fond (1 à 5 mois), le mois et la semaine. Version 40.
     </footer>
 </div>
 <script>
@@ -3407,12 +3408,14 @@ function mktModel(a,coins,top){
   m.breadth={now:ser[ser.length-1],series:ser,up:up,dn:dn,n:coins.length};
   m.score=Math.round(30*m.btcD+25*m.btcW+15*m.ethD+30*m.breadth.now);
   m.label=mktLabel(m.score);m.side=m.score>=15?1:m.score<=-15?-1:0;
-  /* short term: the last 7 days, which the background trend above follows only slowly */
+  /* the last 30 and 7 days, which the background trend above follows only slowly:
+     Bitcoin's change (full marks at 12 % a month, 5 % a week), Ether's, and the share of big coins up */
   var ch=function(k,n){var L=k?k.length:0;return L>n?k[L-1].c/k[L-1-n].c*100-100:null},cl=function(v){return Math.max(-1,Math.min(1,v))};
-  var b7=ch(d,7),e7=ch(a[2],7),u7=0,n7=0;
-  coins.forEach(function(x){var v=ch(x.k,7);if(v===null)return;n7++;if(v>0)u7++});
-  var ss=Math.round(40*cl((b7||0)/5)+20*cl((e7||0)/7)+40*(n7?(u7/n7-0.5)*2:0));
-  m.st={score:ss,k:ss>=15?1:ss<=-15?-1:0,b7:b7,b30:ch(d,30),e7:e7,up:u7,n:n7};
+  var span=function(n,bf,ef){var b=ch(d,n),e=ch(a[2],n),u=0,c=0;
+    coins.forEach(function(x){var v=ch(x.k,n);if(v===null)return;c++;if(v>0)u++});
+    var sc=Math.round(40*cl((b||0)/bf)+20*cl((e||0)/ef)+40*(c?(u/c-0.5)*2:0));
+    return{days:n,score:sc,k:sc>=15?1:sc<=-15?-1:0,b:b,e:e,up:u,n:c}};
+  m.mo=span(30,12,15);m.st=span(7,5,7);
   /* the level where Bitcoin's daily trend flips: its 50-day average */
   var e50d=ema(closes(d.slice(-90)),50);m.flip=e50d[e50d.length-1];
   /* the rest of the picture: who rose today, funding, Bitcoin's share, mood */
@@ -3541,7 +3544,8 @@ function trendView(m){
     +(m.flip&&m.btcD?'<div class="flip">Bitcoin 1J repasse neutre s\'il clôture '+(m.btcD>0?"sous":"au-dessus de")+" <b>≈ "+(m.flip>1000?fr(m.flip,0):px(m.flip))+" $</b> ("+sgn((m.flip/m.price-1)*100,1)+" %), sa moyenne 50 jours</div>":"")
     +'<div class="pil four"><div><span>Bitcoin 1J</span>'+dir3(m.btcD,"haussier","baissier")+"</div><div><span>Bitcoin hebdo</span>"+dir3(m.btcW,"au-dessus","en dessous")+'<small>de sa moyenne 21 semaines</small></div><div><span>Ether 1J</span>'+dir3(m.ethD,"haussier","baissier")
     +'</div><div><span>Largeur</span><b><em class="pos">▲ '+b.up+'</em> · <em class="neg">▼ '+b.dn+"</em></b><small>sur les "+b.n+" plus grosses cryptos, en 1J</small></div></div></article>";
-  h+=shortView(m);
+  h+=spanView(m,m.mo)+spanView(m,m.st);
+  if(m.mo&&m.mo.b!==undefined)h+='<div class="sub" style="margin:-4px 2px 12px">Le mois et la semaine sont des repères d\'info : le côté favorisé reste celui de la tendance de fond, ces deux lectures n\'ont pas été testées comme filtre.</div>';
   h+='<article class="card tr"><div class="cap">Largeur du marché sur 30 jours : part des cryptos en hausse moins celles en baisse</div><canvas id="mkt-cv" class="mcv" aria-label="Largeur du marché sur 30 jours"></canvas></article>';
   var t=[];
   if(m.fng)t.push('<div><b class="'+(m.fng.v>=60?"pos":m.fng.v<=40?"neg":"")+'">'+m.fng.v+"/100</b><span>"+fngFr(m.fng.c)+'</span><div class="track fgt"><i style="left:'+m.fng.v+'%"></i></div></div>');
@@ -3553,16 +3557,15 @@ function trendView(m){
   h+='<article class="card tr"><div class="cap">Bitcoin, 120 jours · moyennes 20 jours (jaune) et 50 jours (gris)</div><canvas id="mkt-btc" class="mcv" aria-label="Bitcoin sur 120 jours"></canvas></article>';
   return h+'<div class="sub">Dans les listes de setups, le côté favorisé passe en premier. Testé sur deux ans, ne trader que dans le sens du marché a aidé en 2025-2026 (+0,05\u00a0R par trade) et nui en 2024-2025 (−0,11\u00a0R) : un repère de contexte, pas un filtre qui gagne à coup sûr.</div>'}
 function pc(v){return v===null||v===undefined?"–":'<b class="'+(v>=0?"pos":"neg")+'">'+sgn(v,1)+" %</b>"}
-function shortView(m){
-  var st=m.st;if(!st)return"";
-  var k=st.k>0?"pos":st.k<0?"neg":"",lab=st.k>0?"En hausse":st.k<0?"En baisse":"À plat";
-  var mix=m.side>0&&st.k<0?"Fond haussier mais 7 derniers jours en baisse : correction dans la tendance, ou début de cassure. Prudence sur les longs.":
-    m.side<0&&st.k>0?"Fond baissier mais 7 derniers jours en hausse : rebond dans la tendance, ou début de retournement. Prudence sur les shorts.":
-    m.side&&st.k===m.side?"Fond et court terme vont dans le même sens.":"";
-  return'<article class="card tr"><div class="cap">Court terme · 7 derniers jours</div><div class="gbig '+k+'">'+lab+" <span>"+sgn(st.score,0)+"</span></div>"
+function spanView(m,st){
+  if(!st||st.b===undefined)return"";
+  var k=st.k>0?"pos":st.k<0?"neg":"",lab=st.k>0?"En hausse":st.k<0?"En baisse":"À plat",per=st.days+" derniers jours";
+  var mix=m.side>0&&st.k<0?"Fond haussier mais "+per+" en baisse : correction dans la tendance, ou début de cassure. Prudence sur les longs.":
+    m.side<0&&st.k>0?"Fond baissier mais "+per+" en hausse : rebond dans la tendance, ou début de retournement. Prudence sur les shorts.":
+    m.side&&st.k===m.side?"Va dans le même sens que la tendance de fond.":"";
+  return'<article class="card tr"><div class="cap">'+(st.days===30?"Le mois":"La semaine")+" · "+per+'</div><div class="gbig '+k+'">'+lab+" <span>"+sgn(st.score,0)+"</span></div>"
     +(mix?'<div class="side '+(mix.indexOf("même")>0?(st.k>0?"up":"dn"):"")+'">'+mix+"</div>":"")
-    +'<div class="pil four"><div><span>Bitcoin 7 j</span>'+pc(st.b7)+'</div><div><span>Bitcoin 30 j</span>'+pc(st.b30)+'</div><div><span>Ether 7 j</span>'+pc(st.e7)+'</div><div><span>En hausse sur 7 j</span><b>'+st.up+" / "+st.n+'</b><small>des plus grosses cryptos</small></div></div>'
-    +'<div class="sub">Repère d\'info : le côté favorisé reste celui de la tendance de fond, le court terme n\'a pas été testé comme filtre.</div></article>'}
+    +'<div class="pil four tri"><div><span>Bitcoin</span>'+pc(st.b)+'</div><div><span>Ether</span>'+pc(st.e)+'</div><div><span>En hausse</span><b>'+st.up+" / "+st.n+'</b><small>grosses cryptos</small></div></div></article>'}
 function cycView(m){
   var c=m.cyc,mo=Math.min(47.9,c.mo),day=function(t){return new Date(t).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"})};
   /* does the price trend agree with the historical calendar of the cycle? */
@@ -3637,7 +3640,7 @@ function mktLine(){
   var el=$("mkt-line"),m=MKT;if(!el)return;
   if(!m){el.hidden=true;return}
   el.hidden=false;el.className="mline "+(m.side>0?"up":m.side<0?"dn":"");
-  var st=m.st,sh=st?'<small class="mst '+(st.k>0?"pos":st.k<0?"neg":"")+'">7 jours : '+(st.k>0?"▲ en hausse":st.k<0?"▼ en baisse":"– à plat")+(st.b7!==null?" · BTC "+sgn(st.b7,1)+" %":"")+"</small>":"";
+  var sl=function(st,lab){return st&&st.b!==undefined?'<small class="mst '+(st.k>0?"pos":st.k<0?"neg":"")+'">'+lab+" : "+(st.k>0?"▲ en hausse":st.k<0?"▼ en baisse":"– à plat")+(st.b!==null?" · BTC "+sgn(st.b,1)+" %":"")+"</small>":""},sh=sl(m.mo,"30 jours")+sl(m.st,"7 jours");
   el.innerHTML="<span>Fond <b>"+m.label.toLowerCase()+"</b> "+sgn(m.score,0)+'<small class="mst">tendance sur 1 à 5 mois</small>'+sh+'</span><span class="sub">'+(m.side>0?"longs d'abord":m.side<0?"shorts d'abord":"aucun côté")+" ›</span>"}
 $("mkt-line").addEventListener("click",function(){setView("mkt")});
 
