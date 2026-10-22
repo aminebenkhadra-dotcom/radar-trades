@@ -426,6 +426,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 
   <section class="view" id="view-scan">
   <button class="mline" type="button" id="mkt-line" hidden></button>
+  <div class="filters sidef" id="sidef" role="group" aria-label="Sens des trades"><button type="button" data-side="both">Longs et shorts</button><button type="button" data-side="long">Longs seulement</button><button type="button" data-side="short">Shorts seulement</button></div>
   <div id="ready3"></div>
   <div class="funnel" id="funnel" hidden></div>
 
@@ -520,14 +521,14 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <footer>
     Le scan passe tous les contrats crypto USDT de Binance Futures, garde les marchés liquides et en tendance sur 1J, analyse les 60 plus gros, puis lit le 15 minutes, le carnet d'ordres et le squeeze des 20 setups les plus proches de leur zone.
     Chaque setup passe six contrôles : tendance, marché, zone, déclencheur, élan, risque. Ce moteur a été rejoué sur deux ans de données Binance (octobre 2024 à octobre 2026, une soixantaine de cryptos) : environ un trade gagnant sur trois, pour un résultat moyen proche de zéro, légèrement négatif une fois les frais payés. Les contrôles décrivent une configuration, ils ne prédisent pas le marché : garde un risque faible par trade et vérifie avec le test sur l'historique de l'onglet Analyser.
-    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. En tête des listes, les 3 meilleurs setups prêts ; une notification ouvre directement le setup ou le trade concerné. Version 37.
+    TP1 vise le premier niveau réaliste (3R au plus), TP2 le niveau lointain. Le carnet est une photo prise au moment du scan : les murs peuvent être retirés à tout instant. Les onglets Top 10 et Top 50 prennent les plus grosses capitalisations (source CoinGecko, stablecoins exclus) qui ont un contrat sur Binance Futures. Le risque de squeeze combine le funding, le ratio de comptes long/short, la hausse des positions ouvertes et les liquidations estimées proches du prix. Le profil long terme utilise les données de CoinGecko et les prix hebdomadaires de Binance. Les onglets Tendance et Cycle lisent Bitcoin, Ether et les 40 cryptos les plus échangées sur Binance Futures, l'indice peur et avidité d'alternative.me et la part du Bitcoin de CoinGecko ; la saison des altcoins compare les 50 plus grosses altcoins au Bitcoin sur 90 jours. Mes trades lit tes positions Binance Futures et leurs ordres stop et TP avec ta clé en lecture seule. L'onglet Earn compare les offres Binance (même clé), les taux publics d'OKX et les pools DeFi suivis par DefiLlama. Chaque setup montre aussi son volume profile (POC, zone de valeur), deux VWAP ancrés sur le plus haut et le plus bas des 5 derniers jours, le delta cumulé des ordres agressifs et la price action en 4H et 1H. Mes trades et les setups affichent la fiabilité (chance que le TP arrive avant le stop) et la durée habituelle pour atteindre le TP, toutes deux mesurées sur les deux années de test. Sur OKX, le détail des cryptos placées en Earn (flexible, on-chain, à terme) est lu avec la même clé. Dans l'évaluation du portefeuille, chaque crypto s'ouvre sur le détail de sa note et la règle qui a donné la recommandation. La recommandation tient compte du potentiel pour le prochain bull run, mesuré sur le dernier cycle. Le portefeuille compare tes achats saisis à tes avoirs actuels (le surplus vient d'Earn), et le Simulateur calcule ton prix moyen après de nouveaux achats. Chaque trade ouvert propose des options d'optimisation (taille, frais, prise de profit partielle, stop suiveur, funding), mesurées sur deux ans. L'onglet Capital montre la répartition du capital investi ou de la valeur actuelle par crypto. En tête des listes, les 3 meilleurs setups prêts ; une notification ouvre directement le setup ou le trade concerné. Un filtre permet de n'afficher que les longs ou que les shorts. Version 38.
     </footer>
 </div>
 <script>
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={acsync:true,account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal"};
+var DEF={side:"both",acsync:true,account:1000,risk:2,lev:5,margin:25,minvol:20,fee:0.05,exclude:"",a10:false,a50:false,amin:30,apct:95,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal"};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -1333,14 +1334,16 @@ function render(){
     return"<div><b>"+fr(x[0]||0,0)+"</b><span>"+x[1]+"</span></div>"}).join("");
   if(funnel&&top&&funnel.tiles&&funnel.tiles[3]){funnel.tiles[3][0]=results.filter(function(r){return r.st==="ready"}).length;fu.lastChild.firstChild.textContent=fr(funnel.tiles[3][0],0)}
   /* longs and shorts apart, the side the whole market leans to first */
-  var ms=MKT,side=ms&&ms.side?ms.side:1,setups=rs.filter(function(r){return r.plan}),none=rs.filter(function(r){return!r.plan});
+  sideChips();var want=S.side==="long"?1:S.side==="short"?-1:0,hid=want?rs.filter(function(r){return r.plan&&r.dir!==want}).length:0;
+  if(want)rs=rs.filter(function(r){return!r.plan||r.dir===want});
+  var ms=MKT,side=want||(ms&&ms.side?ms.side:1),setups=rs.filter(function(r){return r.plan}),none=rs.filter(function(r){return!r.plan});
   var g1=setups.filter(function(r){return r.dir===side}),g2=setups.filter(function(r){return r.dir!==side});
   function head(dir,n){var lab=(dir>0?"Longs":"Shorts")+" · "+n;
     return ms&&ms.side?lab+(dir===ms.side?" · dans le sens du marché":" · contre la tendance du marché"):lab}
   mktLine();ready3(setups);
   $("top-h").textContent=g1.length||!g2.length?head(side,g1.length):head(-side,g2.length);
   var first=g1.length||!g2.length?g1:g2,second=first===g1?g2:[];
-  $("top").innerHTML=first.length?first.map(function(r,i){return card(r,i+1)}).join(""):'<div class="empty">'+(busy?"Scan en cours…":live?"Aucun setup propre pour l\'instant. Relance un scan plus tard.":"Appuie sur Scanner pour lancer le premier scan.")+'</div>';
+  $("top").innerHTML=first.length?first.map(function(r,i){return card(r,i+1)}).join(""):'<div class="empty">'+(busy?"Scan en cours…":live?(want?"Aucun "+(want>0?"long":"short")+" propre pour l\'instant"+(hid?" · "+hid+" "+(want>0?"short":"long")+(hid>1?"s":"")+" masqué"+(hid>1?"s":"")+" par le filtre":"")+".":"Aucun setup propre pour l\'instant. Relance un scan plus tard."):"Appuie sur Scanner pour lancer le premier scan.")+'</div>';
   $("next-h").hidden=!second.length;$("next-h").textContent=second.length?head(-side,second.length):"";
   $("next").innerHTML=second.map(function(r,i){return card(r,i+1)}).join("");
   $("none-h").hidden=!none.length;$("none-h").textContent="Sans setup · "+none.length;
@@ -1361,6 +1364,9 @@ function ready3(setups){
       +'<span class="pl">Entrée '+pp(r,p.entry)+" · Stop "+pp(r,p.sl)+" · TP1 "+pp(r,p.tp1)+(o!==null?" · fiabilité "+Math.round(o*100)+" %":"")+(t?" · ~"+hrs(t.med):"")+"</span></button>"}
   el.innerHTML='<div class="r3"><div class="r3h"><b>'+(rd.length?"Top "+Math.min(3,rd.length)+(rd.length>1?" setups prêts":" setup prêt"):"Aucun setup prêt")+'</b><span class="sub" style="margin-left:auto">'+(rd.length>3?rd.length+" prêts au total":fill.length?"complété par les plus proches":"")+"</span></div>"
     +list.map(function(r,i){return tile(r,i,false)}).join("")+fill.map(function(r,i){return tile(r,list.length+i,true)}).join("")+"</div>"}
+/* long / short filter: applies to the lists, the top 3 and the notifications */
+function sideChips(){var el=$("sidef");if(!el)return;[].forEach.call(el.children,function(b){b.setAttribute("aria-pressed",b.dataset.side===(S.side||"both"))})}
+$("sidef").addEventListener("click",function(e){var b=e.target.closest("[data-side]");if(!b)return;S.side=b.dataset.side;saveSettings();openSym=firstSetup();render()});
 function cardNone(r,n){
   var sy=esc(r.sym),last=r.why&&r.why.length?r.why[r.why.length-1].t:"";
   return'<article class="card"><div class="row"><span class="ring"><b>–</b></span>'
@@ -3370,7 +3376,7 @@ function renderNews(){
 var MKT=null,mktP=null,mktErr="",mktBusy=false;
 try{var mk0=JSON.parse(localStorage.getItem("radar-market")||"null");if(mk0&&mk0.v===1)MKT=mk0}catch(e){}
 var HALV=[Date.UTC(2012,10,28),Date.UTC(2016,6,9),Date.UTC(2020,4,11),Date.UTC(2024,3,20)],NEXTH=Date.UTC(2028,3,15),MONTH=30.44*864e5;
-function firstSetup(){var rs=results.slice().sort(rank),side=MKT&&MKT.side?MKT.side:1,f=rs.filter(function(r){return r.plan&&r.dir===side})[0]||rs.filter(function(r){return r.plan})[0];return f?f.sym:null}
+function firstSetup(){var want=S.side==="long"?1:S.side==="short"?-1:0,rs=results.slice().sort(rank).filter(function(r){return!want||!r.plan||r.dir===want}),side=want||(MKT&&MKT.side?MKT.side:1),f=rs.filter(function(r){return r.plan&&r.dir===side})[0]||rs.filter(function(r){return r.plan})[0];return f?f.sym:null}
 function smaS(v,n){var o=[],s=0;for(var i=0;i<v.length;i++){s+=v[i];if(i>=n)s-=v[i-n];o.push(i>=n-1?s/n:null)}return o}
 function mktLabel(sc){return sc>=40?"Haussière":sc>=15?"Plutôt haussière":sc>-15?"Neutre":sc>-40?"Plutôt baissière":"Baissière"}
 function marketState(force){
@@ -3690,13 +3696,15 @@ window.bgScan=function(t10,t50){
     var thr=Math.max(95,+S.apct||95),ms=MKT;
     st.results.forEach(function(r){
       if(!r.plan||!(r.pct>=thr))return;
+      if((S.side==="long"&&r.dir<0)||(S.side==="short"&&r.dir>0))return;
       var rdy=r.st==="ready";n++;
       var id=r.sym+(r.dir>0?"L":"S")+(rdy?"r":"n");if(seen[id])return;seen[id]=now;
       var mi=rdy?[]:missing(r);
       try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+(rdy?" prêt":" presque prêt ("+r.pct+" %)")+" · "+passed(r)+"/6 contrôles",
         (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.flow&&r.flow.v!=="mid"?(r.flow.v==="ok"?"Volume et flux pour · ":"Volume et flux contre · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")+(mi.length?"Il manque : "+mi.join(", ")+" · ":"")+"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(r.cap?" · Cap. n°"+r.cap:""),id,m+"~"+r.sym)}catch(e){}});
     try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
-    trades(n?n+(n>1?" setups au-dessus de ":" setup au-dessus de ")+thr+" %":"aucun setup à "+thr+" % ou plus")};
+    var sw=S.side==="long"?"long":S.side==="short"?"short":"setup";
+    trades(n?n+" "+sw+(n>1?"s au-dessus de ":" au-dessus de ")+thr+" %":"aucun "+sw+" à "+thr+" % ou plus")};
   scan(m)};
 
 /* ---------- boot ---------- */
