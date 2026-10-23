@@ -1747,6 +1747,8 @@ function optItems(t,price){
   var it=[],h=health[t.id],a1=h&&!h.err&&h.atr,d=t.dir,e=t.entry,sl=t.sl,tp=t.tp,R=sl>0?Math.abs(e-sl):0,qty=+t.qty||0;
   var acc=(t.live&&LV.acct)||+S.account||0,riskU=R*qty,goal=+S.risk||2,fee=(+S.fee||0)/100;
   if(!(price>0)||t.unknown)return it;
+  /* a stop on part of the position only: protecting the rest comes before any other advice */
+  if(t.partial){it.push({k:"no",h:"Protéger toute la position",t:"Ton stop ne couvre que "+fr((t.cover||0)*100,0)+" % de la position. Mets un stop (ou « fermer la position ») sur la totalité avant toute autre optimisation."});return it}
   /* no stop: a level at 3 ATR 1H from the entry, and the size that keeps the planned risk */
   if(!R&&a1){var ss=e-d*3*a1;if((price-ss)*d<=0)ss=price-d*3*a1;var dist=Math.abs(e-ss);
     it.push({k:"no",h:"Placer un stop",t:"Repère : "+px(ss)+" (3 ATR 1H de l'entrée, hors du bruit habituel)."+(acc&&qty?" Avec ce stop, perte max ≈ "+fr(dist*qty,2)+" $ ("+fr(dist*qty/acc*100,1)+" % du compte)"+(dist*qty/acc*100>goal*1.5?" : réduis la position à "+q4i(acc*goal/100/dist)+" pour rester à "+fr(goal,1)+" %.":"."):"")})}
