@@ -1488,7 +1488,7 @@ function finalize(r,A){
   r.st=f.st;r.stWhy=f.why;return r}
 /* what the account allows right now: capital, profile, risk and margin already engaged, result of the day */
 function acctState(){
-  var pos=[],now=Date.now(),bn=hasBn(),liveOk=bn&&!!LV.list&&!LV.stale&&now-LV.at<3*60e3;
+  var pos=[],now=Date.now(),bn=hasBn(),liveOk=bn&&!!LV.list&&!LV.stale&&now-LV.at<10*60e3;
   if(bn&&!liveOk)pos.push({name:"positions Binance",cover:null});
   (liveOk?LV.list:[]).forEach(function(p){pos.push({name:p.sym+" "+(p.dir>0?"long":"short"),cover:p.ordOk?p.cover:null,risk:p.covRisk,margin:p.margin})});
   openTrades().forEach(function(t){
@@ -2216,6 +2216,14 @@ function liveTick(force){
   liveFetch(force).then(function(L){LV.list=L;LV.at=Date.now();LV.err="";LV.stale=false;LV.busy=false;paintLiveAll();liveIncome().then(paintLiveAll)},
     function(e){LV.busy=false;LV.err=apiMsg(e);LV.stale=true;if(view==="trades")renderLive()})}
 setInterval(function(){liveTick(false)},5000);
+/* outside Mes trades too: positions, balance and result of the day are re-read every minute, so the size and the status of the
+   setups never rest on a stale reading (and never fall to "Données incomplètes" just because the positions were read a while ago) */
+var acctBusy=false;
+setInterval(function(){
+  if(BG||document.hidden||view==="trades"||acctBusy||!hasBn()||Date.now()-LV.at<60e3)return;acctBusy=true;
+  if(Date.now()-LV.acctAt>60e3)acctSync();
+  Promise.all([liveFetch(true).then(function(L){LV.list=L;LV.at=Date.now();LV.stale=false},function(){LV.stale=true}),daySync()])
+    .then(function(){acctBusy=false;if(view==="scan"&&!busy)render();else if(view==="one")renderOne()},function(){acctBusy=false})},15000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)liveTick(true)});
 /* futures wallet balance: shown with the positions, and used as the account size when the setting asks for it */
 function acctSync(){
