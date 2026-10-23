@@ -187,12 +187,15 @@ function tpOdds(price,sl,tp,dir){
   if(!(sl>0)||!(tp>0)||!(price>0))return null;
   var den=(tp-sl)*dir;if(!(den>0))return null;
   return Math.max(0,Math.min(1,(price-sl)*dir/den))}
-/* hours the winning setups took to reach TP1, by TP distance in 1H ATR: [up to, median, quarter, three quarters] (same two years) */
-var TTP=[[2,5.5,2.3,10.5],[3,9.5,4.3,17.3],[4,16.5,8.3,30.5],[5,25.3,12.8,51.5],[6,33.8,16.8,65.3],[8,41.8,19.5,74.3],[10,51.3,26.8,93.5]];
+/* hours the winning setups of version 42 took to reach TP1, by TP distance in 1H ATR (Wilder, as the app reads it):
+   [up to, median, quarter, three quarters]; 4 319 distinct trades over the two years (tools/backtest/ttp42.js, results/ttp-v42.txt).
+   The 6-8 ATR group (45.5 h measured, 73 trades) is held at 46.5 h so the time never falls as the distance grows; beyond 8 ATR
+   it is scaled with the distance. */
+var TTP=[[2,6.5,4.5,11.3],[3,11,5.5,17.8],[4,18.8,11,30.8],[5,27.3,14.5,52.5],[6,46.5,23.8,73.8],[8,46.5,23,72]];
 function tpTime(dist,a1){
   if(!(dist>0)||!(a1>0))return null;var k=dist/a1;
   for(var i=0;i<TTP.length;i++)if(k<TTP[i][0])return{k:k,med:TTP[i][1],lo:TTP[i][2],hi:TTP[i][3]};
-  var x=k/9;return{k:k,med:51.3*x,lo:26.8*x,hi:93.5*x,far:true}}
+  var x=k/7;return{k:k,med:46.5*x,lo:23*x,hi:72*x,far:true}}
 function hrs(h){if(h<1)return"moins d'1 h";if(h<24)return Math.round(h)+" h";var d=Math.floor(h/24),r=Math.round(h-24*d);if(r===24){d++;r=0}return d+" j"+(r&&d<4?" "+r+" h":"")}
 
 /* ---------- volume profile, anchored VWAP, order flow and price action, read on the last 5 days of 1H candles ---------- */

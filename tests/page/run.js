@@ -251,6 +251,20 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await ctx.close();
   });
 
+  await test("P10", "Tous les onglets s'ouvrent sans erreur", async ok => {
+    const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [] } } });
+    await waitScan(page);
+    const tabs = await page.$$eval(".tabs button", a => a.map(b => b.dataset.v));
+    for (const v of tabs) { await page.click('.tabs button[data-v="' + v + '"]'); await page.waitForTimeout(700); }
+    await page.click('.tabs button[data-v="one"]'); await page.fill("#one-sym", "SOL"); await page.click("#one-form button");
+    await page.waitForFunction(() => /Setup|Pas de trade/.test(document.getElementById("one-out").textContent), null, { timeout: 30000 });
+    const v = await page.textContent("#one-out .verdict");
+    ok(/prêt selon les règles|à surveiller|refusé|données incomplètes|Pas de trade/i.test(v), "Analyser SOL : « " + v.trim() + " »");
+    ok(tabs.length === 17, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
   await browser.close();
   const fail = results.filter(r => !r.ok).length;
   console.log("\n" + (results.length - fail) + "/" + results.length + " tests de page réussis");

@@ -25,3 +25,13 @@ node tools/backtest/refrep.js <sortie> ref-2
 Méthode : entrée au prix de clôture de la bougie 15 minutes où le setup devient « Prêt », sortie au stop ou à TP1 (stop
 d'abord si les deux sont touchés dans la même bougie), un seul trade à la fois par crypto, 0,05 % de frais par côté et
 0,02 % de glissement. Le carnet d'ordres n'est pas rejoué, faute d'historique.
+
+## Version 42
+
+- `engine_v41.js` : le moteur de la version 41, gelé, pour comparer sur les mêmes données.
+- `ref.js` accepte `ENGINE=<fichier>` et `TAG=<nom>` ; `compare42.js` compare les deux moteurs ; le workflow `replay.yml` (branche
+  `replay-run`) rejoue les deux années et publie `replay-v42-A` et `replay-v42-B` ; résumé copié dans `results/`.
+- `ttp42.js` et `ttp.yml` (branche `ttp-run`) : durée jusqu'au TP de la version 42, avec l'ATR de Wilder de l'appli et un trade
+  par setup distinct (les deux défauts de `timing26.js`).
+- `drawdown.js` : simulation du recul du compte selon le risque par trade (générateur mulberry32), utilisée par le profil.
+- `manage.js` et `timing26.js` n'utilisent plus de chemin absolu.

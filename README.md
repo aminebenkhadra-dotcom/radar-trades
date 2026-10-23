@@ -3,12 +3,54 @@
 Application Android qui scanne les contrats crypto USDT de Binance Futures, propose des setups (tendance, zone d'entrée,
 stop, objectifs, taille de position), suit les trades pris et affiche le portefeuille.
 
+## Version 42 : protection, calculs et résultats fiables
+
+Issue des deux audits (Claude et ChatGPT) et de la note de cadrage du 23 octobre 2026. Elle corrige la protection, les calculs
+et les résultats ; elle ne change pas la stratégie et ne promet aucun gain.
+
+- **Quatre statuts.** « Prêt selon les règles » : les contrôles passent, les prix du plan sont valides sur Binance et la taille
+  tient dans le profil de risque. « À surveiller » : une condition manque, ou un obstacle critique bloque (écart achat-vente
+  au-delà de 0,15 %, niveau 4H ou mur du carnet avant 1R). « Refusé » : tendance ou risque en échec, écart au-delà de 0,5 %,
+  plan invalide après arrondi, taille sous le minimum du contrat, plafond du compte atteint. « Données incomplètes » : contexte
+  Bitcoin, carnet, bougies 15 minutes ou règles du contrat non lus ; aucun point n'est accordé à leur place. Les pourcentages
+  « 95 % » et « fiabilité » ont disparu des cartes et des alertes ; le détail montre le seuil de rentabilité (1 ÷ (1 + R:R net)).
+- **Taille.** Perte au stop = quantité × (distance au stop + frais d'entrée et de sortie + glissement prévu), jamais au-delà du
+  budget (en % du compte ou en USDT fixes). La marge max (toutes positions), le solde disponible et la taille max du contrat
+  réduisent vraiment la quantité ; le levier est abaissé quand la liquidation arriverait avant le stop (marge isolée) ; risque
+  total ouvert et perte max du jour bloquent les nouvelles entrées. Rien n'est modifié en silence : le profil se confirme.
+- **Prix.** Entrée au pas le plus proche, stop éloigné et objectifs rapprochés de l'entrée, quantité au pas inférieur ; ordre
+  des niveaux, distance minimale et prix limites revérifiés ; R:R net recalculé sur les niveaux arrondis.
+- **Protection.** Chaque position Binance montre la part couverte par ses stops (sens, côté de position, reduce-only) ; un stop
+  partiel n'apparaît jamais comme une protection complète ; ordres illisibles = « protection inconnue », jamais l'ancienne lecture.
+- **Résultats.** Une sortie est gagnante si elle l'est après frais et funding ; l'historique Binance est lu en entier (fenêtres
+  découpées au-delà de 1 000 lignes) ; les frais en BNB sont convertis au cours du jour ; un résultat incomplet est signalé.
+  Suivi sans argent : seulement les setups prêts selon les règles, version notée, prix suivis à la minute après l'entrée, sortie
+  à l'ouverture en cas de gap, stop d'abord si stop et TP sont dans la même bougie.
+- **Alertes.** Alerte d'entrée seulement pour « Prêt selon les règles ». La protection des positions passe d'abord, dans son
+  propre canal (stop absent ou partiel, protection illisible, liquidation proche). La surveillance reprend après un redémarrage.
+- **Sécurité.** Nouvelle clé de signature avec rotation (`signing/CERTIFICATS.md`) ; droits des clés API vérifiés (Binance, OKX) ;
+  plus de conseil d'enlever une restriction d'adresse IP ; WebView durcie et politique de contenu stricte ; sauvegarde et
+  restauration des données (jamais les clés API).
+- **Tests.** `tests/run.js` avant chaque compilation, `tests/page/run.js` dans Chromium, `tests/compare.js` avant/après sur le
+  code de la version 41 (`tests/README.md`).
+
+Rejouée sur les mêmes données que la version 41 (réglage par défaut ; les règles du carnet ne se rejouent pas, faute d'historique) :
+
+| Période | Version 41 | Version 42 |
+|---|---|---|
+| Octobre 2024 à octobre 2025 | 3 347 setups · 32 % · −0,08 R | 2 479 setups · 32 % · −0,08 R |
+| Octobre 2025 à octobre 2026 | 2 537 setups · 36 % · +0,03 R | 1 840 setups · 36 % · +0,03 R |
+
+La règle d'obstacle retire environ un setup sur quatre sans changer le résultat moyen (`tools/backtest/results/`). La version 42
+se juge désormais en direct, dans Résultats › Suivi sans argent. Restent à faire, dans une version séparée et testée à part :
+regroupement des onglets, entrées à cours limité avec échéance, sorties partielles et stops suiveurs.
+
 - **Mes trades** lit en direct les positions ouvertes sur Binance Futures, avec leurs ordres stop et TP (y compris les ordres
   conditionnels du service « algo » de Binance), et applique les contrôles de suivi : validité, feu vert break-even, objectif,
   stop absent, stop au-delà de la liquidation, positions fermées avec leur résultat réalisé.
-- **Résultats › Suivi sans argent** note chaque setup « Prêt » (ou à 95 % et plus) trouvé par un scan, manuel ou en
-  arrière-plan, au prix du moment, puis regarde sur les bougies 15 minutes s'il touche d'abord le stop ou le TP1 (au plus
-  5 jours), frais et glissement compris. Le résultat est donné en R : on juge les signaux en direct avant d'y mettre de l'argent.
+- **Résultats › Suivi sans argent** note chaque setup prêt selon les règles trouvé par un scan, manuel ou en arrière-plan, au
+  prix du moment, puis regarde s'il touche d'abord le stop ou le TP1 (au plus 5 jours), frais et glissement compris. Le résultat
+  est donné en R : on juge les signaux en direct avant d'y mettre de l'argent.
 - **Temporalité** montre le résultat des setups par jour et par heure sur les deux années de test, et l'activité de Bitcoin
   heure par heure. Le jour compte un peu : les setups du lundi et du mardi (UTC) ont fait −0,11 R contre 0,00 R les autres
   jours, les deux années. L'heure ne compte pas : aucun effet stable d'une année sur l'autre. Le réglage « Temporalité »
@@ -55,12 +97,13 @@ price action des dernières bougies 4H et 1H. Ces lectures ont été rejouées s
 Aucun effet durable, ni ensemble ni composante par composante : ces lectures restent des aides visuelles et ne changent
 pas le statut « Prêt ».
 
-## Fiabilité et durée jusqu'au TP
+## Durée jusqu'au TP
 
-La fiabilité affichée est la distance au stop divisée par la distance entre le stop et le TP. Rejouée sur 26 000 setups des
-deux années, elle a prédit la part de TP atteints avant le stop à 2 points près (33 % prévus, 33 à 34 % observés). La durée
-est le temps médian qu'ont mis les setups gagnants pour un TP aussi éloigné, mesuré en ATR 1H : environ 10 h pour 2 à 3 ATR,
-17 h pour 3 à 4, 25 h pour 4 à 5, 34 h pour 5 à 6 (`tools/backtest/timing26.js`).
+La durée est le temps médian qu'ont mis les setups gagnants de la version 42 pour un TP aussi éloigné, mesuré en ATR 1H de Wilder
+comme dans l'appli, sur 4 319 trades distincts des deux années : environ 11 h pour 2 à 3 ATR, 19 h pour 3 à 4, 27 h pour 4 à 5,
+46 h pour 5 à 8 (`tools/backtest/ttp42.js`, `results/ttp-v42.txt` ; `timing26.js` pour la version 41). La « fiabilité » (distance au stop ÷ distance stop-TP) n'est plus
+affichée depuis la version 42 : en moyenne sur environ 20 000 setups distincts elle correspondait à la part de TP atteints, mais
+ce n'est pas la chance d'un setup donné.
 
 ## Potentiel pour le prochain bull run
 
@@ -88,4 +131,5 @@ elles sont chiffrées sur le téléphone et ne servent qu'à des demandes de con
 
 Télécharge `radar-trades.apk` depuis la dernière version : https://github.com/aminebenkhadra-dotcom/radar-trades/releases/latest
 
-Chaque modification poussée sur `main` recompile l'APK automatiquement (onglet Actions).
+Chaque modification poussée sur `main` lance les tests puis recompile et signe l'APK (onglet Actions). Chaque release joint
+`signature.txt` (certificats et lineage) et `tests.txt`.
