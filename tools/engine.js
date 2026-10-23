@@ -181,8 +181,8 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   return r}
 
 /* ---------- reliability and time to target ---------- */
-/* chance that the target comes before the stop: distance to the stop over the stop-to-target span.
-   Replayed on 26 000 setups over two years, this predicted the share of trades reaching TP1 within 2 points (33 % predicted, 33 to 34 % observed). */
+/* share of the stop-to-target span already behind the price. Averaged over about 20 000 distinct setups of two years it matched
+   the share of trades reaching TP1 within 2 points, but it is not the chance of one given setup: since version 42 it is not shown as such. */
 function tpOdds(price,sl,tp,dir){
   if(!(sl>0)||!(tp>0)||!(price>0))return null;
   var den=(tp-sl)*dir;if(!(den>0))return null;
@@ -323,14 +323,16 @@ function enrich(r,m15,book,sqd,opt){
   return r}
 
 /* ---------- verdict: six checks, a score, a status ----------
-   Tendance, Zone and Risque must pass for a setup to be "Prêt"; the strictness setting adds Déclencheur, then Marché and Élan. */
-var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5};
+   Tendance, Zone and Risque must pass for a setup to be "Prêt"; the strictness setting adds Déclencheur, then Marché and Élan.
+   Four statuses: "ready" (prêt selon les règles), "watch" (à surveiller), "refused" (refusé), "incomplete" (données incomplètes).
+   Missing data never earns points, and a critical blocker (wide spread, obstacle before 1R) takes "ready" away. */
+var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5};
 function judge(r,opt){
   opt=opt||{};
-  if(!r.plan){r.score=r.dir?(r.f.bd?25:12):0;r.pct=0;return r}
+  if(!r.plan){r.score=r.dir?(r.f.bd?25:12):0;r.blk=[];r.miss=[];return r}
   var f=r.f,dir=r.dir,L=dir>0,p=r.plan,q=!!opt.quiet,strict=opt.strict===undefined?PREC.strict:+opt.strict,
     minRR=+opt.minRR||PREC.minRR,lev=+opt.lev||PREC.lev,cap=+opt.feeCap||PREC.feeCap,
-    cost=(2*(opt.fee===undefined?PREC.fee:+opt.fee)+0.02)/100;
+    cost=(2*(opt.fee===undefined?PREC.fee:+opt.fee)+0.02)/100,blk=[],md=[];
   function fam(k,label){return{k:k,label:label,ok:true,pts:0,items:[],head:""}}
   function add(g,k,pts,text){g.pts+=pts;if(!q)g.items.push({k:k,t:text()})}
   var G={trend:fam("trend","Tendance"),mkt:fam("mkt","Marché"),zone:fam("zone","Zone"),trig:fam("trig","Déclencheur"),mom:fam("mom","Élan"),risk:fam("risk","Risque")},g;
@@ -356,7 +358,7 @@ function judge(r,opt){
   g=G.mkt;var agit=(f.rng24!==null&&f.rng24>1.3)||(f.relVol!==null&&f.relVol>1.5),quiet=f.rng24!==null&&f.rng24<0.75&&(f.relVol===null||f.relVol<0.8);
   if(f.btc4===null){
     if(r.sym==="BTC")add(g,"ok",7,function(){return"Bitcoin lui-même : pas de filtre de marché"});
-    else add(g,"mid",3,function(){return"Contexte Bitcoin non lu"})}
+    else{g.ok=false;if(strict>=2)md.push("contexte Bitcoin");add(g,"no",0,function(){return"Contexte Bitcoin non lu : contrôle impossible, aucun point accordé"})}}
   else{
     if(f.btc4>0)add(g,"ok",5,function(){return"Bitcoin dans le même sens sur 4H"});
     else if(f.btc4===0)add(g,"mid",3,function(){return"Bitcoin sans tendance sur 4H"});
@@ -388,7 +390,8 @@ function judge(r,opt){
 
   /* Déclencheur */
   g=G.trig;var T=r.dist<=0.5?r.trig:null;
-  if(!T){g.ok=false;add(g,"mid",0,function(){return r.dist<=0.5?"Signal 15 min non vérifié":"Signal 15 min à lire quand le prix sera sur la zone"});if(!q)g.head=r.dist<=0.5?"Non vérifié":"En attente du prix"}
+  if(!T){g.ok=false;if(r.dist<=0.5&&strict>=1)md.push("bougies 15 min");
+    add(g,"mid",0,function(){return r.dist<=0.5?"Signal 15 min non vérifié : bougies 15 min non lues":"Signal 15 min à lire quand le prix sera sur la zone"});if(!q)g.head=r.dist<=0.5?"Non vérifié":"En attente du prix"}
   else{var names=[];
     if(T.bos){g.pts+=8;names.push("cassure")}if(T.sweep){g.pts+=6;names.push("balayage")}if(T.candle){g.pts+=4;names.push("bougie")}
     if(T.rsiT){g.pts+=3;names.push("RSI")}if(T.delta){g.pts+=3;names.push("flux")}if(T.climax){g.pts+=3;names.push("volume")}
@@ -432,18 +435,30 @@ function judge(r,opt){
   else{g.ok=false;add(g,"no",1,function(){return"TP1 à "+fr(rrNet,1)+"R net de frais : sous ton minimum de "+fr(minRR,1)+"R"})}
   if(fees<=cap)add(g,"ok",3,function(){return"Frais et glissement ≈ "+fr(fees,0)+" % du risque"});
   else{g.ok=false;add(g,"no",0,function(){return"Frais et glissement ≈ "+fr(fees,0)+" % du risque : stop trop serré"})}
-  if(p.block)add(g,"no",0,function(){return"Obstacle proche avant TP1"});else g.pts+=3;
-  if(stopPct>=90/lev){g.ok=false;add(g,"no",0,function(){return"Stop à "+pct(stopPct)+" : à levier x"+lev+", la liquidation arrive avant"})}else g.pts+=1;
+  /* critical obstacle: a 4H level the price has to cross before it has even made 1R */
+  if(p.block){blk.push({k:"obst",sev:"watch",t:"Niveau 4H entre l'entrée et 1R : obstacle avant même le premier R"});
+    add(g,"no",0,function(){return"Obstacle critique : niveau 4H avant 1R (bloque le statut « Prêt »)"})}
+  else g.pts+=3;
+  /* the leverage only decides where the liquidation sits: the size step lowers it when the stop is too far, it does not fail the setup */
+  if(stopPct>=90/lev)add(g,"mid",0,function(){return"Stop à "+pct(stopPct)+" : à levier x"+lev+" la liquidation arriverait avant, un levier plus bas est indiqué dans la taille"});
+  else g.pts+=1;
   if(r.sq){var nA=L?"long squeeze":"short squeeze",wA=(L?r.sq.wd:r.sq.wu).join(", "),wF=(L?r.sq.wu:r.sq.wd).join(", ");
     if(f.sqA>=60){g.ok=false;add(g,"no",0,function(){return"Risque élevé de "+nA+" contre le trade"+(wA?" ("+wA+")":"")})}
     else if(f.sqA>=35)add(g,"mid",1,function(){return"Risque modéré de "+nA+(wA?" ("+wA+")":"")});
     else g.pts+=2;
     if(f.sqF>=60)add(g,"ok",0,function(){return"Potentiel de "+(L?"short squeeze":"long squeeze")+" dans le sens du trade"+(wF?" ("+wF+")":"")})}
-  else g.pts+=1;
+  else add(g,"mid",0,function(){return"Risque de squeeze non mesuré (données de positionnement non lues)"});
   if(b){
-    if(b.block)add(g,"no",0,function(){return"Mur "+(L?"vendeur":"acheteur")+" à "+px(b.block.p)+" ("+usd(b.block.n)+") avant TP1"});
+    /* a resting wall counts as critical only when it sits before 1R; further away it is shown, not blocking */
+    if(b.block){var wR=Math.abs(b.block.p-p.entry)<R;
+      if(wR)blk.push({k:"mur",sev:"watch",t:"Mur "+(L?"vendeur":"acheteur")+" à "+px(b.block.p)+" avant 1R"});
+      add(g,"no",0,function(){return"Mur "+(L?"vendeur":"acheteur")+" à "+px(b.block.p)+" ("+usd(b.block.n)+") avant TP1"+(wR?", et même avant 1R : obstacle critique":"")})}
     if(b.guard)add(g,"ok",0,function(){return"Mur "+(L?"acheteur":"vendeur")+" à "+px(b.guard.p)+" ("+usd(b.guard.n)+") devant le stop"});
-    if(b.spread>0.15)add(g,"no",0,function(){return"Écart achat-vente large ("+fr(b.spread,2)+" %) : marché peu liquide"})}
+    if(b.spread>PREC.spreadRefuse){blk.push({k:"spread",sev:"refuse",t:"Écart achat-vente de "+fr(b.spread,2)+" % (au-delà de "+fr(PREC.spreadRefuse,2)+" %)"});
+      add(g,"no",0,function(){return"Écart achat-vente de "+fr(b.spread,2)+" % : marché trop peu liquide, setup refusé"})}
+    else if(b.spread>PREC.spreadWatch){blk.push({k:"spread",sev:"watch",t:"Écart achat-vente de "+fr(b.spread,2)+" % (au-delà de "+fr(PREC.spreadWatch,2)+" %)"});
+      add(g,"no",0,function(){return"Écart achat-vente large ("+fr(b.spread,2)+" %) : pas de « Prêt » tant qu'il dépasse "+fr(PREC.spreadWatch,2)+" %"})}}
+  else if(r.dist<=0.5&&!opt.noBook)md.push("carnet d'ordres");
   if(r.liqOwn)add(g,"no",0,function(){return"Zone de liquidation de "+(L?"longs":"shorts")+" vers "+px(r.liqOwn.p)+", entre l'entrée et le stop : mèche possible"});
   if(r.liqMag)add(g,"mid",0,function(){return"Aimant possible : liquidations de "+(L?"shorts":"longs")+" vers "+px(r.liqMag.p)+" ("+sgn((r.liqMag.p-r.price)/r.price*100,1)+" %)"});
   g.pts=Math.min(15,g.pts);
@@ -454,9 +469,13 @@ function judge(r,opt){
   if(strict>=1&&!G.trig.ok)miss++;if(strict>=2&&!G.mkt.ok)miss++;if(strict>=2&&!G.mom.ok)miss++;
   var core=G.trend.ok&&G.risk.ok;
   r.score=Math.max(0,Math.min(100,Math.round(sc)));
-  r.st=core&&G.zone.ok&&!miss?"ready":core&&r.dist<=1.5?"watch":"wait";
-  /* readiness: 100 ready, 95 at the zone with one check missing, 90 almost at the zone */
-  r.pct=r.st==="ready"?100:core&&G.zone.ok?(miss===1?95:92):core&&f.retr<=0.79?(r.dist<=0.75?90:r.dist<=1.5?80:Math.max(30,Math.round(75-10*r.dist))):Math.min(70,r.score);
+  /* refused when a core check fails, ready when every required check passes, watch otherwise;
+     a critical blocker then takes "ready" away (or refuses), and missing essential data makes the reading incomplete */
+  var st=!core?"refused":G.zone.ok&&!miss?"ready":"watch";r.st0=st;
+  if(blk.some(function(x){return x.sev==="refuse"}))st="refused";
+  else if(st==="ready"&&blk.length)st="watch";
+  if(st!=="refused"&&md.length)st="incomplete";
+  r.st=st;r.blk=blk;r.miss=md;
   if(!q){
     /* green: passes cleanly; amber: passes with a weak point, or still pending; red: fails */
     var pend={trig:!T,zone:r.dist>0.5&&r.dist<=1.5&&f.retr<=0.79};
@@ -465,12 +484,6 @@ function judge(r,opt){
     r.why=[];
     r.need=strict>=2?["trend","mkt","zone","trig","mom","risk"]:strict>=1?["trend","zone","trig","risk"]:["trend","zone","risk"]}
   return r}
-/* round the plan to the contract's price step, so the numbers can be typed as they are */
-function snap(r,tick){
-  var p=r.plan;if(!p||!(tick>0))return r;
-  var d=Math.max(0,Math.min(10,Math.round(-Math.log(tick)/Math.LN10)));
-  function s(v){return+(Math.round(v/tick)*tick).toFixed(d)}
-  p.entry=s(p.entry);p.sl=s(p.sl);p.tp1=s(p.tp1);p.tp2=s(p.tp2);r.tick=tick;r.dec=d;return r}
 
 /* order book snapshot: who is heavier near the price, and where the big resting orders sit */
 function bookStats(book,dir,p){
@@ -588,7 +601,7 @@ function btMarket(m,d1){var F=btFrames(m,d1),out={},i;
 function btStart(sym,m,d1,opt){
   return{sym:sym,m:m,F:btFrames(m,d1),opt:opt||{},i:0,free:BT_WARM,trades:[],evals:0,ready:0,first:null,done:m.length<BT_WARM+200}}
 function btStep(S,n){
-  var m=S.m,F=S.F,o=S.opt,N=m.length-1,cost=(2*(o.fee===undefined?PREC.fee:+o.fee)+0.02)/100,end=Math.min(N,S.i+n),jo={quiet:true},k;
+  var m=S.m,F=S.F,o=S.opt,N=m.length-1,cost=(2*(o.fee===undefined?PREC.fee:+o.fee)+0.02)/100,end=Math.min(N,S.i+n),jo={quiet:true,noBook:true},k;
   for(k in o)jo[k]=o[k];
   for(;S.i<end;S.i++){var i=S.i;F.step(i);
     if(i<BT_WARM||i<S.free)continue;
@@ -598,17 +611,26 @@ function btStep(S,n){
     var r=analyze(S.sym,d1,F.get("h4",200),F.get("h1",200),o.btc?{btc:o.btc[m[i].t]||null}:null,o);
     if(!r.plan||r.dist>0.5)continue;
     enrich(r,F.m15(500),null,null,{noHeat:true});judge(r,jo);
-    if(r.st!=="ready")continue;
+    if(r.st!=="ready"){
+      /* o.shadow: also follow the setups the checks alone would call ready but a blocker or missing data holds back (study only) */
+      if(o.shadow&&r.st0==="ready"){var sh=btResolve(m,i,r.plan,r.dir,N,cost);
+        if(sh.how!=="open")(S.shadow=S.shadow||[]).push({t:m[i].t,x:m[sh.j].t,dir:r.dir,how:sh.how,r:sh.r,st:r.st,blk:(r.blk||[]).map(function(b){return b.k}),miss:r.miss||[]})}
+      continue}
     S.ready++;
-    var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),j,res=null,stop=Math.min(N,i+960);
-    for(j=i+1;j<=stop;j++){var c=m[j];
-      if(dir>0?c.l<=p.sl:c.h>=p.sl){var fill=dir>0?Math.min(c.o,p.sl):Math.max(c.o,p.sl);res={how:"sl",r:dir*(fill-e)/R};break}
-      if(dir>0?c.h>=p.tp1:c.l<=p.tp1){res={how:"tp",r:Math.abs(p.tp1-e)/R};break}}
-    if(!res){j=Math.min(j,N);res={how:j>=N?"open":"time",r:dir*(m[j].c-e)/R}}
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r-cost*e/R,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null});
+    var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null});
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}
+/* entry at the close of candle i, exit at the stop (or at the open when the candle opens beyond it) or at TP1, stop first when both are
+   reached in the same candle, at the close after ten days; r in R, costs included */
+function btResolve(m,i,p,dir,N,cost){
+  var e=p.entry,R=Math.abs(e-p.sl),j,res=null,stop=Math.min(N,i+960);
+  for(j=i+1;j<=stop;j++){var c=m[j];
+    if(dir>0?c.l<=p.sl:c.h>=p.sl){var fill=dir>0?Math.min(c.o,p.sl):Math.max(c.o,p.sl);res={how:"sl",r:dir*(fill-e)/R};break}
+    if(dir>0?c.h>=p.tp1:c.l<=p.tp1){res={how:"tp",r:Math.abs(p.tp1-e)/R};break}}
+  if(!res){j=Math.min(j,N);res={how:j>=N?"open":"time",r:dir*(m[j].c-e)/R}}
+  res.j=j;res.r-=cost*e/R;return res}
 function btStats(tr){
   var n=tr.length,w=0,sum=0,gp=0,gl=0,streak=0,worst=0,curve=[],i;
   for(i=0;i<n;i++){var x=tr[i].r;if(x>0){w++;gp+=x;streak=0}else{gl-=x;streak++;if(streak>worst)worst=streak}sum+=x;curve.push(sum)}

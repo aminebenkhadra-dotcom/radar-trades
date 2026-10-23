@@ -1,0 +1,36 @@
+name: Replay v41 vs v42
+# Replays the version 41 engine (frozen in tools/backtest/engine_v41.js) and the version 42 engine on the same two years of
+# Binance history, default precision (6 checks), and publishes the trades and the comparison to the branch replay-v42-<period>.
+on:
+  push:
+    branches: [replay-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: A, start: "2024-09", end: "2025-10" }
+          - { id: B, start: "2025-10", end: "2026-10" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.start }}", END: "${{ matrix.end }}" }
+        run: node tools/backtest/fetch.js klines data 2>&1 | tail -15
+      - name: Replay both engines
+        run: |
+          mkdir -p res
+          for k in 0 1 2 3; do ENGINE=tools/backtest/engine_v41.js TAG=v41 node tools/backtest/ref.js data res 2 $k/4 & done; wait
+          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data res 2 $k/4 '{"shadow":true}' & done; wait
+          node tools/backtest/compare42.js res | tee res/compare.json
+      - name: Publish
+        run: |
+          cd res && git init -q -b replay-v42-${{ matrix.id }}
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Replay v41 vs v42 ${{ matrix.id }}" && git push -q -f "$REMOTE" replay-v42-${{ matrix.id }}
