@@ -1,7 +1,9 @@
 // Reliability and time to target of the setups, from the reference runs of both years.
 // Reliability: does "distance to stop / (distance to stop + distance to target)" predict how often TP comes first?
 // Time: hours needed to reach TP1, against the TP distance measured in 1H ATR at entry.
-const fs = require("fs"), L = require("/home/claude/radar-trades/tools/backtest/lib.js");
+// Version 41 study. Its two weak points are fixed in ttp42.js (used for version 42): the strict-0 and strict-2 runs overlap, so a
+// setup could be counted twice here, and the ATR here is a plain 14-hour mean while the app uses Wilder's ATR.
+const fs = require("fs"), L = require("./lib.js");
 const [N, OLD] = process.argv.slice(2);
 function load(dir, s) { let tr = []; for (let k = 0; k < 8; k++) { const f = dir + "/ref-" + s + "-" + k + ".json"; if (!fs.existsSync(f)) break; tr = tr.concat(JSON.parse(fs.readFileSync(f, "utf8")).trades); } return tr; }
 function atr(k, n) { let s = 0; for (let i = k.length - n; i < k.length; i++) s += Math.max(k[i].h - k[i].l, Math.abs(k[i].h - k[i - 1].c), Math.abs(k[i].l - k[i - 1].c)); return s / n; }

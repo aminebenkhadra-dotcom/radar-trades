@@ -19,12 +19,34 @@ import android.webkit.WebViewClient;
 
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+
 /** Shows the scanner page and lets it switch the background watch on and off. */
 public class MainActivity extends Activity {
     static final String PREFS = "watch";
     static final String EXTRA_TAB = "tab";
+    private static final int REQ_SAVE = 41, REQ_OPEN = 42;
+    private static final int MAX_FILE = 20_000_000;
 
     private WebView web;
+    private String pendingSave;
+
+    /** The page needs JavaScript and its own storage, nothing else: no files, no content providers, no pop-ups, no plain HTTP. */
+    static void harden(WebSettings s) {
+        s.setAllowFileAccess(false);
+        s.setAllowContentAccess(false);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setGeolocationEnabled(false);
+        s.setJavaScriptCanOpenWindowsAutomatically(false);
+        s.setSupportMultipleWindows(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        if (Build.VERSION.SDK_INT >= 26) s.setSafeBrowsingEnabled(true);
+        WebView.setWebContentsDebuggingEnabled(false);
+    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -34,6 +56,7 @@ public class MainActivity extends Activity {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        harden(s);
         web.addJavascriptInterface(new Bridge(), "Android");
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -41,20 +64,24 @@ public class MainActivity extends Activity {
                 return Relay.handle(getApplicationContext(), request);
             }
 
-            /** Links to news articles open in the phone's browser, never inside the app. */
+            /** The page itself stays in the app; web links (news articles) open in the phone's browser; anything else is ignored. */
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri u = request.getUrl();
-                if (Relay.HOST.equals(u.getHost())) return false;
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, u));
-                } catch (Exception ignored) {
+                String sc = u.getScheme();
+                if (Relay.HOST.equals(u.getHost()) && "https".equals(sc)) return false;
+                if ("https".equals(sc) || "http".equals(sc)) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, u).addCategory(Intent.CATEGORY_BROWSABLE));
+                    } catch (Exception ignored) {
+                    }
                 }
                 return true;
             }
         });
         setContentView(web);
         String tab = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_TAB);
+        if (tab != null && !tab.matches("[a-z0-9]{1,8}(~[A-Za-z0-9]{1,30})?")) tab = null;
         web.loadUrl(Relay.HOME + (tab == null ? "" : "#" + tab));
 
         SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
@@ -75,6 +102,65 @@ public class MainActivity extends Activity {
             startForegroundService(new Intent(this, WatchService.class));
         } catch (Exception ignored) {
             // The system can refuse a background start; the watch resumes next time the app is opened.
+        }
+    }
+
+    /** Hands a result back to the page: window[fn](ok, text). */
+    private void callback(final String fn, final boolean ok, final String arg) {
+        runOnUiThread(() -> {
+            if (web != null) {
+                web.evaluateJavascript("window." + fn + "&&window." + fn + "(" + ok + "," + JSONObject.quote(arg == null ? "" : arg) + ")", null);
+            }
+        });
+    }
+
+    /** Backup file chosen by the user through the system file picker: written or read here, never anywhere else. */
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        final Uri u = data == null ? null : data.getData();
+        if (req == REQ_SAVE) {
+            final String c = pendingSave;
+            pendingSave = null;
+            if (res != RESULT_OK || u == null || c == null) {
+                callback("onBackup", false, "annulée");
+                return;
+            }
+            new Thread(() -> {
+                boolean ok = false;
+                try (OutputStream o = getContentResolver().openOutputStream(u, "w")) {
+                    if (o != null) {
+                        o.write(c.getBytes(StandardCharsets.UTF_8));
+                        ok = true;
+                    }
+                } catch (Exception ignored) {
+                }
+                callback("onBackup", ok, ok ? "" : "écriture impossible");
+            }).start();
+        } else if (req == REQ_OPEN) {
+            if (res != RESULT_OK || u == null) {
+                callback("onRestore", false, "annulé");
+                return;
+            }
+            new Thread(() -> {
+                String txt = null;
+                try (InputStream in = getContentResolver().openInputStream(u)) {
+                    if (in != null) {
+                        ByteArrayOutputStream b = new ByteArrayOutputStream();
+                        byte[] buf = new byte[8192];
+                        int n;
+                        long tot = 0;
+                        while ((n = in.read(buf)) > 0) {
+                            tot += n;
+                            if (tot > MAX_FILE) throw new IllegalStateException("too big");
+                            b.write(buf, 0, n);
+                        }
+                        txt = new String(b.toByteArray(), StandardCharsets.UTF_8);
+                    }
+                } catch (Exception ignored) {
+                }
+                callback("onRestore", txt != null, txt == null ? "lecture impossible" : txt);
+            }).start();
         }
     }
 
@@ -133,7 +219,7 @@ public class MainActivity extends Activity {
                     requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
                 }
                 WatchService.alert(getApplicationContext(), "Radar Trades · test",
-                        "Les alertes fonctionnent. Tu recevras ce type de message quand un setup est prêt.", "test", "all");
+                        "Les alertes fonctionnent. Tu recevras ce type de message quand un setup est prêt selon les règles.", "test", "all");
             });
         }
 
@@ -171,6 +257,40 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String lastCheck() {
             return getSharedPreferences(PREFS, MODE_PRIVATE).getString("last", "");
+        }
+
+        /** Backup of the page's own data (journal, settings, entries): the user picks where the file goes. API keys are never in it. */
+        @JavascriptInterface
+        public void saveFile(String name, String content) {
+            if (content == null || content.length() > MAX_FILE) {
+                callback("onBackup", false, "fichier trop gros");
+                return;
+            }
+            final String n = name != null && name.matches("[A-Za-z0-9._-]{1,80}") ? name : "radar-trades-sauvegarde.json";
+            runOnUiThread(() -> {
+                pendingSave = content;
+                Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                        .setType("application/json").putExtra(Intent.EXTRA_TITLE, n);
+                try {
+                    startActivityForResult(i, REQ_SAVE);
+                } catch (Exception e) {
+                    pendingSave = null;
+                    callback("onBackup", false, "aucun gestionnaire de fichiers");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void openFile() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                        .putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "text/plain", "application/octet-stream"});
+                try {
+                    startActivityForResult(i, REQ_OPEN);
+                } catch (Exception e) {
+                    callback("onRestore", false, "aucun gestionnaire de fichiers");
+                }
+            });
         }
     }
 

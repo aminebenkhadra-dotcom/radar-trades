@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
 def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
-def ksFile = rootProject.file('radar.keystore')
+def appVersion = '42'
 
 android {
     namespace 'com.amine.radartrades'
@@ -12,20 +12,12 @@ android {
         minSdk 26
         targetSdk 34
         versionCode runNumber
-        versionName "1.0.${runNumber}"
-    }
-    signingConfigs {
-        release {
-            storeFile ksFile
-            storePassword System.getenv('KS_PASS') ?: 'radartrades'
-            keyAlias 'radar'
-            keyPassword System.getenv('KS_PASS') ?: 'radartrades'
-        }
+        versionName "V${appVersion} (1.0.${runNumber})"
     }
     buildTypes {
         release {
+            // built unsigned: the workflow signs it with key rotation (old key -> 2026 key), see signing/CERTIFICATS.md
             minifyEnabled false
-            signingConfig signingConfigs.release
         }
     }
     compileOptions {

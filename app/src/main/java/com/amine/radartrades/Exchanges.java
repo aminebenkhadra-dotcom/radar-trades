@@ -64,13 +64,20 @@ final class Exchanges {
             return http(method, host + path + "?" + q + "&signature=" + hex(hmac(cred[1], q)), new String[]{"X-MBX-APIKEY", cred[0]});
         }
         if (name.startsWith("inc:")) {
-            // realised results of the futures account: inc:<type>:<days>
+            // realised results of the futures account: inc:<type>:<days>, or inc:<type>:<from ms>:<to ms> for one page of a longer
+            // history (the page splits a window that returns 1000 rows); at most 100 days per call
             String[] p = name.split(":");
-            boolean type = p.length == 3 && (p[1].equals("REALIZED_PNL") || p[1].equals("COMMISSION") || p[1].equals("FUNDING_FEE"));
-            boolean days = p.length == 3 && (p[2].equals("7") || p[2].equals("30") || p[2].equals("90"));
-            if (!type || !days) return new String[]{"400", "{\"msg\":\"Requête inconnue\"}"};
-            long start = System.currentTimeMillis() - Long.parseLong(p[2]) * 86400000L;
-            String q = "incomeType=" + p[1] + "&startTime=" + start + "&limit=1000&recvWindow=10000&timestamp=" + System.currentTimeMillis();
+            boolean type = p.length >= 3 && (p[1].equals("REALIZED_PNL") || p[1].equals("COMMISSION") || p[1].equals("FUNDING_FEE"));
+            if (!type) return BAD;
+            String range;
+            if (p.length == 3 && (p[2].equals("7") || p[2].equals("30") || p[2].equals("90"))) {
+                range = "startTime=" + (System.currentTimeMillis() - Long.parseLong(p[2]) * 86400000L);
+            } else if (p.length == 4 && p[2].matches("\\d{10,13}") && p[3].matches("\\d{10,13}")) {
+                long a = Long.parseLong(p[2]), b = Long.parseLong(p[3]);
+                if (b < a || b - a > 100L * 86400000L) return BAD;
+                range = "startTime=" + a + "&endTime=" + b;
+            } else return BAD;
+            String q = "incomeType=" + p[1] + "&" + range + "&limit=1000&recvWindow=10000&timestamp=" + System.currentTimeMillis();
             return http("GET", "https://fapi.binance.com/fapi/v1/income?" + q + "&signature=" + hex(hmac(cred[1], q)),
                     new String[]{"X-MBX-APIKEY", cred[0]});
         }
@@ -85,6 +92,8 @@ final class Exchanges {
             case "pos": host = "https://fapi.binance.com"; path = "/fapi/v2/positionRisk"; break;
             case "wbeth": path = "/sapi/v1/eth-staking/eth/history/rateHistory"; extra = "current=1&size=100&"; break;
             case "bnsol": path = "/sapi/v1/sol-staking/sol/history/rateHistory"; extra = "current=1&size=100&"; break;
+            // what the key is allowed to do: the app checks that it can only read
+            case "perm": path = "/sapi/v1/account/apiRestrictions"; break;
             default: return BAD;
         }
         String q = extra + "recvWindow=10000&timestamp=" + System.currentTimeMillis();
@@ -118,6 +127,7 @@ final class Exchanges {
             case "save": path = "/api/v5/finance/savings/balance"; break;
             case "stake": path = "/api/v5/finance/staking-defi/orders-active"; break;
             case "fixed": path = "/api/v5/finance/fixed-loan/lending-orders-list"; break;
+            case "perm": path = "/api/v5/account/config"; break;
             default: return new String[]{"400", "{\"msg\":\"Requête inconnue\"}"};
         }
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);

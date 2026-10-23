@@ -1,5 +1,5 @@
 // Trade management replayed on the reference setups of both years: fixed stop and target against break-even moves, partial exits and trailing stops.
-const fs = require("fs"), L = require("/home/claude/radar-trades/tools/backtest/lib.js"), [N, OLD] = process.argv.slice(2), COST = 0.0012;
+const fs = require("fs"), L = require("./lib.js"), [N, OLD] = process.argv.slice(2), COST = 0.0012;
 function load(dir, s) { let tr = []; for (let k = 0; k < 8; k++) { const f = dir + "/ref-" + s + "-" + k + ".json"; if (!fs.existsSync(f)) break; tr = tr.concat(JSON.parse(fs.readFileSync(f, "utf8")).trades); } return tr; }
 function atr(k, n) { let s = 0; for (let i = k.length - n; i < k.length; i++) s += Math.max(k[i].h - k[i].l, Math.abs(k[i].h - k[i - 1].c), Math.abs(k[i].l - k[i - 1].c)); return s / n; }
 const V = {

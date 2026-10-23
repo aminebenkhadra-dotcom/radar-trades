@@ -36,6 +36,7 @@ import java.util.Locale;
 public class WatchService extends Service {
     private static final String CH_RUN = "watch";
     private static final String CH_ALERT = "setups";
+    private static final String CH_PROTECT = "protect";
     private static final String ACTION_TICK = "com.amine.radartrades.TICK";
     private static final int RUN_ID = 1;
 
@@ -51,7 +52,10 @@ public class WatchService extends Service {
         NotificationChannel run = new NotificationChannel(CH_RUN, "Surveillance en cours", NotificationManager.IMPORTANCE_LOW);
         run.setShowBadge(false);
         nm.createNotificationChannel(run);
-        nm.createNotificationChannel(new NotificationChannel(CH_ALERT, "Setups prêts", NotificationManager.IMPORTANCE_HIGH));
+        nm.createNotificationChannel(new NotificationChannel(CH_ALERT, "Setups prêts selon les règles", NotificationManager.IMPORTANCE_HIGH));
+        NotificationChannel pr = new NotificationChannel(CH_PROTECT, "Protection de mes positions", NotificationManager.IMPORTANCE_HIGH);
+        pr.setDescription("Stop absent ou partiel, protection illisible, liquidation proche, sortie à envisager");
+        nm.createNotificationChannel(pr);
     }
 
     private static PendingIntent open(Context ctx, String tab, int code) {
@@ -61,10 +65,15 @@ public class WatchService extends Service {
     }
 
     static void alert(Context ctx, String title, String text, String tag, String tab) {
+        alertOn(ctx, CH_ALERT, title, text, tag, tab);
+    }
+
+    /** Position protection alerts go to their own channel, separate from new setups. */
+    static void alertOn(Context ctx, String channel, String title, String text, String tag, String tab) {
         channels(ctx);
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
-        Notification n = new Notification.Builder(ctx, CH_ALERT)
+        Notification n = new Notification.Builder(ctx, channel)
                 .setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(title)
                 .setContentText(text)
@@ -115,6 +124,7 @@ public class WatchService extends Service {
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        MainActivity.harden(s);
         web.addJavascriptInterface(new Bridge(), "Android");
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -175,6 +185,11 @@ public class WatchService extends Service {
         @JavascriptInterface
         public void notify(String title, String text, String tag, String tab) {
             alert(getApplicationContext(), title, text, tag == null ? "setup" : tag, tab);
+        }
+
+        @JavascriptInterface
+        public void protect(String title, String text, String tag, String tab) {
+            alertOn(getApplicationContext(), CH_PROTECT, title, text, tag == null ? "protect" : tag, tab);
         }
 
         /** Same fixed read-only account queries as the visible page, so open positions can be checked in the background. */

@@ -1,15 +1,44 @@
 name: Build APK
+# Every build: tests and engine/page check first, then an unsigned build, then the signature with key rotation
+# (old key 2026-10 -> key 2026, APK Signature Scheme v3, Android 9 and later). No secret, no APK: nothing is generated silently.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
+env:
+  OLD_CERT: fa322b2ced9e40e2b1e0dd484ebba4d411fa7a641c96342a9f3afb05f8b4e5dc
+  NEW_CERT: 934df6e6a0a76988c0196a092635bc35ed7acf302b804362ce3804c4e8f306b9
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Engine and page in sync
+        run: |
+          set -o pipefail
+          mkdir -p ci && node tools/inject.js --check 2>&1 | tee ci/sync.txt
+      - name: Automated tests (a failure stops the build)
+        run: |
+          set -o pipefail
+          node tests/run.js 2>&1 | tee ci/tests.txt
+          node tests/run.js --page 2>&1 | tee ci/tests-page.txt
+      - name: Signing key present
+        env:
+          RADAR_SIGNING_KEY: ${{ secrets.RADAR_SIGNING_KEY }}
+        run: |
+          if [ -z "$RADAR_SIGNING_KEY" ]; then
+            echo "::error::Secret RADAR_SIGNING_KEY absent : compilation arrêtée, aucun APK publié (aucune clé n'est créée à sa place)."
+            exit 1
+          fi
+          [ -f radar.keystore ] || { echo "::error::Ancienne clé radar.keystore absente : la rotation ne peut pas être prouvée."; exit 1; }
+          umask 077 && mkdir -p "$RUNNER_TEMP/sign"
+          echo "$RADAR_SIGNING_KEY" | base64 -d > "$RUNNER_TEMP/sign/new.p12"
+          keytool -list -keystore "$RUNNER_TEMP/sign/new.p12" -storetype PKCS12 -storepass radar-trades-signing -alias radar2026 > /dev/null
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -17,29 +46,62 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Signing key
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+      - name: Build (unsigned)
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > radar.keystore
-          elif [ ! -f radar.keystore ]; then
-            keytool -genkeypair -keystore radar.keystore -storepass radartrades -keypass radartrades \
-              -alias radar -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Radar Trades"
-          fi
-      - name: Build
-        env:
-          KS_PASS: ${{ secrets.KS_PASS }}
-        run: gradle :app:assembleRelease --no-daemon
-      - run: cp app/build/outputs/apk/release/app-release.apk radar-trades.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: radar-trades-apk
-          path: radar-trades.apk
+          set -o pipefail
+          gradle :app:assembleRelease --no-daemon 2>&1 | tee ci/gradle.txt | tail -20
+      - name: Sign with key rotation and verify
+        run: |
+          set -eo pipefail
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          echo "build-tools: $BT" | tee ci/sign.txt
+          "$BT/zipalign" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          "$BT/apksigner" rotate --out "$RUNNER_TEMP/sign/lineage" \
+            --old-signer --ks radar.keystore --ks-key-alias radar --ks-pass pass:radartrades --key-pass pass:radartrades \
+            --new-signer --ks "$RUNNER_TEMP/sign/new.p12" --ks-key-alias radar2026 --ks-pass pass:radar-trades-signing
+          "$BT/apksigner" sign --ks radar.keystore --ks-key-alias radar --ks-pass pass:radartrades --key-pass pass:radartrades \
+            --next-signer --ks "$RUNNER_TEMP/sign/new.p12" --ks-key-alias radar2026 --ks-pass pass:radar-trades-signing \
+            --lineage "$RUNNER_TEMP/sign/lineage" --rotation-min-sdk-version 28 --out radar-trades.apk aligned.apk
+          rm -rf "$RUNNER_TEMP/sign"
+          "$BT/apksigner" verify -v --print-certs radar-trades.apk 2>&1 | tee -a ci/sign.txt
+          "$BT/apksigner" lineage --in radar-trades.apk --print-certs 2>&1 | tee -a ci/sign.txt
+          grep -qi "$NEW_CERT" ci/sign.txt || { echo "::error::Nouvelle clé absente de la signature"; exit 1; }
+          grep -qi "$OLD_CERT" ci/sign.txt || { echo "::error::Ancienne clé absente de la lineage"; exit 1; }
+          "$BT/aapt2" dump badging radar-trades.apk | head -3 | tee -a ci/sign.txt
+          sha256sum radar-trades.apk | tee -a ci/sign.txt
+      - name: Release notes
+        run: |
+          VN=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" ci/sign.txt | head -1)
+          VC=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" ci/sign.txt | head -1)
+          {
+            echo "Radar Trades $VN (versionCode $VC), révision ${GITHUB_SHA}."
+            echo
+            echo "Signature : nouvelle clé SHA-256 $NEW_CERT, avec preuve de rotation depuis l'ancienne clé SHA-256 $OLD_CERT (APK Signature Scheme v3, Android 9 et plus)."
+            echo "Tests automatiques : $(tail -1 ci/tests.txt)"
+            echo
+            echo "Installation : télécharge radar-trades.apk puis ouvre-le ; il s'installe par-dessus la version précédente."
+            echo "Version compilée et testée automatiquement ; non validée sur un appareil Android réel par l'auteur du code."
+          } > ci/notes.txt
+          cp ci/sign.txt signature.txt && cp ci/tests.txt tests.txt
       - name: Publish release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ github.run_number }}" radar-trades.apk \
-            --title "Radar Trades 1.0.${{ github.run_number }}" \
-            --notes "APK Android. Telecharge radar-trades.apk puis ouvre-le pour l'installer." --latest
+          gh release create "v${{ github.run_number }}" radar-trades.apk signature.txt tests.txt \
+            --title "Radar Trades V42 · build ${{ github.run_number }}" --notes-file ci/notes.txt --latest
+      - name: Publish test build (branch)
+        if: github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "test-${{ github.run_number }}" radar-trades.apk signature.txt tests.txt \
+            --target "$GITHUB_SHA" --prerelease --title "Essai ${{ github.ref_name }} · build ${{ github.run_number }}" --notes-file ci/notes.txt
+      - name: Keep the logs
+        if: always()
+        env:
+          REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+        run: |
+          mkdir -p ci && cd ci && echo "${{ job.status }} ${GITHUB_REF} ${GITHUB_SHA}" > status.txt
+          git init -q -b ci-logs && git config user.name radar-ci && git config user.email noreply@github.com
+          git add -A && git commit -qm "Build ${{ github.run_number }}" && git push -q -f "$REMOTE" ci-logs || true
