@@ -83,12 +83,13 @@ jobs:
             echo "Version compilée et testée automatiquement ; non validée sur un appareil Android réel par l'auteur du code."
           } > ci/notes.txt
           cp ci/sign.txt signature.txt && cp ci/tests.txt tests.txt
+          node tools/build-extension.js ext/RadarTrades-Chrome && (cd ext && zip -qr ../radar-trades-chrome.zip RadarTrades-Chrome)
       - name: Publish release
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ github.run_number }}" radar-trades.apk signature.txt tests.txt \
+          gh release create "v${{ github.run_number }}" radar-trades.apk radar-trades-chrome.zip signature.txt tests.txt \
             --title "Radar Trades V42 · build ${{ github.run_number }}" --notes-file ci/notes.txt --latest
       - name: Publish test build (branch)
         if: github.ref != 'refs/heads/main'

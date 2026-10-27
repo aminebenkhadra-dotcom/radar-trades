@@ -133,3 +133,10 @@ Télécharge `radar-trades.apk` depuis la dernière version : https://github.com
 
 Chaque modification poussée sur `main` lance les tests puis recompile et signe l'APK (onglet Actions). Chaque release joint
 `signature.txt` (certificats et lineage) et `tests.txt`.
+
+## Version Chrome (ordinateur)
+
+`extension/` et `tools/build-extension.js` : la même page en extension Chrome (fichier `radar-trades-chrome.zip` joint à chaque
+release). Scanner, setups, analyse, heatmaps, tendance, cycle et alertes tant que l'onglet est ouvert. Pas de clé API ni de
+portefeuille : ils restent dans l'appli Android. Installation : décompresser, `chrome://extensions`, « Mode développeur »,
+« Charger l'extension non empaquetée », choisir le dossier `RadarTrades-Chrome`.
