@@ -121,6 +121,14 @@ tendance, pas une garantie.
 0,01 R. Elles changent la part de trades positifs : 34 % avec stop et TP fixes, environ 40 % avec break-even ou stop suiveur,
 50 % en encaissant la moitié à +1R. L'onglet Mes trades les propose comme options, avec la taille, les frais et le funding.
 
+## Configuration du moment (onglet Analyser)
+
+Pour chaque crypto analysée : le type de setup (sens, et zone : order block + niveau 4H, order block seul, ancien niveau
+qui a changé de côté, niveau 4H seul), le nombre de repères sur la zone, le potentiel jusqu'au TP1 et jusqu'au stop, et le
+taux de setups de ce type qui ont atteint le TP1 avant le stop. Taux mesuré en rejouant la version 42 sur deux ans
+(4 338 setups « Prêt », `config.yml`, `tools/backtest/config42.js`, `results/config-v42.json`), année par année ;
+signalé comme indicatif quand il y a moins de 150 setups ou plus de 10 points d'écart entre les deux années.
+
 ## Export Excel de l'historique
 
 Onglet Résultats (source Binance Futures) : « Exporter en Excel » sur 7, 30 ou 90 jours ; aussi dans Mes trades, sous l'historique Binance (90 jours).

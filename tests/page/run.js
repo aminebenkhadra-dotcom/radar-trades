@@ -262,6 +262,15 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await page.waitForFunction(() => /Setup|Pas de trade/.test(document.getElementById("one-out").textContent), null, { timeout: 30000 });
     const v = await page.textContent("#one-out .verdict");
     ok(/prêt selon les règles|à surveiller|refusé|données incomplètes|Pas de trade/i.test(v), "Analyser SOL : « " + v.trim() + " »");
+    let cf = await page.textContent("#one-out .cfg"), tried = ["SOL"];
+    ok(/Configuration du moment/.test(cf) && /atteint le TP1|aucune configuration/.test(cf), "Analyser SOL : carte « Configuration du moment »");
+    for (const s of Object.keys(MARKET).map(x => x.replace(/USDT$/, ""))) {
+      if (/atteint le TP1/.test(cf)) break; if (tried.includes(s)) continue; tried.push(s);
+      await page.fill("#one-sym", s); await page.click("#one-form button");
+      await page.waitForFunction(() => document.querySelector("#one-out .cfg"), null, { timeout: 30000 }); cf = await page.textContent("#one-out .cfg");
+    }
+    ok(/\d+ %de ces setups ont atteint le TP1/.test(cf.replace(/\s+/g, "")) || /\d+ %\s*de ces setups ont atteint le TP1/.test(cf), tried[tried.length - 1] + " : " + cf.replace(/\s+/g, " ").slice(24, 170) + "…");
+    if (SHOTS) { await page.$eval("#one-out .cfg", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p10-config.png") }); }
     ok(tabs.length === 17, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
