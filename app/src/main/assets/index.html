@@ -1178,6 +1178,10 @@ function btFrames(m,d1){
       else{done=f.j;last={t:f.p.t,o:f.p.o,h:f.p.h,l:f.p.l,c:f.p.c,q:f.p.q,b:f.p.b}}
       var a=f.full.slice(Math.max(0,done-(n-1)),done);a.push(last);return a},
     m15:function(n){var a=m.slice(Math.max(0,at+1-n),at+1),k=m[at];a.push({t:k.t+9e5,o:k.c,h:k.c,l:k.c,c:k.c,q:0,b:0});return a}}}
+/* configuration of a setup, as the Analyser names it: direction, kind of zone, and how many other price marks sit on it.
+   key = L|S + c (order block and 4H level together) | o (order block) | f (4H level that changed side) | s (4H level) */
+function cfgOf(r){var f=r.f||{};if(!r.z)return null;
+  return{key:(r.dir>0?"L":"S")+(f.conf?"c":f.zkind?"o":f.flip?"f":"s"),k:f.kN||0}}
 var BT_WARM=96*34;
 /* Bitcoin's state at every 15m close, for the Marché check of altcoins */
 function btMarket(m,d1){var F=btFrames(m,d1),out={},i;
@@ -1200,11 +1204,11 @@ function btStep(S,n){
     if(r.st!=="ready"){
       /* o.shadow: also follow the setups the checks alone would call ready but a blocker or missing data holds back (study only) */
       if(o.shadow&&r.st0==="ready"){var sh=btResolve(m,i,r.plan,r.dir,N,cost);
-        if(sh.how!=="open")(S.shadow=S.shadow||[]).push({t:m[i].t,x:m[sh.j].t,dir:r.dir,how:sh.how,r:sh.r,st:r.st,blk:(r.blk||[]).map(function(b){return b.k}),miss:r.miss||[]})}
+        if(sh.how!=="open")(S.shadow=S.shadow||[]).push({t:m[i].t,x:m[sh.j].t,dir:r.dir,how:sh.how,r:sh.r,st:r.st,blk:(r.blk||[]).map(function(b){return b.k}),miss:r.miss||[],cf:cfgOf(r)})}
       continue}
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null});
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r)});
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}
