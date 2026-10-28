@@ -1,0 +1,28 @@
+name: Radar BTC·ETH · historique
+# Downloads BTCUSDT and ETHUSDT futures candles (15 minutes for the test window, daily for the 24 months before) and
+# publishes them to the branch btceth-data, for the configuration replay of the Radar BTC·ETH app.
+on:
+  push:
+    branches: [btceth-data-run]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Fetch candles
+        env: { START: "2024-09", SYMS: "BTCUSDT,ETHUSDT" }
+        run: node tools/backtest/fetch.js klines data 2>&1 | tail -8
+      - name: Publish
+        run: |
+          cd data && git init -q -b btceth-data
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "BTC ETH history $(date -u +%F)" && git push -q -f "$REMOTE" btceth-data

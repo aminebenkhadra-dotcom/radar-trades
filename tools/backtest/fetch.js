@@ -66,6 +66,7 @@ async function klines(sym, iv, months) {
 }
 const gz = (f, lines) => fs.writeFileSync(path.join(OUT, f), zlib.gzipSync(lines.join("\n") + "\n", { level: 9 }));
 async function universe() {
+  if (process.env.SYMS) { const top = process.env.SYMS.split(","); return { listed: 0, candidates: top.length, withData: top.length, top, vol: {} }; }   // env SYMS: fixed list (Radar BTC·ETH)
   let syms = [];
   try {
     let marker = "";
