@@ -121,6 +121,14 @@ tendance, pas une garantie.
 0,01 R. Elles changent la part de trades positifs : 34 % avec stop et TP fixes, environ 40 % avec break-even ou stop suiveur,
 50 % en encaissant la moitié à +1R. L'onglet Mes trades les propose comme options, avec la taille, les frais et le funding.
 
+## Export Excel de l'historique
+
+Onglet Résultats (source Binance Futures) : « Exporter en Excel » sur 7, 30 ou 90 jours ; aussi dans Mes trades, sous l'historique Binance (90 jours).
+Le fichier .xlsx a quatre onglets : Résumé (taux de réussite, net, frais, funding, par contrat, par jour d'ouverture, en formules),
+Trades (une ligne par position, de l'ouverture jusqu'au retour à zéro), Exécutions (chaque fill Binance) et Revenus Binance
+(gains, frais et funding tels que Binance les enregistre). Lecture seule : `/fapi/v1/userTrades`, par fenêtres de 7 jours, seulement
+là où Binance a enregistré des frais. Fichier construit dans le téléphone, enregistré où tu le choisis.
+
 ## Données et clés
 
 L'appli lit les données de marché publiques de Binance. L'onglet Portefeuille demande des clés API **en lecture seule** :

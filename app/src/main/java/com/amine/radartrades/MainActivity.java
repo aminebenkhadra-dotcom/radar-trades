@@ -32,7 +32,8 @@ public class MainActivity extends Activity {
     private static final int MAX_FILE = 20_000_000;
 
     private WebView web;
-    private String pendingSave;
+    private byte[] pendingSave;
+    private String pendingCb = "onBackup";
 
     /** The page needs JavaScript and its own storage, nothing else: no files, no content providers, no pop-ups, no plain HTTP. */
     static void harden(WebSettings s) {
@@ -120,22 +121,23 @@ public class MainActivity extends Activity {
         super.onActivityResult(req, res, data);
         final Uri u = data == null ? null : data.getData();
         if (req == REQ_SAVE) {
-            final String c = pendingSave;
+            final byte[] c = pendingSave;
+            final String cb = pendingCb;
             pendingSave = null;
             if (res != RESULT_OK || u == null || c == null) {
-                callback("onBackup", false, "annulée");
+                callback(cb, false, "annulée");
                 return;
             }
             new Thread(() -> {
                 boolean ok = false;
-                try (OutputStream o = getContentResolver().openOutputStream(u, "w")) {
+                try (OutputStream o = getContentResolver().openOutputStream(u, "wt")) {
                     if (o != null) {
-                        o.write(c.getBytes(StandardCharsets.UTF_8));
+                        o.write(c);
                         ok = true;
                     }
                 } catch (Exception ignored) {
                 }
-                callback("onBackup", ok, ok ? "" : "écriture impossible");
+                callback(cb, ok, ok ? "" : "écriture impossible");
             }).start();
         } else if (req == REQ_OPEN) {
             if (res != RESULT_OK || u == null) {
@@ -266,16 +268,36 @@ public class MainActivity extends Activity {
                 callback("onBackup", false, "fichier trop gros");
                 return;
             }
-            final String n = name != null && name.matches("[A-Za-z0-9._-]{1,80}") ? name : "radar-trades-sauvegarde.json";
+            String n = name != null && name.matches("[A-Za-z0-9._-]{1,80}") ? name : "radar-trades-sauvegarde.json";
+            pick(n, "application/json", content.getBytes(StandardCharsets.UTF_8), "onBackup");
+        }
+
+        /** Excel export of the trade history (built by the page, sent in base64): the user picks where the file goes. */
+        @JavascriptInterface
+        public void saveBytes(String name, String b64) {
+            byte[] data;
+            try {
+                if (b64 == null || b64.length() > MAX_FILE * 4 / 3 + 4) throw new IllegalArgumentException();
+                data = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+            } catch (Exception e) {
+                callback("onExport", false, "fichier illisible ou trop gros");
+                return;
+            }
+            String n = name != null && name.matches("[A-Za-z0-9._-]{1,80}\\.xlsx") ? name : "radar-trades-historique.xlsx";
+            pick(n, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data, "onExport");
+        }
+
+        private void pick(String n, String mime, byte[] data, String cb) {
             runOnUiThread(() -> {
-                pendingSave = content;
+                pendingSave = data;
+                pendingCb = cb;
                 Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                        .setType("application/json").putExtra(Intent.EXTRA_TITLE, n);
+                        .setType(mime).putExtra(Intent.EXTRA_TITLE, n);
                 try {
                     startActivityForResult(i, REQ_SAVE);
                 } catch (Exception e) {
                     pendingSave = null;
-                    callback("onBackup", false, "aucun gestionnaire de fichiers");
+                    callback(cb, false, "aucun gestionnaire de fichiers");
                 }
             });
         }

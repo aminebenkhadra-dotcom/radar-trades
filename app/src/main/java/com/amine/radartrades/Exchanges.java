@@ -46,7 +46,7 @@ final class Exchanges {
         // a few queries take one value after a colon: a contract (BTCUSDT) or a coin (SOL), letters and digits only
         String arg = null;
         int colon = name.indexOf(':');
-        if (colon > 0 && !name.startsWith("inc:")) {
+        if (colon > 0 && !name.startsWith("inc:") && !name.startsWith("utr:")) {
             arg = name.substring(colon + 1);
             name = name.substring(0, colon);
             boolean contract = name.equals("ord") || name.equals("algo");
@@ -62,6 +62,16 @@ final class Exchanges {
             }
             String q = extra + "recvWindow=10000&timestamp=" + System.currentTimeMillis();
             return http(method, host + path + "?" + q + "&signature=" + hex(hmac(cred[1], q)), new String[]{"X-MBX-APIKEY", cred[0]});
+        }
+        if (name.startsWith("utr:")) {
+            // fills of one futures contract, for the Excel export: utr:<CONTRACT>:<from ms>:<to ms>, at most 7 days per call (Binance limit)
+            String[] p = name.split(":");
+            if (p.length != 4 || !p[1].matches("[A-Z0-9]{2,24}") || !p[2].matches("\\d{10,13}") || !p[3].matches("\\d{10,13}")) return BAD;
+            long a = Long.parseLong(p[2]), b = Long.parseLong(p[3]);
+            if (b < a || b - a >= 7L * 86400000L) return BAD;
+            String q = "symbol=" + p[1] + "&startTime=" + a + "&endTime=" + b + "&limit=1000&recvWindow=10000&timestamp=" + System.currentTimeMillis();
+            return http("GET", "https://fapi.binance.com/fapi/v1/userTrades?" + q + "&signature=" + hex(hmac(cred[1], q)),
+                    new String[]{"X-MBX-APIKEY", cred[0]});
         }
         if (name.startsWith("inc:")) {
             // realised results of the futures account: inc:<type>:<days>, or inc:<type>:<from ms>:<to ms> for one page of a longer

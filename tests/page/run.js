@@ -67,6 +67,7 @@ const BRIDGE = `(() => {
         if (name === "fut") return reply(id, 200, M.fut);
         if (name === "perm") return reply(id, 200, M.perm || { enableReading: true, ipRestrict: false });
         if (name.startsWith("inc:")) { const p = name.split(":"), a = +p[2], b = +p[3]; return reply(id, 200, (M.inc[p[1]] || []).filter(r => r.time >= a && r.time <= b).slice(0, 1000)); }
+        if (name.startsWith("utr:")) { const p = name.split(":"), a = +p[2], b = +p[3]; if (b - a >= 7 * 864e5) return reply(id, 400, { msg: "fenêtre" }); M.utrCalls = (M.utrCalls || 0) + 1; return reply(id, 200, (M.fills || []).filter(f => f.symbol === p[1] && f.time >= a && f.time <= b).slice(0, 1000)); }
         if (name === "spot") return reply(id, 200, { balances: [] });
         return reply(id, 200, []);
       }
@@ -77,6 +78,7 @@ const BRIDGE = `(() => {
     protect(title, text, tag, tab) { M.notes.push({ ch: "protect", title, text, tag, tab }); },
     startWatch() {}, stopWatch() {}, canNotify() { return true; }, batteryFree() { return true; }, askBattery() {}, test() {}, lastCheck() { return ""; },
     done(msg) { M.done = msg; },
+    saveBytes(name, b64) { M.xlsx = { name, b64 }; setTimeout(() => window.onExport && window.onExport(true, name), 5); },
     saveFile(name, data) { M.saved = data; setTimeout(() => window.onBackup && window.onBackup(true, ""), 5); },
     openFile() { setTimeout(() => window.onRestore && window.onRestore(true, M.restore || ""), 5); }
   };
@@ -261,6 +263,45 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const v = await page.textContent("#one-out .verdict");
     ok(/prêt selon les règles|à surveiller|refusé|données incomplètes|Pas de trade/i.test(v), "Analyser SOL : « " + v.trim() + " »");
     ok(tabs.length === 17, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P11", "Export Excel de l'historique Binance Futures", async ok => {
+    /* 24 trades on 3 contracts over 30 days, one with a second entry, the last one still open; income rows built from the same fills */
+    const now = Date.now(), fills = [], inc = { REALIZED_PNL: [], COMMISSION: [], FUNDING_FEE: [] }, syms = ["SOLUSDT", "ETHUSDT", "BTCUSDT"], base = { SOLUSDT: 150, ETHUSDT: 3000, BTCUSDT: 60000 };
+    let id = 1, want = 0, nWant = 0;
+    const fill = (sym, t, side, qty, price, rp) => { const fee = qty * price * 0.0005, f = { symbol: sym, id: id++, orderId: id * 7, time: t, side, qty: String(qty), price: String(price), quoteQty: String(qty * price), realizedPnl: String(rp), commission: String(fee), commissionAsset: "USDT", positionSide: "BOTH", maker: false };
+      fills.push(f); inc.COMMISSION.push({ symbol: sym, time: t, income: String(-fee), asset: "USDT", tradeId: String(f.id) }); if (rp) inc.REALIZED_PNL.push({ symbol: sym, time: t, income: String(rp), asset: "USDT", tradeId: String(f.id) }); return -fee; };
+    for (let i = 0; i < 24; i++) {
+      const sym = syms[i % 3], dir = i % 2 ? -1 : 1, t0 = now - (29 - i) * 29 * 36e5, e = base[sym] * (1 + i / 100), q = +(200 / e).toFixed(4), x = e * (1 + dir * (i % 4 === 0 ? -0.01 : 0.02));
+      let net = fill(sym, t0, dir > 0 ? "BUY" : "SELL", q, e, 0);
+      if (i === 5) net += fill(sym, t0 + 36e5, dir > 0 ? "BUY" : "SELL", q, e, 0);
+      const qq = i === 5 ? 2 * q : q;
+      if (i === 23) continue;
+      const rp = (x - e) * dir * qq; net += fill(sym, t0 + 5 * 36e5, dir > 0 ? "SELL" : "BUY", qq, x, rp) + rp;
+      inc.FUNDING_FEE.push({ symbol: sym, time: t0 + 2 * 36e5, income: "-0.05", asset: "USDT" }); net -= 0.05; if (t0 + 5 * 36e5 >= now - 30 * 864e5 + 6e4) { want += net; nWant++; }
+    }
+    const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, fills, inc }, suffix: "#res" });
+    await page.click('.tabs button[data-v="res"]').catch(() => {});
+    await page.waitForSelector('[data-xp="30"]', { timeout: 20000 });
+    ok(true, "bouton « Exporter en Excel · 30 jours » dans Résultats");
+    await page.click('[data-xp="30"]');
+    await page.waitForFunction(() => window.__M.xlsx, null, { timeout: 30000 }).catch(async e => { throw new Error("statut : " + await page.evaluate(() => (document.querySelector(".xp-st") || {}).textContent + " / utr " + window.__M.utrCalls + " / " + typeof Android.saveBytes) + " / " + errors.slice(0, 2).join(" | ")); });
+    await page.waitForFunction(() => /Fichier/.test(document.querySelector(".xp-st").textContent), null, { timeout: 5000 }).catch(() => {});
+    const x = await page.evaluate(() => ({ f: window.__M.xlsx, st: document.querySelector(".xp-st").textContent, calls: window.__M.utrCalls }));
+    const buf = Buffer.from(x.f.b64, "base64");
+    ok(/^radar-trades-historique-futures-\d{4}-\d\d-\d\d-30j\.xlsx$/.test(x.f.name), "fichier " + x.f.name + " (" + (buf.length / 1024).toFixed(1) + " Ko)");
+    ok(buf.readUInt32LE(0) === 0x04034b50, "fichier zip / xlsx");
+    ok(/Fichier enregistré/.test(x.st), "message : " + x.st);
+    ok(x.calls > 0 && x.calls <= 15, x.calls + " lectures d'exécutions (fenêtres de 7 jours utiles seulement)");
+    const xml = buf.toString("utf8");
+    ok(/Entrée avant|Clôturé/.test(xml) && /En cours/.test(xml), "statuts Clôturé et En cours présents");
+    const net = +((xml.match(/Résultat net \(USDT\)<\/t><\/is><\/c><c r="B9" s="4"><f>[^<]*<\/f><v>([^<]+)</) || [])[1]);
+    const cnt = +((xml.match(/<c r="B6" s="6"><f>[^<]*<\/f><v>([^<]+)</) || [])[1]);
+    ok(cnt === nWant && Math.abs(net - want) < 0.01, cnt + " trades clôturés, net " + net.toFixed(2) + " (attendu " + nWant + " et " + want.toFixed(2) + ")");
+    if (process.env.XLSX_OUT) { fs.writeFileSync(process.env.XLSX_OUT, buf); fs.writeFileSync(process.env.XLSX_OUT + ".want", String(want)); }
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p11-export.png"), fullPage: false });
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });

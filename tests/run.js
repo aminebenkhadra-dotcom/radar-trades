@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -219,6 +219,49 @@ test("T15", "Moteur complet sur des bougies synthétiques", () => {
   let guard = 0; while (!E.btStep(S, 2000) && guard++ < 100) { }
   ok(S.done && S.evals > 0, "rejeu terminé : " + S.evals + " évaluations, " + S.trades.length + " trades");
   ok(S.trades.every(x => isFinite(x.r)), "résultats numériques");
+});
+
+/* ---------- 7. Excel export of the trade history ---------- */
+const FL = (id, t, side, qty, price, rp, fee, extra) => Object.assign({ symbol: "SOLUSDT", id, orderId: id, time: t, side, qty: String(qty), price: String(price), quoteQty: String(qty * price), realizedPnl: String(rp), commission: String(fee), commissionAsset: "USDT", positionSide: "BOTH", maker: false }, extra || {});
+test("T16", "Export : trades reconstruits à partir des exécutions", () => {
+  const H = 36e5, t = Date.UTC(2026, 9, 5, 8);
+  const fills = [
+    FL(1, t, "BUY", 2, 100, 0, 0.1), FL(2, t + H, "BUY", 2, 104, 0, 0.1),           // long 4 @ 102 (renfort)
+    FL(3, t + 2 * H, "SELL", 1, 110, 8, 0.05), FL(4, t + 3 * H, "SELL", 3, 106, 12, 0.15), // sortie partielle puis totale
+    FL(5, t + 4 * H, "SELL", 1, 100, 0, 0.05), FL(6, t + 5 * H, "BUY", 3, 98, 2, 0.15), // short 1, puis achat de 3 : clôture et long 2
+    FL(7, t - 9 * H, "SELL", 5, 50, -3, 0.2, { symbol: "ADAUSDT" }),                     // ADA : position ouverte avant la période lue
+    FL(1, t, "BUY", 2, 100, 0, 0.1)];                                                    // doublon ignoré
+  const fund = [{ symbol: "SOLUSDT", time: t + 1.5 * H, income: "-0.4", asset: "USDT" }];
+  const R = E.fillTrades(fills, fund, null), T = R.trades;
+  ok(T.length === 4, "4 trades (" + T.length + ")");
+  const a = T.find(x => x.sym === "SOLUSDT" && x.dir > 0 && x.t1 === t + 3 * H);
+  ok(a && near(a.qty, 4) && near(a.entry, 102) && near(a.exit, 107), "long : 4 à 102 en moyenne, sortie moyenne 107");
+  ok(a && near(a.pnl, 20) && near(a.fee, -0.4) && near(a.fund, -0.4) && near(a.net, 19.2), "net = 20 − 0,40 frais − 0,40 funding = 19,20");
+  ok(a && a.n === 4 && near(a.h, 3), "4 exécutions, 3 heures");
+  const s = T.find(x => x.dir < 0 && x.sym === "SOLUSDT");
+  ok(s && near(s.pnl, 2) && near(s.fee, -0.1) && s.t1 === t + 5 * H, "short clôturé par l'achat, frais au prorata (0,05 + 1/3 de 0,15)");
+  const r = T.find(x => x.open);
+  ok(r && r.dir > 0 && near(r.qty, 2) && near(r.entry, 98) && r.t1 === null && near(r.fee, -0.1), "reste de l'achat : long 2 en cours");
+  const p = T.find(x => x.sym === "ADAUSDT");
+  ok(p && p.partial && p.entry === null && p.dir > 0 && near(p.exit, 50) && near(p.net, -3.2), "ADA : entrée avant la période, sortie gardée");
+  ok(T[T.length - 1].open, "positions en cours à la fin");
+});
+test("T17", "Export : fichier Excel valide (zip, CRC, onglets)", () => {
+  const u = E.xlsxBytes([{ name: "Résumé", cols: [{ w: 20 }, { w: 10 }], rows: [[{ v: "Titre", s: "title" }], ["Net", { f: "SUM(Trades!B2:B3)", v: 3, s: "pnl" }]] },
+    { name: "Trades", table: true, cols: [{ h: "Date", f: "date" }, { h: "Net", f: "pnl" }], rows: [[Date.UTC(2026, 0, 1), 1], [Date.UTC(2026, 0, 2), 2]] }]);
+  const dv = new DataView(u.buffer), eo = u.length - 22;
+  ok(dv.getUint32(0, true) === 0x04034b50 && dv.getUint32(eo, true) === 0x06054b50, "signatures zip");
+  const n = dv.getUint16(eo + 10, true); ok(n === 7, "7 fichiers dans le zip (" + n + ")");
+  let o = dv.getUint32(eo + 16, true), names = [], crcOk = true;
+  for (let i = 0; i < n; i++) {
+    const len = dv.getUint16(o + 28, true), at = dv.getUint32(o + 42, true), size = dv.getUint32(o + 20, true), crc = dv.getUint32(o + 16, true);
+    names.push(Buffer.from(u.subarray(o + 46, o + 46 + len)).toString()); const nl = dv.getUint16(at + 26, true);
+    const data = u.subarray(at + 30 + nl, at + 30 + nl + size); if (require("zlib").crc32 ? require("zlib").crc32(data) !== crc : false) crcOk = false; o += 46 + len;
+  }
+  ok(names.includes("xl/workbook.xml") && names.includes("xl/worksheets/sheet2.xml"), "classeur et onglets présents");
+  ok(crcOk, "CRC des fichiers");
+  const wb = Buffer.from(u).toString("latin1");
+  ok(wb.includes("<f>SUM(Trades!B2:B3)</f><v>3</v>") && wb.includes('<autoFilter ref="A1:B3"/>'), "formule avec valeur, filtre sur le tableau");
 });
 
 /* ---------- report ---------- */
