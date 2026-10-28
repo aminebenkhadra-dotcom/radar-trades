@@ -1,0 +1,55 @@
+name: Radar BTC·ETH · APK
+# Separate app (package com.amine.radarbtceth). Checks first, then an unsigned build, then the 2026 signing key of Radar Trades.
+# Published as a release tagged btceth-v<run>, never marked "latest", so the Radar Trades download link does not change.
+on:
+  push:
+    branches: [main]
+    paths: ["btceth/**", "tools/btceth/**", "tools/engine.js", "tests/btceth/**", ".github/workflows/btceth-build.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Page built from the engine, and engine checks
+        run: |
+          set -o pipefail
+          node tools/btceth/build.js --check
+          node tests/btceth/engine.js 2>&1 | tee tests.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build (unsigned)
+        run: gradle :btceth:assembleRelease --no-daemon 2>&1 | tail -20
+      - name: Sign and verify
+        env:
+          RADAR_SIGNING_KEY: ${{ secrets.RADAR_SIGNING_KEY }}
+        run: |
+          set -eo pipefail
+          [ -n "$RADAR_SIGNING_KEY" ] || { echo "::error::Secret RADAR_SIGNING_KEY absent"; exit 1; }
+          umask 077 && mkdir -p "$RUNNER_TEMP/sign" && echo "$RADAR_SIGNING_KEY" | base64 -d > "$RUNNER_TEMP/sign/new.p12"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/zipalign" -p -f 4 btceth/build/outputs/apk/release/btceth-release-unsigned.apk aligned.apk
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/sign/new.p12" --ks-key-alias radar2026 --ks-pass pass:radar-trades-signing --out radar-btc-eth.apk aligned.apk
+          rm -rf "$RUNNER_TEMP/sign"
+          "$BT/apksigner" verify -v --print-certs radar-btc-eth.apk 2>&1 | tee signature.txt
+          "$BT/aapt2" dump badging radar-btc-eth.apk | head -2 | tee -a signature.txt
+          sha256sum radar-btc-eth.apk | tee -a signature.txt
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf 'Radar BTC·ETH, build %s, révision %s.\n\nTests : %s\n\nInstallation : télécharge radar-btc-eth.apk puis ouvre-le. Appli séparée : elle s'"'"'installe à côté de Radar Trades.\n' \
+            "${{ github.run_number }}" "$GITHUB_SHA" "$(tail -1 tests.txt)" > notes.txt
+          gh release create "btceth-v${{ github.run_number }}" radar-btc-eth.apk signature.txt tests.txt \
+            --title "Radar BTC·ETH · build ${{ github.run_number }}" --notes-file notes.txt --latest=false

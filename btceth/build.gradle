@@ -1,0 +1,29 @@
+plugins { id 'com.android.application' }
+
+// Radar BTC·ETH: separate app (own package, installs next to Radar Trades), same signing key as Radar Trades 2026.
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+def appVersion = '1'
+
+android {
+    namespace 'com.amine.radarbtceth'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.amine.radarbtceth'
+        minSdk 26
+        targetSdk 34
+        versionCode runNumber
+        versionName "V${appVersion} (1.0.${runNumber})"
+    }
+    buildTypes {
+        release {
+            // built unsigned: .github/workflows/btceth-build.yml signs it
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+}

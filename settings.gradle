@@ -4,4 +4,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "radar-trades"
-include ":app"
+include ":app", ":btceth"
