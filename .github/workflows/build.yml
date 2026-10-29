@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     # the Radar BTC·ETH app has its own workflow (btceth-build.yml)
-    paths-ignore: ["btceth/**", "tools/btceth/**", "tests/btceth/**", ".github/workflows/btceth-*.yml", "tools/backtest/fetch.js"]
+    paths-ignore: ["btceth/**", "tools/btceth/**", "tests/btceth/**", ".github/workflows/btceth-*.yml", "top50/**", "tools/top50/**", "tests/top50/**", ".github/workflows/top50-*.yml", "tools/backtest/fetch.js"]
   workflow_dispatch:
 permissions:
   contents: write
