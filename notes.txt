@@ -1,0 +1,7 @@
+Radar Trades V42 (1.0.53) (versionCode 53), révision 9d67be302c9b294faa71e52bae587cdc70160671.
+
+Signature : nouvelle clé SHA-256 934df6e6a0a76988c0196a092635bc35ed7acf302b804362ce3804c4e8f306b9, avec preuve de rotation depuis l'ancienne clé SHA-256 fa322b2ced9e40e2b1e0dd484ebba4d411fa7a641c96342a9f3afb05f8b4e5dc (APK Signature Scheme v3, Android 9 et plus).
+Tests automatiques : 17/17 tests réussis · tools/engine.js + tools/core.js · version 42
+
+Installation : télécharge radar-trades.apk puis ouvre-le ; il s'installe par-dessus la version précédente.
+Version compilée et testée automatiquement ; non validée sur un appareil Android réel par l'auteur du code.

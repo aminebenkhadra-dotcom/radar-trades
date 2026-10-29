@@ -1,0 +1,41 @@
+build-tools: /usr/local/lib/android/sdk/build-tools/37.0.0
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v3.2 scheme (APK Signature Scheme v3.2): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+V3.0 Signer: certificate DN: CN=Radar Trades 2026
+V3.0 Signer: certificate SHA-256 digest: 934df6e6a0a76988c0196a092635bc35ed7acf302b804362ce3804c4e8f306b9
+V3.0 Signer: certificate SHA-1 digest: fc8541a33a87700ab0ce48a95aba15e22731592d
+V3.0 Signer: certificate MD5 digest: 8a08fe8bf0237b3501e808f5fc04c472
+V3.0 Signer: key algorithm: EC
+V3.0 Signer: key size (bits): 256
+V3.0 Signer: public key SHA-256 digest: 5cebdd2e7590170ecbb8c65a5da0d5763a592363d04f46d83dbf257fa446cbfe
+V3.0 Signer: public key SHA-1 digest: ff9463d13c05445b6c7e91800af65f546a16f0a1
+V3.0 Signer: public key MD5 digest: b7c67c9b5324e4bbd53c30c77de16d78
+Signer #1 in lineage certificate DN: CN=Radar Trades
+Signer #1 in lineage certificate SHA-256 digest: fa322b2ced9e40e2b1e0dd484ebba4d411fa7a641c96342a9f3afb05f8b4e5dc
+Signer #1 in lineage certificate SHA-1 digest: 83372c1517964730b6575a8cd902ade04e3f1afb
+Signer #1 in lineage certificate MD5 digest: 51ed654d3d2a105dd30a07e8b5f2fdac
+Has installed data capability: true
+Has shared UID capability    : true
+Has permission capability    : true
+Has rollback capability      : false
+Has auth capability          : true
+Signer #2 in lineage certificate DN: CN=Radar Trades 2026
+Signer #2 in lineage certificate SHA-256 digest: 934df6e6a0a76988c0196a092635bc35ed7acf302b804362ce3804c4e8f306b9
+Signer #2 in lineage certificate SHA-1 digest: fc8541a33a87700ab0ce48a95aba15e22731592d
+Signer #2 in lineage certificate MD5 digest: 8a08fe8bf0237b3501e808f5fc04c472
+Has installed data capability: true
+Has shared UID capability    : true
+Has permission capability    : true
+Has rollback capability      : false
+Has auth capability          : true
+package: name='com.amine.radartrades' versionCode='53' versionName='V42 (1.0.53)' platformBuildVersionName='14' platformBuildVersionCode='34' compileSdkVersion='34' compileSdkVersionCodename='14'
+minSdkVersion:'26'
+targetSdkVersion:'34'
+e63b8a6d35c1ae2a74272c1dee7783662f4b229f3eaad0cb1f2cd3711020c7d0  radar-trades.apk

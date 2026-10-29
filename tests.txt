@@ -1,0 +1,112 @@
+PASS T1 · Budget 20 USDT, entrée 100, stop 98, coût 0,12 %
+     ok   taille calculée
+     ok   quantité 9.43 ≤ 20 / 2,12 = 9.4340
+     ok   quantité arrondie au pas inférieur : 9,43
+     ok   perte modélisée 19.9916 ≤ 20
+     ok   la quantité 10 (perte 21,20) a disparu
+     ok   short : perte modélisée 19.9930 ≤ 20, quantité 9.42
+PASS T2 · Plafond de marge 25 % : la quantité est réduite
+     ok   taille limitée par la marge max (marge max)
+     ok   marge 250.00 ≤ 25 % de 1 000
+     ok   quantité ramenée à 25 (au lieu de 32.26)
+     ok   le plan reste exploitable
+     ok   marge déjà toute engagée : entrée bloquée (marge max déjà engagée par les positions ouvertes)
+PASS T3 · Levier : la liquidation reste au-delà du stop
+     ok   stop à 8 % : levier ramené de x10 à x9
+     ok   avertissement affiché
+     ok   marge croisée : levier inchangé, liquidation signalée comme dépendant du solde
+PASS T4 · Plafonds du compte : risque total, perte du jour, position sans stop
+     ok   plafond 6 % = 60 $, 50 $ déjà engagés : budget ramené à 10 $ (10)
+     ok   perte du jour de 61 $ pour une limite de 60 $ : entrée bloquée
+     ok   position sans stop ouverte : entrée bloquée
+     ok   protection non lue : taille marquée incomplète
+     ok   budget 2 $ sur un contrat au pas de 1 : taille trop petite, plan refusé
+PASS T5 · Tick 0,25 · 0,05 · 2,5 en long et en short
+     ok   100,25 reste 100,25 au tick 0,25
+     ok   100,30 devient 100,25
+     ok   décimales lues sur le pas
+     ok   tick 0.25 long  : 100 / 90.5 / 121.25 / 138.25 sur la grille, ordonnés
+     ok   tick 0.25 short : 100 / 109.5 / 78.75 / 62 sur la grille, ordonnés
+     ok   tick 0.05 long  : 100 / 98.1 / 104.25 / 107.65 sur la grille, ordonnés
+     ok   tick 0.05 short : 100 / 101.9 / 95.75 / 92.4 sur la grille, ordonnés
+     ok   tick 2.5 long  : 50000 / 49905 / 50212.5 / 50382.5 sur la grille, ordonnés
+     ok   tick 2.5 short : 50000 / 50095 / 49787.5 / 49620 sur la grille, ordonnés
+     ok   tick 0.0001 long  : 0.1 / 0.0962 / 0.1085 / 0.1153 sur la grille, ordonnés
+     ok   tick 0.0001 short : 0.1 / 0.1038 / 0.0915 / 0.0848 sur la grille, ordonnés
+     ok   tick 1e-7 long  : 0.1 / 0.0999962 / 0.1000085 / 0.1000153 sur la grille, ordonnés
+     ok   tick 1e-7 short : 0.1 / 0.1000038 / 0.0999915 / 0.0999848 sur la grille, ordonnés
+     ok   stop et entrée confondus après arrondi au tick 1 : plan invalide (stop à moins d'un pas de prix de l'entrée, ou du mauvais côté)
+     ok   objectif au-delà du prix maximum du contrat : plan invalide
+     ok   ratio recalculé sur les niveaux arrondis
+PASS T6 · Stop couvrant 10 % de la position
+     ok   couverture 10 %
+     ok   perte au stop sur la partie couverte : -8
+     ok   stop « fermer la position » : 100 %
+     ok   ordre dans le mauvais sens (achat sur un long) : ne protège pas
+     ok   mode couverture : un stop du côté SHORT ne protège pas le LONG
+     ok   stop non « reduce-only » plus gros que la position : couvre, mais signalé
+     ok   risque ouvert : partiel = non borné, illisible = inconnu
+PASS T7 · Statuts de base
+     ok   tous les contrôles passent : Prêt selon les règles
+     ok   tendance cassée : Refusé
+     ok   prix pas encore sur la zone : À surveiller
+     ok   libellés des quatre états
+     ok   plus de pourcentage de préparation (95 %, 92 %…)
+PASS T8 · Spread 1 % et obstacle critique avant TP
+     ok   spread 1 % + obstacle : refused (aucun Prêt)
+     ok   spread 0,30 % : À surveiller (watch)
+     ok   niveau 4H avant 1R : À surveiller (watch)
+     ok   mur avant 1R : À surveiller (watch)
+     ok   mur après 1R : affiché mais non bloquant (ready)
+     ok   spread 0,12 % sous le seuil de 0,15 % : pas de blocage arbitraire
+PASS T9 · Données indispensables absentes
+     ok   contexte Bitcoin absent : Données incomplètes (incomplete)
+     ok   contrôle Marché non validé par défaut
+     ok   aucun point accordé sans la donnée (score 82 contre 89)
+     ok   carnet non lu sur la zone : Données incomplètes (incomplete)
+     ok   bougies 15 min non lues sur la zone : Données incomplètes (incomplete)
+     ok   squeeze non mesuré : non bloquant, aucun point gratuit
+PASS T10 · Statut final : plan arrondi, taille, contrat
+     ok   tout est bon : Prêt
+     ok   plan invalide après arrondi : Refusé
+     ok   règles du contrat non lues : Données incomplètes
+     ok   perte du jour atteinte : Refusé
+     ok   taille sous le minimum du contrat : Refusé
+     ok   protection d'une position non lue : Données incomplètes
+PASS T11 · PnL brut +1, frais −2 : net −1, pas un gagnant
+     ok   sortie nette −1 (-1)
+     ok   aucun gagnant net compté
+     ok   totaux : brut +1, frais −2, net −1
+PASS T12 · Frais en BNB convertis, conversion manquante signalée
+     ok   0,002 BNB à 600 $ = 1,20 $ de frais : net 3,80 (3.8)
+     ok   sans cours du BNB : résultat marqué incomplet
+     ok   frais d'ouverture et funding rattachés à la sortie suivante (5 / 1.5)
+PASS T13 · Historique paginé au-delà de 1 000 lignes
+     ok   4 321 lignes lues sur 15 appels, sans doublon ni trou
+PASS T14 · Suivi sans argent : milieu de bougie, gap, stop et TP dans la même bougie
+     ok   bougie ouverte avant l'entrée : ignorée (aucun prix antérieur)
+     ok   gap sous le stop : sortie à l'ouverture 96,5 (96.5)
+     ok   résultat -1.810 R, frais compris
+     ok   stop et TP dans la même bougie : le stop d'abord
+     ok   bougie pas encore close : pas de sortie
+     ok   bougie close au-dessus du TP : sortie au TP
+PASS T15 · Moteur complet sur des bougies synthétiques
+     ok   rejeu terminé : 576 évaluations, 0 trades
+     ok   résultats numériques
+PASS T16 · Export : trades reconstruits à partir des exécutions
+     ok   4 trades (4)
+     ok   long : 4 à 102 en moyenne, sortie moyenne 107
+     ok   net = 20 − 0,40 frais − 0,40 funding = 19,20
+     ok   4 exécutions, 3 heures
+     ok   short clôturé par l'achat, frais au prorata (0,05 + 1/3 de 0,15)
+     ok   reste de l'achat : long 2 en cours
+     ok   ADA : entrée avant la période, sortie gardée
+     ok   positions en cours à la fin
+PASS T17 · Export : fichier Excel valide (zip, CRC, onglets)
+     ok   signatures zip
+     ok   7 fichiers dans le zip (7)
+     ok   classeur et onglets présents
+     ok   CRC des fichiers
+     ok   formule avec valeur, filtre sur le tableau
+
+17/17 tests réussis · tools/engine.js + tools/core.js · version 42
