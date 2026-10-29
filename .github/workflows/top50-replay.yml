@@ -1,0 +1,47 @@
+name: Radar Top 50 · rejeu
+# Replays the configurations on the branch top50-data in 6 shards x 4 processes, merges them and publishes to the branch top50-replay.
+on:
+  push:
+    branches: [top50-replay-run]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  shard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        part: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: History
+        run: git fetch -q --depth 1 origin top50-data && mkdir data && git --work-tree=data checkout FETCH_HEAD -- . && ls data | wc -l
+      - name: Replay
+        run: |
+          mkdir -p res
+          for p in 1 2 3 4; do n=$(( ${{ matrix.part }} * 4 + p )); node tools/top50/replay.js data res/shard-$n.json $n/24 & done; wait
+          ls -la res
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.part }}
+          path: res/
+  merge:
+    needs: shard
+    runs-on: ubuntu-latest
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: parts
+          merge-multiple: true
+      - name: Merge and publish
+        run: |
+          mkdir out && node tools/top50/merge.js parts out/replay-v1.json
+          cd out && git init -q -b top50-replay && git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Top 50 replay" && git push -q -f "$REMOTE" top50-replay
