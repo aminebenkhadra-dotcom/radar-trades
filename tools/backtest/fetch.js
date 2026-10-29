@@ -6,7 +6,8 @@ const LIST = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimi
 const what = process.argv[2] || "klines", OUT = process.argv[3] || "out";
 const START = process.env.START || "2025-10";   // first month of the test window (env START overrides)
 const HIST = 24;           // months of daily candles kept before the window
-const TOP = 60;            // universe size, ranked by volume in the START month
+const TOP = +process.env.TOP || 60;   // universe size, ranked by volume in the RANK month (env RANK, default START)
+const RANK = process.env.RANK || START;
 const EXTRA = ["PIXELUSDT"];
 const FALLBACK = ("BTC ETH BNB SOL XRP DOGE ADA TRX LINK AVAX SUI LTC DOT NEAR APT ARB OP INJ TIA SEI WIF 1000PEPE 1000SHIB FET UNI AAVE FIL ATOM ETC BCH " +
   "HBAR XLM TON ENA JUP WLD ORDI HYPE TAO ONDO PENDLE CRV LDO RUNE GALA SAND 1000BONK 1000FLOKI ALGO VET ICP STX IMX GRT ZEC KAS POL RENDER JTO PYTH " +
@@ -79,13 +80,15 @@ async function universe() {
   const listed = syms.length;
   if (syms.length < 50) syms = FALLBACK.concat(EXTRA);
   syms = [...new Set(syms)].filter(s => /^[A-Z0-9]+USDT$/.test(s) && !/^(USDC|FDUSD|TUSD|BUSD|USDP|DAI|EUR|USD1|USDE)/.test(s));
+  const EXCL = (process.env.EXCLUDE || "").split(",").filter(Boolean);   // env EXCLUDE: bases left out (gold, tokenised stocks)
+  syms = syms.filter(s => !EXCL.includes(s.replace(/USDT$/, "")));
   const vol = await pool(syms, 24, async s => {
-    const b = await grab(`${BASE}monthly/klines/${s}/1d/${s}-1d-${START}.zip`); if (!b) return 0;
+    const b = await grab(`${BASE}monthly/klines/${s}/1d/${s}-1d-${RANK}.zip`); if (!b) return 0;
     const r = rows(unzip(b)); return r.length < 25 ? 0 : r.reduce((a, x) => a + +x[7], 0) / r.length;
   });
   const ranked = syms.map((s, i) => ({ s, v: vol[i] })).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const top = ranked.slice(0, TOP).map(x => x.s);
-  for (const e of EXTRA) if (!top.includes(e) && ranked.find(x => x.s === e)) top.push(e);
+  if (!process.env.TOP) for (const e of EXTRA) if (!top.includes(e) && ranked.find(x => x.s === e)) top.push(e);
   return { listed, candidates: syms.length, withData: ranked.length, top, vol: Object.fromEntries(ranked.slice(0, 150).map(x => [x.s, Math.round(x.v)])) };
 }
 (async () => {
