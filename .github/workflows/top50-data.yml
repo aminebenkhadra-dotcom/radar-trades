@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: "20"
       - name: Fetch candles
-        env: { START: "2024-09", RANK: "2026-09", TOP: "50", COINS_ONLY: "1", EXCLUDE: "XAU,XAG,PAXG,XAUT" }
+        env: { START: "2024-09", RANK: "2026-09", TOP: "50", EXCLUDE: "SNDK,CL,SOXL,SPCX,SKHYNIX,BZ,MU,KORU,SKHY,SNXX,CRCL,SOXS,INTC,SAMSUNG,DRAM,EWY,MRVL,MUU,AMD,NBIS,LITE,DELL,ZHIPU,ORCL,AVGO,TQQQ,NATGAS,AAOI,BMNR,MINIMAX,CHIP,MVLL,CBRS,AXTI,BE,XAU,XAG,PAXG,XAUT,TSLA,NVDA,MSTR,COIN,HOOD,AAPL,AMZN,GOOGL,META,MSFT,SPY,QQQ" }
         run: node tools/backtest/fetch.js klines data 2>&1 | tail -60
       - name: Publish
         run: |
