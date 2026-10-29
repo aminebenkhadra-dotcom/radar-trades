@@ -1,5 +1,5 @@
 name: Radar Top 50 · historique
-# Downloads the 50 USDT futures contracts with the most volume in September 2026 (stablecoins, gold and tokenised stocks left out),
+# Downloads the 50 USDT futures contracts with the most volume in September 2026 (crypto only: no stablecoin, gold, commodity or tokenised stock),
 # 15-minute candles from September 2024 and the 24 months of daily candles before, and publishes them to the branch top50-data.
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: "20"
       - name: Fetch candles
-        env: { START: "2024-09", RANK: "2026-09", TOP: "50", EXCLUDE: "XAU,XAG,PAXG,XAUT,TSLA,NVDA,MSTR,COIN,HOOD,AAPL,AMZN,GOOGL,META,MSFT,SPY,QQQ" }
+        env: { START: "2024-09", RANK: "2026-09", TOP: "50", COINS_ONLY: "1", EXCLUDE: "XAU,XAG,PAXG,XAUT" }
         run: node tools/backtest/fetch.js klines data 2>&1 | tail -60
       - name: Publish
         run: |

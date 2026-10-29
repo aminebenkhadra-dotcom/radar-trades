@@ -82,6 +82,11 @@ async function universe() {
   syms = [...new Set(syms)].filter(s => /^[A-Z0-9]+USDT$/.test(s) && !/^(USDC|FDUSD|TUSD|BUSD|USDP|DAI|EUR|USD1|USDE)/.test(s));
   const EXCL = (process.env.EXCLUDE || "").split(",").filter(Boolean);   // env EXCLUDE: bases left out (gold, tokenised stocks)
   syms = syms.filter(s => !EXCL.includes(s.replace(/USDT$/, "")));
+  if (process.env.COINS_ONLY) {       // env COINS_ONLY: keep the contracts Binance lists today as crypto (underlyingType COIN), no stocks or commodities
+    try { const info = await (await fetch("https://fapi.binance.com/fapi/v1/exchangeInfo")).json();
+      const coin = new Set(info.symbols.filter(x => x.underlyingType === "COIN" && x.contractType === "PERPETUAL").map(x => x.symbol));
+      console.log("exchangeInfo:", coin.size, "crypto perpetuals"); syms = syms.filter(s => coin.has(s));
+    } catch (e) { console.log("exchangeInfo failed", e.message); process.exit(1); } }
   const vol = await pool(syms, 24, async s => {
     const b = await grab(`${BASE}monthly/klines/${s}/1d/${s}-1d-${RANK}.zip`); if (!b) return 0;
     const r = rows(unzip(b)); return r.length < 25 ? 0 : r.reduce((a, x) => a + +x[7], 0) / r.length;
