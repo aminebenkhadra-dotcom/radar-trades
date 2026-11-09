@@ -121,6 +121,22 @@ tendance, pas une garantie.
 0,01 R. Elles changent la part de trades positifs : 34 % avec stop et TP fixes, environ 40 % avec break-even ou stop suiveur,
 50 % en encaissant la moitié à +1R. L'onglet Mes trades les propose comme options, avec la taille, les frais et le funding.
 
+## Fiabilité d'un trade actif (Mes trades)
+
+Chaque trade actif porte une étiquette « Fiabilité x % · Attendre / Sortir ». Le moteur lit l'état du trade (`tradeState` :
+tendances 4H et 1J, volume et flux, setup inverse, avancement, distance au stop, âge, élan), le même état a été relevé toutes
+les 4 heures sur chaque trade du test de deux ans (26 745 relevés, `state.yml`, `tools/backtest/state42.js`,
+`results/state-v42.json`). Le % est la part des trades dans le même état qui ont ensuite atteint le TP1. « Sortir » quand le
+score est à 0 ou moins, ou que la vérification du trade dit « sortie à envisager » : dans ces états, rester a coûté 0,07 à
+0,10 R en moyenne par rapport à une sortie immédiate, les deux années. Sans stop, pas de fiabilité.
+
+## Après sortie
+
+Un trade clôturé dans Mes trades, ou une position Binance qui se ferme, arrive dans l'onglet « Après sortie » : l'appli continue
+de le simuler avec son stop et son objectif (bougies Binance depuis la sortie, stop avant objectif dans une même bougie) jusqu'à
+ce que l'utilisateur le supprime. Verdict : bonne décision, sortie trop tôt ou égalité. Liste à part (`radar-after`) : rien n'est
+lu par Mes trades, Résultats ou l'export Excel. Pour Binance, le prix de sortie exact vient des exécutions (`userTrades`).
+
 ## Configuration du moment (onglet Analyser)
 
 Pour chaque crypto analysée : le type de setup (sens, et zone : order block + niveau 4H, order block seul, ancien niveau

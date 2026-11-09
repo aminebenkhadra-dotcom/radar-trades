@@ -259,6 +259,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .btcv{width:100%;height:170px;display:block;background:var(--sunk);border-radius:10px;margin-top:6px}
 .verdict.neg{color:var(--bad)}
 .tr .bar{height:6px}
+.fi{margin-left:auto;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}.fi:empty{display:none}.fi b{font-weight:700}.fi.stay{background:var(--good-soft);color:var(--good)}.fi.out{background:var(--bad-soft);color:var(--bad)}.lv .fi:not(:empty)+.ldot{margin-left:8px}
+.afv{margin-left:auto;font-weight:600;font-size:13px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--ink)}.afv small{font-weight:400;color:var(--muted)}.af.good .afv{background:var(--good-soft);color:var(--good)}.af.early .afv{background:var(--bad-soft);color:var(--bad)}
 .cfgn{font-size:17px;font-weight:600;color:var(--ink)}.cfgr{display:flex;align-items:center;gap:12px}.cfgr b{flex:none;white-space:nowrap;font-size:30px;font-family:var(--mono);color:var(--ink)}.cfgr b.pos{color:var(--good)}.cfgr b.neg{color:var(--bad)}.cfgr span{color:var(--muted);font-size:13px}
 .funnel.plain.two div:last-child{border-color:transparent}
 .mline{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px}
@@ -426,6 +428,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button type="button" role="tab" data-v="one" aria-selected="false">Analyser</button>
     <button type="button" role="tab" data-v="fund" aria-selected="false">Fondamental</button>
     <button type="button" role="tab" data-v="trades" aria-selected="false">Mes trades<b id="tcount"></b></button>
+    <button type="button" role="tab" data-v="aft" aria-selected="false">Après sortie</button>
     <button type="button" role="tab" data-v="news" aria-selected="false">Actus</button>
     <button type="button" role="tab" data-v="res" aria-selected="false">Résultats</button>
     <button type="button" role="tab" data-v="pf" aria-selected="false">Portefeuille</button>
@@ -454,6 +457,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div id="bt-list"></div>
   </section>
   <section class="view" id="view-trades" hidden></section>
+  <section class="view" id="view-aft" hidden></section>
   <section class="view" id="view-mkt" hidden></section>
   <section class="view" id="view-cyc" hidden></section>
   <section class="view" id="view-tmp" hidden></section>
@@ -1583,6 +1587,29 @@ function xlsxBytes(sheets){
     +names.map(function(s,i){return'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>'}).join("")
     +'<Relationship Id="rId'+(names.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
   return xlZip([["[Content_Types].xml",ct],["_rels/.rels",rels],["xl/workbook.xml",wb],["xl/_rels/workbook.xml.rels",wrels],["xl/styles.xml",styles]].concat(files))}
+
+/* ---------- after the exit: what the trade would have done had it been kept ----------
+   a: {dir,exit,sl,tp,tc,at,hi,lo}. Candles {t,o,h,l,c} opening at or after the exit (or after a.at, when continued) are walked in order:
+   the stop first, then the target, as everywhere else. A stop or target the exit price had already reached is ignored (the trade
+   left through it): the walk then only follows the price. Returns {out:null|{why:"sl"|"tp",t,px}, hi, lo, last, at}. */
+function afterLevels(a){var d=a.dir,e=a.exit,tol=e*0.0015;
+  return{sl:a.sl>0&&(e-a.sl)*d>tol?a.sl:0,tp:a.tp>0&&(a.tp-e)*d>tol?a.tp:0,
+    byStop:a.sl>0&&(e-a.sl)*d<=tol,byTp:a.tp>0&&(a.tp-e)*d<=tol}}
+function afterWalk(a,candles,now){
+  var d=a.dir,L=afterLevels(a),from=a.at||a.tc,hi=a.hi>0?a.hi:a.exit,lo=a.lo>0?a.lo:a.exit,last=a.last>0?a.last:a.exit,at=from,out=null;
+  for(var i=0;i<(candles||[]).length;i++){var c=candles[i];
+    if(c.t<from||c.t>now)continue;
+    if(L.sl&&(d>0?c.l<=L.sl:c.h>=L.sl)){var gap=d>0?c.o<=L.sl:c.o>=L.sl;out={why:"sl",t:c.t,px:gap?c.o:L.sl};if(d>0)lo=Math.min(lo,out.px);else hi=Math.max(hi,out.px);last=out.px;at=c.t;break}
+    if(L.tp&&(d>0?c.h>=L.tp:c.l<=L.tp)){out={why:"tp",t:c.t,px:L.tp};if(d>0)hi=Math.max(hi,L.tp);else lo=Math.min(lo,L.tp);last=L.tp;at=c.t;break}
+    if(c.h>hi)hi=c.h;if(c.l<lo)lo=c.l;last=c.c;at=c.t}
+  return{out:out,hi:hi,lo:lo,last:last,at:at}}
+/* verdict of an exit: gain is what staying would have added per unit (price reached by the kept trade minus the exit price, in the
+   trade's direction); flat when it is under a tenth of the risk unit (or 0.15 % of the price without one). */
+function afterVerdict(a){
+  var d=a.dir,L=afterLevels(a),p=a.out?a.out.px:a.last>0?a.last:a.exit,gain=(p-a.exit)*d,unit=a.r0>0?0.1*a.r0:a.exit*0.0015;
+  var v=a.out?(a.out.why==="sl"?"good":"early"):Math.abs(gain)<unit?"flat":gain>0?"early":"good";
+  return{v:v,gain:gain,final:!!a.out,byStop:L.byStop,byTp:L.byTp,px:p,
+    best:(d>0?(a.hi||a.exit)-a.exit:a.exit-(a.lo||a.exit))/a.exit*100,worst:(d>0?(a.lo||a.exit)-a.exit:a.exit-(a.hi||a.exit))/a.exit*100}}
 /*</CORE>*/
 
 /* ---------- live data: Binance public market data, relayed by the app ---------- */
@@ -2041,15 +2068,16 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1),lev:z?z.lev:+S.lev,st:r.st})}
 function setView(v){
   var isScan=v==="all"||v==="10"||v==="50",isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"||v==="cap"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"||v==="cap"||v==="aft"?v:"trades";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-cap").hidden=view!=="cap";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-aft").hidden=view!=="aft";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-cap").hidden=view!=="cap";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
     if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
   else if(view==="news"){statusLine();loadNews(false)}
   else if(view==="res"){statusLine();loadRes()}
+  else if(view==="aft"){statusLine();renderAft();loadAft()}
   else if(view==="tmp"){statusLine();renderTmp();loadTmp(false)}
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
@@ -2070,9 +2098,9 @@ function renderTrades(){
   if(!op.length)h+=on?'<div class="sub">Aucun trade suivi à la main. Tes positions Binance sont suivies automatiquement au-dessus.</div>'
     :'<div class="empty">Aucun trade suivi. Dans l\'onglet Scanner, ouvre un setup et appuie sur « J\'ai pris ce trade ».</div>';
   h+=op.map(function(t){var id=t.id,twin=LV.list&&LV.list.some(function(p){return p.full===t.full&&p.dir===t.dir});
-    return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="sub" style="margin-left:auto">depuis le '+when(t.t)+"</span></div>"
+    return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="fi" id="fi-'+id+'"></span></div><div class="sub">depuis le '+when(t.t)+"</div>"
       +(twin?'<div class="sub">Cette position existe aussi sur ton compte Binance : elle est suivie en direct plus haut, avec tes vrais stop et objectif.</div>':"")
-      +'<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
+      +'<div id="hl-'+id+'"></div><div class="sub" id="fx-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
       +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(t.sl)+'</span><span id="px-'+id+'">–</span><span>TP '+px(t.tp)+"</span></div></div>"
       +'<div class="funnel plain two" id="od-'+id+'"></div><details class="set opd" id="op-'+id+'"></details>'+vpBox(id)
@@ -2141,7 +2169,8 @@ $("view-trades").addEventListener("click",function(e){
   if(b.dataset.del){if(!armed["d"+id]){armed["d"+id]=1;b.textContent="Confirmer la suppression";return}T=T.filter(function(x){return x.id!==id});saveTrades();renderTrades();return}
   var p=lastPx[t.full];if(p===undefined){b.textContent="Prix indisponible, réessaie";return}
   if(!armed["c"+id]){armed["c"+id]=1;b.textContent="Confirmer la clôture à "+px(p);return}
-  t.closed=true;t.exit=p;t.net=pnl(t,p).net;t.tc=Date.now();saveTrades();renderTrades()});
+  t.closed=true;t.exit=p;t.net=pnl(t,p).net;t.tc=Date.now();saveTrades();
+  aftAdd({sym:t.sym,full:t.full,dir:t.dir,entry:t.entry,qty:t.qty,sl:t.sl,tp:t.tp,r0:t.r0||Math.abs(t.entry-t.sl),t0:t.t,tc:t.tc,exit:p,net:t.net,src:"main"});renderTrades()});
 $("view-trades").addEventListener("change",function(e){
   var el=e.target,t=el.dataset&&el.dataset.id&&trade(el.dataset.id);if(!t)return;
   var v=num(el.value);if(!(v>0)){el.value=t[el.dataset.f];return}
@@ -2226,7 +2255,8 @@ function checkTrade(t){
       tp=after.length?{act:"up",px:after[0].p-dir*0.1*a4,why:"Prix proche de l'objectif, tendance 1J et 4H intactes, prochain niveau vers "+px(after[0].p)}
         :{act:"up",px:t.tp+dir*Math.max(r0,a4),why:"Prix proche de l'objectif, tendance 1J et 4H intactes, aucun niveau au-delà : objectif repoussé d'un cran"};
     else if(before.length)tp={act:"keep",why:"Une "+lvl+" vers "+px(before[0].p)+" sur le chemin, mais la tendance reste solide"};
-    return{v:v,sc:sc,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
+    var fi=null;try{fi=tradeState(t.sym,d1,h4,h1,m15,t,Date.now(),opts())}catch(e){}
+    return{v:v,sc:sc,fi:fi,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
 function paintTP(t){
   var el=$("tp-"+t.id);if(!el)return;var h=health[t.id],a=h&&!h.err&&h.tp;
   if(!a||a.act==="hit"||a.act==="none"){el.className="be";el.innerHTML="";return}
@@ -2237,8 +2267,28 @@ function paintTP(t){
   el.className="be tp-"+(a.act==="set"?"down":a.act);
   el.innerHTML='<span class="arw">'+(a.act==="up"?"▲":a.act==="down"?"▼":a.act==="set"?"◎":"●")+'</span><span class="betxt"><b>'+head+"</b><span>"+txt+"</span></span>"
     +(a.act==="keep"||t.live?"":'<button class="ghost" type="button" data-tpok="'+t.id+'">✓ C\'est fait</button>')}
+/* ---------- reliability label of an open trade ----------
+   STATECAL: every 4 hours of each trade of the two-year replay of version 42, the engine's tradeState was recorded with the end of
+   the trade. Per state [samples, % that reached TP1, average result of holding minus closing right then, in R]. cell = score band
+   (a: -3 or less, b: -2 to 0, c: 1 to 3, d: 4 or more) + progress band (0: under -0.5 R, 1: to 0, 2: to 0.5, 3: to 1, 4: beyond). */
+var STATECAL={"trades":4357,"samples":26745,"band":{"H":[3,0.0,-0.313],"a":[456,5.0,-0.104],"all":[26745,38.3,-0.023],"b":[1083,11.7,-0.074],"c":[7621,25.9,-0.072],"d":[17582,46.2,0.003],"r0":[1929,10.3,0.013],"r1":[7002,23.3,-0.005],"r2":[8500,36.2,-0.022],"r3":[5696,50.4,-0.036],"r4":[3618,68.3,-0.061]},"cell":{"H0":[3,0.0,-0.313],"a0":[193,4.1,-0.045],"a1":[211,5.2,-0.182],"a2":[51,7.8,0.003],"a3":[1,0.0,-0.18],"b0":[331,7.9,0.003],"b1":[566,15.7,-0.054],"b2":[172,6.4,-0.282],"b3":[13,7.7,-0.061],"b4":[1,0.0,-0.842],"c0":[1006,11.3,0.024],"c1":[2754,22.2,-0.023],"c2":[3039,29.9,-0.135],"c3":[817,41.7,-0.124],"c4":[5,40.0,-0.075],"d0":[396,13.3,0.027],"d1":[3471,26.5,0.028],"d2":[5238,41.1,0.051],"d3":[4865,52.0,-0.021],"d4":[3612,68.4,-0.061]}};
+function fiOf(t,h){
+  var s=h&&!h.err&&h.fi;if(!s)return null;
+  if(!s.known)return{none:true};
+  var key=stateKey(s),k=key.charAt(0)==="H"?"a"+key.charAt(1):key,c=STATECAL.cell[k],b=STATECAL.band[k.charAt(0)],x=c&&c[0]>=150?c:b;
+  return{pct:x[1],n:x[0],hold:b[2],out:s.hard||s.sc<=0||h.v==="exit",r:s.r}}
+function paintFi(t){
+  var el=$("fi-"+t.id),bx=$("fx-"+t.id),h=health[t.id],f=fiOf(t,h);if(!el)return;
+  if(!f){el.className="fi";el.textContent=healthBusy[t.id]?"Fiabilité…":"";if(bx)bx.textContent="";return}
+  if(f.none){el.className="fi";el.textContent="Fiabilité ? · pas de stop";if(bx)bx.textContent="Fiabilité non calculée : elle se mesure par rapport à ton stop. Place un stop sur toute la position.";return}
+  el.className="fi "+(f.out?"out":"stay");el.innerHTML="Fiabilité "+fr(f.pct,0)+" % · <b>"+(f.out?"Sortir":"Attendre")+"</b>";
+  if(bx)bx.textContent="Sur deux ans de test, "+fr(f.pct,0)+" % des trades dans cet état ont atteint leur objectif. "
+    +(f.out?"Rester a "+(f.hold<0?"coûté "+fr(-f.hold,2)+" R":"rapporté "+fr(f.hold,2)+" R")+" en moyenne par rapport à une sortie immédiate."
+      :f.hold<=-0.04?"Trade fragile : rester a coûté "+fr(-f.hold,2)+" R en moyenne par rapport à une sortie immédiate."
+      :"Rester ou sortir maintenant : même résultat moyen.")+" Indication, pas garantie."}
 var HLAB={ok:"Toujours valide",warn:"Fragile, à surveiller",exit:"Sortie à envisager"};
 function paintHealth(t){
+  paintFi(t);
   var el=$("hl-"+t.id);if(!el)return;var h=health[t.id];
   if(!h){el.innerHTML='<div class="hbox"><div class="hrow"><span class="sub">'+(healthBusy[t.id]?"Vérification du trade en cours…":"Trade pas encore vérifié")+"</span></div></div>";return}
   if(h.err){el.innerHTML='<div class="hbox"><div class="hrow"><span class="sub">Vérification impossible : '+esc(h.err)+'</span><button class="ghost" type="button" data-hc="'+t.id+'" style="margin-left:auto">Revérifier</button></div></div>';return}
@@ -2282,6 +2332,7 @@ function liveRemember(p){
   var k=lkey(p),m=LVS[k],risky=p.sl>0&&(p.entry-p.sl)*p.dir>0;
   if(!m)m=LVS[k]={t:Date.now(),e:p.entry,r0:risky?Math.abs(p.entry-p.sl):0};
   else if(risky&&(!m.r0||Math.abs(p.entry-m.e)/p.entry>0.003)){m.r0=Math.abs(p.entry-p.sl);m.e=p.entry}
+  m.en=p.entry;m.q=p.qty;m.mk=p.mark;m.at=Date.now();if(p.ordOk){m.sl=p.sl>0?p.sl:0;m.tp=p.tp>0?p.tp:0}
   return m}
 function liveTrade(p){var m=LVS[lkey(p)]||{t:Date.now(),r0:0},known=p.ordOk&&!LV.stale;
   return{id:"bn"+lkey(p),sym:p.sym,full:p.full,dir:p.dir,entry:p.entry,qty:p.qty,sl:known&&p.sl>0?p.sl:NaN,tp:known&&p.tp>0?p.tp:NaN,t:m.t,r0:m.r0||0,live:true,
@@ -2309,7 +2360,8 @@ function liveSync(L){
   L.forEach(function(p){have[lkey(p)]=1;liveRemember(p)});
   Object.keys(LVS).forEach(function(k){if(k==="_c"||have[k])return;var m=LVS[k]||{};delete LVS[k];
     var full=k.slice(0,-1),qm=full.match(/(USDT|USDC)$/);
-    c.push({k:k,full:full,sym:qm?full.slice(0,-qm[0].length):full,dir:k.slice(-1)==="L"?1:-1,t0:m.t||now,tc:now,net:null})});
+    c.push({k:k,full:full,sym:qm?full.slice(0,-qm[0].length):full,dir:k.slice(-1)==="L"?1:-1,t0:m.t||now,tc:now,net:null});
+    if(m.mk>0&&qm&&qm[0]==="USDT")aftAdd({sym:full.slice(0,-4),full:full,dir:k.slice(-1)==="L"?1:-1,entry:m.en||m.e||0,qty:m.q||0,sl:m.sl||0,tp:m.tp||0,r0:m.r0||0,t0:m.t||now,tc:now,seen:m.at||0,exit:m.mk,approx:true,src:"binance"})});
   saveLive()}
 /* ---------- realised results: Binance's income history read in full (paged), converted to USDT, counted net per exit ---------- */
 function incomeRange(type,from,to){
@@ -2415,14 +2467,14 @@ function renderLive(){
   L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p);paintVP(t)});liveTotals();focusNow()}
 function liveCard(p){
   var t=liveTrade(p),id=t.id,acc=LV.acct||+S.account||0,known=p.ordOk&&!LV.stale,cov=known?p.cover:null,risk=known&&p.sls.length?p.covRisk:null;
-  var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="ldot" title="Suivi en direct"></span></div>';
+  var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="fi" id="fi-'+id+'"></span><span class="ldot" title="Suivi en direct"></span></div>';
   /* protection: unknown, none, partial or full; a partial stop never reads as full protection */
   if(!known)h+='<div class="hbox"><div class="hrow"><span class="hdot"></span><b>Protection inconnue</b></div><span class="sub">Les ordres stop de cette position n\'ont pas pu être lus'+(p.ordAt?" (dernière lecture réussie à "+new Date(p.ordAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+")":"")+". Vérifie sur Binance qu'un stop protège toute la position.</span></div>";
   else if(cov===0)h+='<div class="alarm"><b>Aucun stop-loss sur Binance</b><span>'+(p.trail?"Seul un stop suiveur est actif. ":"")+"Sans stop, rien ne limite la perte avant la liquidation"+(p.liq>0?" à "+px(p.liq):"")+". Place-le dans Binance : Positions, puis TP/SL.</span></div>";
   else if(cov<0.999)h+='<div class="alarm"><b>Stop partiel : '+fr(cov*100,0)+" % de la position couverts</b><span>"+fr((1-cov)*100,0)+" % de la position ("+fr(p.qty*(1-cov),p.qty>=100?0:p.qty>=1?3:4)+") n'ont aucun stop : leur perte n'est limitée que par la liquidation"+(p.liq>0?" à "+px(p.liq):"")+". Mets un stop sur toute la position.</span></div>";
   else if(p.liq>0&&(p.sl-p.liq)*p.dir<0)h+='<div class="alarm"><b>Stop au-delà de la liquidation</b><span>Ton stop à '+px(p.sl)+" est plus loin que le prix de liquidation ("+px(p.liq)+") : la position serait liquidée avant. Rapproche le stop ou ajoute de la marge.</span></div>";
   if(known&&p.nonRO)h+='<div class="sub">Un stop n\'est pas en « reduce-only » : s\'il est plus gros que la position, il ouvrira une position inverse.</div>';
-  h+='<div id="hl-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
+  h+='<div id="hl-'+id+'"></div><div class="sub" id="fx-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
     +'<div><div class="cap">Gain ou perte latent</div><div class="net" id="ln-'+id+'">–</div><div class="sub" id="ls-'+id+'"></div></div>';
   if(known&&cov>=0.999&&p.sl>0&&p.tp>0)h+='<div><div class="rail" id="lr-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+px(p.sl)+'</span><span id="lp-'+id+'">–</span><span>TP '+px(p.tp)+"</span></div></div>";
   h+='<div class="funnel plain two" id="od-'+id+'"></div><details class="set opd" id="op-'+id+'"></details>';
@@ -2453,6 +2505,78 @@ function closedView(){
     return'<div class="cl1"><span class="pill '+(x.dir>0?"long":"short")+'">'+(x.dir>0?"Long":"Short")+"</span><b>"+esc(x.sym)+'</b><span class="sub">vue fermée à '+new Date(x.tc).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+"</span>"
       +(x.net===null?'<span class="sub" style="margin-left:auto">résultat en lecture…</span>':x.net==="?"?'<span class="sub" style="margin-left:auto">voir Résultats</span>':'<b class="'+(x.net>=0?"pos":"neg")+'">'+sgn(x.net,2)+" $</b>")+"</div>"}).join("")
     +'<div class="sub">Résultat réalisé, frais et funding compris, lu sur Binance.</div></div>'}
+
+/* ---------- Après sortie: trades left are followed as if they had been kept, until the user deletes them ----------
+   Its own list (radar-after): nothing here is read by Mes trades, Résultats or the Excel export. */
+var AF=aftLoad(),aftBusy=false,aftArm={};
+function aftLoad(){try{var a=JSON.parse(localStorage.getItem("radar-after")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
+function aftSave(){try{localStorage.setItem("radar-after",JSON.stringify(AF))}catch(e){}}
+function aftAdd(o){
+  if(!(o.exit>0)||!o.full||!o.dir)return;AF=aftLoad();
+  if(AF.some(function(x){return x.full===o.full&&x.dir===o.dir&&Math.abs(x.tc-o.tc)<10*60e3}))return;
+  o.id="a"+Date.now().toString(36)+Math.floor(Math.random()*1e4);o.out=null;o.at=0;o.hi=0;o.lo=0;o.last=0;
+  AF.unshift(o);if(AF.length>200)AF.length=200;aftSave()}
+/* exact exit of a Binance position: its closing fills, read once (the first value is the last price the app saw) */
+function aftExit(a){
+  if(!a.approx||!hasBn()||Date.now()-a.tc>6.5*864e5)return Promise.resolve();
+  var from=Math.floor(Math.max(a.seen?a.seen-60e3:a.tc-36e5,a.tc-6.9*864e5)),to=Math.floor(Math.min(Date.now(),from+7*864e5-1));
+  return xapi("binance","utr:"+a.full+":"+from+":"+to).then(function(rows){
+    var q=0,c=0,t=0;(Array.isArray(rows)?rows:[]).forEach(function(f){
+      if((f.side==="SELL")!==(a.dir>0)||!(+f.realizedPnl)||(f.positionSide&&f.positionSide!=="BOTH"&&(f.positionSide==="LONG")!==(a.dir>0)))return;
+      q+=+f.qty;c+=(+f.qty)*(+f.price);if(+f.time>t)t=+f.time});
+    if(q>0){a.exit=+(c/q).toPrecision(8);a.tc=t;if(!(a.qty>0))a.qty=q;a.approx=false;a.at=0;a.hi=0;a.lo=0;a.last=0;a.out=null}},function(){})}
+function aftStep(a){
+  if(a.out)return Promise.resolve();
+  var now=Date.now(),from=a.at||a.tc,age=now-from,iv=age<=9*864e5?"15m":age<=38*864e5?"1h":age<=150*864e5?"4h":"1d";
+  return get("klines?symbol="+encodeURIComponent(a.full)+"&interval="+iv+"&startTime="+Math.floor(from)+"&limit=1000",true).then(function(p){
+    if(!Array.isArray(p))return;
+    var w=afterWalk(a,p.map(function(k){return{t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4]}}),now);
+    a.out=w.out;a.hi=w.hi;a.lo=w.lo;a.last=w.last;a.at=w.at;a.chk=now},function(){})}
+function loadAft(){
+  if(aftBusy)return;AF=aftLoad();if(!AF.length){renderAft();return}
+  aftBusy=true;var L=AF.slice(),i=0;
+  (function next(){var a=L[i++];if(!a){aftBusy=false;aftSave();if(view==="aft")renderAft();return}
+    aftExit(a).then(function(){return aftStep(a)}).then(next,next)})()}
+setInterval(function(){if(view==="aft"&&!document.hidden)loadAft()},60000);
+var AFV={good:"Bonne décision",early:"Sortie trop tôt",flat:"Égalité"};
+function aftCard(a){
+  var v=afterVerdict(a),q=+a.qty||0,usd=q?v.gain*q:null,d=a.dir,L=afterLevels(a),un=q?" $":" %",val=q?usd:v.gain/a.exit*100;
+  var head=v.byStop?"Sorti par ton stop":v.byTp?"Sorti à ton objectif":AFV[v.v],cls=v.byStop||v.byTp?(v.v==="early"?"early":v.v==="good"?"good":"flat"):v.v;
+  var line=a.out?(a.out.why==="sl"?"Le stop à "+px(L.sl)+" aurait été touché le "+when(a.out.t)+" : en restant, tu aurais "+(val<0?"perdu ":"gagné ")+fr(Math.abs(val),2)+un+(val<0?" de plus.":" de plus quand même.")
+      :"L'objectif à "+px(L.tp)+" a été atteint le "+when(a.out.t)+" : en restant, tu aurais gagné "+fr(Math.abs(val),2)+un+" de plus.")
+    :!a.chk?"Suivi en cours de lecture…"
+    :v.v==="flat"?"Prix à "+px(v.px)+", presque au niveau de ta sortie : pour l'instant, rester n'aurait rien changé."
+    :"Prix à "+px(v.px)+" : pour l'instant, rester aurait "+(val>0?"rapporté ":"coûté ")+fr(Math.abs(val),2)+un+(val>0?" de plus.":".");
+  if(v.byStop&&!a.out&&a.chk)line="Depuis ton stop, le prix est à "+px(v.px)+" : "+(val>0?"il est reparti dans ton sens ("+sgn(v.gain/a.exit*100,1)+" %).":"il a continué contre toi ("+sgn(v.gain/a.exit*100,1)+" %).");
+  var h='<article class="card tr af '+cls+'"><div class="trh"><span class="sym">'+esc(a.sym)+'<small>USDT</small></span><span class="pill '+(d>0?"long":"short")+'">'+(d>0?"Long":"Short")+'</span>'
+    +'<span class="afv">'+head+(a.out||v.byStop||v.byTp?"":' <small>provisoire</small>')+"</span></div>"
+    +'<div class="sub">Sorti le '+when(a.tc)+" à "+(a.approx?"environ ":"")+px(a.exit)+" · entrée "+px(a.entry)+(a.net!==undefined&&a.net!==null?" · résultat réel "+sgn(a.net,2)+" $":"")+"</div>"
+    +'<div><div class="cap">Si tu étais resté</div><div class="net '+(val>0?"pos":val<0?"neg":"")+'">'+(a.chk||a.out?sgn(val,2)+un:"…")+'</div><div class="sub">'+line+"</div></div>";
+  if(L.sl&&L.tp){var span=L.tp-L.sl,pos=Math.max(0,Math.min(1,(v.px-L.sl)/span)),e=Math.max(0,Math.min(1,(a.exit-L.sl)/span));
+    h+='<div><div class="rail" style="--e:'+(e*100).toFixed(1)+'%"><u></u><i style="left:'+(pos*100).toFixed(1)+'%"></i></div><div class="raill"><span>Stop '+px(L.sl)+"</span><span>sortie "+px(a.exit)+"</span><span>TP "+px(L.tp)+"</span></div></div>"}
+  else h+='<div class="sub">'+(L.sl?"Stop suivi : "+px(L.sl)+", pas d'objectif.":L.tp?"Objectif suivi : "+px(L.tp)+(v.byStop?".":", pas de stop."):"Ni stop ni objectif connus : seul le prix est suivi.")+"</div>";
+  h+='<div class="funnel plain" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b class="pos">'+(a.chk?sgn(Math.max(0,v.best),1)+" %":"–")+"</b><span>au mieux depuis la sortie</span></div>"
+    +'<div><b class="neg">'+(a.chk?sgn(Math.min(0,v.worst),1)+" %":"–")+"</b><span>au pire depuis la sortie</span></div>"
+    +"<div><b>"+hrs(Math.max(0,((a.out?a.out.t:Date.now())-a.tc)/36e5))+"</b><span>"+(a.out?"entre la sortie et la fin":"de suivi")+"</span></div></div>";
+  return h+'<div class="acts"><button class="ghost danger" type="button" data-adel="'+a.id+'">'+(aftArm[a.id]?"Confirmer la suppression":"Supprimer")+"</button></div></article>"}
+function renderAft(){
+  var el=$("view-aft");if(!el)return;AF=aftLoad();
+  var h='<div class="lvh"><h2>Après sortie</h2><span class="sub">ce que tes trades auraient fait si tu étais resté</span></div>';
+  if(!AF.length){el.innerHTML=h+'<div class="empty">Aucune sortie suivie. Dès que tu clôtures un trade dans Mes trades, ou qu\'une position Binance se ferme, elle arrive ici : l\'appli continue de la simuler avec ton stop et ton objectif jusqu\'à ce que tu la supprimes.</div>';return}
+  var n={good:0,early:0,flat:0},sum=0,has=false;
+  AF.forEach(function(a){if(!a.chk&&!a.out)return;var v=afterVerdict(a);if(v.byStop||v.byTp)return;n[v.v]++;if(a.qty>0){sum+=v.gain*a.qty;has=true}});
+  h+='<div class="funnel plain" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b class="pos">'+n.good+"</b><span>"+(n.good>1?"bonnes décisions":"bonne décision")+"</span></div>"
+    +'<div><b class="neg">'+n.early+"</b><span>"+(n.early>1?"sorties trop tôt":"sortie trop tôt")+"</span></div>"
+    +'<div><b class="'+(sum>0?"neg":sum<0?"pos":"")+'">'+(has?sgn(-sum,2)+" $":"–")+"</b><span>bilan de tes sorties choisies</span></div></div>";
+  h+=AF.map(aftCard).join("")
+    +'<div class="sub">Simulation seulement : stop touché avant l\'objectif quand les deux tombent dans la même bougie, frais non comptés. Ces trades ne comptent ni dans Mes trades ni dans Résultats. Les sorties partielles ne sont pas suivies.</div>'
+    +(AF.length>1?'<button class="ghost danger" type="button" data-awipe="1">'+(aftArm.all?"Confirmer : tout supprimer":"Tout supprimer")+"</button>":"");
+  el.innerHTML=h}
+$("view-aft").addEventListener("click",function(e){
+  var b=e.target.closest("[data-adel],[data-awipe]");if(!b)return;AF=aftLoad();
+  if(b.dataset.awipe){if(!aftArm.all){aftArm={all:1};renderAft();return}AF=[];aftArm={};aftSave();renderAft();return}
+  var id=b.dataset.adel;if(!aftArm[id]){aftArm={};aftArm[id]=1;renderAft();return}
+  AF=AF.filter(function(x){return x.id!==id});aftArm={};aftSave();renderAft()});
 
 /* ---------- events ---------- */
 $("app").addEventListener("click",function(e){
@@ -4385,7 +4509,7 @@ window.bgScan=function(t10,t50){
     scan(m)})};
 
 /* ---------- backup: the user's own data in one file; the API keys never leave the phone's encrypted store ---------- */
-var BKEYS=["radar-settings","radar-trades","radar-live","radar-manual","radar-cost","radar-paper","radar-health","radar-coins"];
+var BKEYS=["radar-settings","radar-trades","radar-after","radar-live","radar-manual","radar-cost","radar-paper","radar-health","radar-coins"];
 function backupData(){var d={};BKEYS.forEach(function(k){try{var v=localStorage.getItem(k);if(v!==null)d[k]=v}catch(e){}});
   return JSON.stringify({app:"radar-trades",format:1,version:CORE_VERSION,at:new Date().toISOString(),data:d})}
 function restoreData(txt){

@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,tradeState,stateKey,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -262,6 +262,31 @@ test("T17", "Export : fichier Excel valide (zip, CRC, onglets)", () => {
   ok(crcOk, "CRC des fichiers");
   const wb = Buffer.from(u).toString("latin1");
   ok(wb.includes("<f>SUM(Trades!B2:B3)</f><v>3</v>") && wb.includes('<autoFilter ref="A1:B3"/>'), "formule avec valeur, filtre sur le tableau");
+});
+
+/* ---------- 8. after the exit ---------- */
+test("T18", "Après sortie : le trade gardé est suivi jusqu'au stop ou à l'objectif", () => {
+  const H = 36e5, t = Date.UTC(2026, 10, 1), k = (i, o, h, l, c) => ({ t: t + i * H, o, h, l, c });
+  const a = { dir: 1, entry: 100, exit: 104, sl: 98, tp: 110, r0: 2, tc: t };
+  let w = E.afterWalk(a, [k(0, 104, 105, 103, 104.5), k(1, 104.5, 107, 104, 106)], t + 9 * H);
+  ok(!w.out && near(w.hi, 107) && near(w.lo, 103) && near(w.last, 106), "en cours : plus haut 107, plus bas 103, prix 106");
+  let v = E.afterVerdict(Object.assign({}, a, w));
+  ok(v.v === "early" && near(v.gain, 2) && !v.final, "pour l'instant rester ferait +2 par unité : sortie trop tôt (provisoire)");
+  const a2 = Object.assign({}, a, w), w2 = E.afterWalk(a2, [k(1, 104.5, 107, 104, 106), k(2, 106, 106.5, 97, 99), k(3, 99, 120, 99, 118)], t + 9 * H);
+  ok(w2.out && w2.out.why === "sl" && near(w2.out.px, 98) && near(w2.hi, 107), "suite : le stop à 98 est touché avant l'objectif, le plus haut reste 107");
+  v = E.afterVerdict(Object.assign({}, a2, w2));
+  ok(v.v === "good" && near(v.gain, -6) && v.final, "bonne décision : rester aurait coûté 6 par unité");
+  const w3 = E.afterWalk(a, [k(0, 104, 111, 103.5, 110.5)], t + 9 * H);
+  ok(w3.out && w3.out.why === "tp" && E.afterVerdict(Object.assign({}, a, w3)).v === "early", "objectif atteint après la sortie : sortie trop tôt");
+  const s = { dir: -1, entry: 100, exit: 102.05, sl: 102, tp: 94, r0: 2, tc: t }, L = E.afterLevels(s);
+  ok(L.byStop && L.sl === 0 && L.tp === 94, "short sorti par son stop : le stop n'est plus suivi, l'objectif oui");
+  const w4 = E.afterWalk(s, [k(0, 102, 103, 101, 101.5), k(1, 101.5, 101.6, 93, 95)], t + 9 * H);
+  ok(w4.out && w4.out.why === "tp", "après le stop, le prix a quand même atteint l'objectif");
+  ok(E.afterVerdict(Object.assign({}, a, { last: 104.1, hi: 104.3, lo: 103.9 })).v === "flat", "écart sous un dixième du risque : égalité");
+});
+
+test("T19", "Fiabilité d'un trade actif : cases de la table de calibration", () => {
+  ok(E.stateKey({ sc: 5, hard: false, r: 0.2 }) === "d2" && E.stateKey({ sc: 0, hard: false, r: -0.7 }) === "b0" && E.stateKey({ sc: -3, hard: false, r: 1.4 }) === "a4" && E.stateKey({ sc: 2, hard: true, r: 0.6 }) === "H3", "score et avancement rangés dans la bonne case");
 });
 
 /* ---------- report ---------- */

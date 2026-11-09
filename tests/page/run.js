@@ -271,7 +271,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     }
     ok(/\d+ %de ces setups ont atteint le TP1/.test(cf.replace(/\s+/g, "")) || /\d+ %\s*de ces setups ont atteint le TP1/.test(cf), tried[tried.length - 1] + " : " + cf.replace(/\s+/g, " ").slice(24, 170) + "…");
     if (SHOTS) { await page.$eval("#one-out .cfg", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p10-config.png") }); }
-    ok(tabs.length === 17, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
+    ok(tabs.length === 18, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -311,6 +311,57 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(cnt === nWant && Math.abs(net - want) < 0.01, cnt + " trades clôturés, net " + net.toFixed(2) + " (attendu " + nWant + " et " + want.toFixed(2) + ")");
     if (process.env.XLSX_OUT) { fs.writeFileSync(process.env.XLSX_OUT, buf); fs.writeFileSync(process.env.XLSX_OUT + ".want", String(want)); }
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p11-export.png"), fullPage: false });
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P12", "Après sortie : un trade clôturé reste simulé, sans toucher à l'historique", async ok => {
+    const M = MARKET.SOLUSDT.m, at = M.length - 96 * 3, c0 = M[at], tc = c0.t, ex = c0.o;
+    let lo = Infinity, hi = -Infinity; for (let i = at; i < M.length; i++) { lo = Math.min(lo, M[i].l); hi = Math.max(hi, M[i].h); }
+    const d = last("SOLUSDT") >= ex ? 1 : -1, far = d > 0 ? hi : lo, back = d > 0 ? lo : hi;
+    const old = { id: "a0", sym: "SOL", full: "SOLUSDT", dir: d, entry: ex * (1 - d * 0.02), qty: 10, sl: back * (1 - d * 0.1), tp: far * (1 + d * 0.1), r0: ex * 0.05, t0: tc - 864e5, tc, exit: ex, net: 12.5, src: "main", out: null, at: 0, hi: 0, lo: 0, last: 0 };
+    const hit = Object.assign({}, old, { id: "a1", sl: 0, tp: ex + (far - ex) * 0.5 });
+    const live = { id: "m1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.99, qty: 0.5, sl: last("ETHUSDT") * 0.95, tp: last("ETHUSDT") * 1.08, t: NOW - 36e5 };
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("seeded")){sessionStorage.setItem("seeded","1");localStorage.setItem("radar-after",${JSON.stringify(JSON.stringify([old, hit]))});localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([live]))})}` });
+    await page.click('.tabs button[data-v="aft"]');
+    await page.waitForFunction(() => document.querySelectorAll("#view-aft .af").length === 2 && !/lecture…/.test(document.querySelector("#view-aft").textContent), null, { timeout: 20000 });
+    const cards = await page.$$eval("#view-aft .af", a => a.map(e => e.textContent.replace(/\s+/g, " ")));
+    const want = (last("SOLUSDT") - ex) * d * 10, got = await page.$eval("#view-aft .af .net", e => parseFloat(e.textContent.replace(/[^0-9,+\-−]/g, "").replace("−", "-").replace(",", ".")));
+    ok(/Si tu étais resté/.test(cards[0]) && Math.abs(got - want) < 0.02, "trade gardé en cours : " + got + " $ de plus en restant (attendu " + want.toFixed(2) + ")");
+    ok(/Sortie trop tôt/.test(cards[1]) && /objectif à .* a été atteint/.test(cards[1]), "objectif atteint après la sortie : « Sortie trop tôt »");
+    await page.click('.tabs button[data-v="trades"]');
+    await page.waitForFunction(() => /\$/.test((document.querySelector("#net-m1") || {}).textContent || ""), null, { timeout: 20000 });
+    await page.waitForFunction(() => /Fiabilité \d+ % · (Sortir|Attendre)/.test((document.querySelector("#fi-m1") || {}).textContent || ""), null, { timeout: 60000 }).catch(() => {});
+    const fi = await page.evaluate(() => [document.querySelector("#fi-m1").textContent, document.querySelector("#fx-m1").textContent]);
+    ok(/^Fiabilité \d+ % · (Sortir|Attendre)$/.test(fi[0]) && /Sur deux ans de test, \d+ % des trades/.test(fi[1]), "étiquette du trade actif : « " + fi[0] + " »");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p12-fiab.png") });
+    await page.click('[data-close="m1"]'); await page.click('[data-close="m1"]');
+    const st = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem("radar-trades")), a: JSON.parse(localStorage.getItem("radar-after")) }));
+    ok(st.t.length === 1 && st.t[0].closed && st.a.length === 3 && st.a[0].sym === "ETH" && st.a[0].exit === st.t[0].exit, "clôture dans Mes trades : le trade arrive dans Après sortie avec son prix de sortie");
+    await page.click('.tabs button[data-v="aft"]');
+    await page.waitForFunction(() => document.querySelectorAll("#view-aft .af").length === 3, null, { timeout: 20000 });
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p12-apres.png"), fullPage: true });
+    await page.click('[data-adel="a1"]'); await page.click('[data-adel="a1"]');
+    const st2 = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem("radar-trades")), a: JSON.parse(localStorage.getItem("radar-after")) }));
+    ok(st2.a.length === 2 && !st2.a.some(x => x.id === "a1") && st2.t.length === 1 && st2.t[0].closed, "suppression dans Après sortie : l'historique de Mes trades ne bouge pas");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P13", "Après sortie : une position Binance fermée y arrive avec son vrai prix de sortie", async ok => {
+    const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [{ symbol: "SOLUSDT", side: "SELL", positionSide: "BOTH", type: "STOP_MARKET", stopPrice: "140", origQty: "0", closePosition: "true" }] } }, suffix: "#trades" });
+    await page.click('.tabs button[data-v="trades"]').catch(() => {});
+    await page.waitForSelector("#view-trades .lv", { timeout: 30000 });
+    const p0 = { dir: 1, qty: 10 }, exit = +(last("SOLUSDT") * 1.004).toFixed(3);
+    await page.evaluate(x => { window.__M.pos = []; window.__M.fills = [{ symbol: "SOLUSDT", id: 9, orderId: 9, time: Date.now() - 2000, side: "SELL", qty: String(x.qty), price: String(x.exit), quoteQty: "0", realizedPnl: "3.2", commission: "0.1", commissionAsset: "USDT", positionSide: "BOTH" }]; }, { qty: p0.qty, exit });
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("radar-after") || "[]").length === 1, null, { timeout: 45000 });
+    let a = await page.evaluate(() => JSON.parse(localStorage.getItem("radar-after") || "[]"));
+    ok(a.length === 1 && a[0].sym === "SOL" && a[0].approx && a[0].src === "binance" && a[0].sl === 140 && a[0].qty === p0.qty, "position disparue : ajoutée à Après sortie avec son stop et sa taille");
+    await page.click('.tabs button[data-v="aft"]');
+    await page.waitForFunction(() => { const x = JSON.parse(localStorage.getItem("radar-after") || "[]")[0]; return x && !x.approx && x.chk; }, null, { timeout: 20000 });
+    a = await page.evaluate(() => JSON.parse(localStorage.getItem("radar-after")));
+    ok(Math.abs(a[0].exit - exit) < 1e-6, "prix de sortie exact lu dans les exécutions Binance : " + a[0].exit);
+    ok(await page.$eval("#view-aft .af", e => /Si tu étais resté/.test(e.textContent)), "carte affichée dans l'onglet");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
