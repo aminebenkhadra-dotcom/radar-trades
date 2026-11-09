@@ -215,17 +215,23 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await ctx.close();
   });
 
-  await test("P7", "Alertes en arrière-plan : protection d'abord, entrée seulement sur « Prêt selon les règles »", async ok => {
+  await test("P7", "Alertes en arrière-plan : trades, seulement « sortir » ou liquidation proche ; entrée seulement sur « Prêt »", async ok => {
     const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [] } }, suffix: "?bg=1",
-      init: `localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:true,profOk:true,account:1000}))` });
+      init: `localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:true,nt43:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: -1, entry: last("ETHUSDT") * 0.99, qty: 1, sl: last("ETHUSDT") * 1.03, tp: last("ETHUSDT") * 0.9, t: NOW - 5 * 36e5 }]))})` });
     await page.evaluate(() => window.bgScan(false, true));
     await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
     const M = await page.evaluate(() => window.__M);
     const prot = M.notes.filter(n => n.ch === "protect"), set = M.notes.filter(n => n.ch === "setups");
-    ok(prot.some(n => /aucun stop-loss/.test(n.title)), "position sans stop : alerte de protection (canal séparé)");
+    ok(prot.every(n => /sortir du trade|liquidation proche/.test(n.title)) && !M.notes.some(n => /stop-loss|fermé|break-even|objectif|protection/.test(n.title)), "trades : aucune notification hors « sortir du trade » et « liquidation proche » (" + prot.length + " envoyée" + (prot.length > 1 ? "s" : "") + ", position sans stop comprise)");
+    const ex = prot.filter(n => /ETH · short : sortir du trade/.test(n.title))[0];
+    ok(ex && /^Fiabilité \d+ % · /.test(ex.text), "short contre les deux tendances : « " + (ex ? ex.title + " » · " + ex.text.slice(0, 60) : "aucune alerte »"));
     ok(M.notes.length === 0 || M.notes[0].ch === "protect", "la protection passe avant les setups");
     ok(set.every(n => /prêt selon les règles/.test(n.title) && !/%/.test(n.title)), "alertes d'entrée : uniquement « prêt selon les règles », sans pourcentage (" + set.length + ")");
-    ok(/contrôle de 1 position Binance/.test(M.done), "résumé du contrôle : " + M.done);
+    ok(/contrôle de 1 position Binance et 1 trade suivi, 1 à risque/.test(M.done), "résumé du contrôle : " + M.done);
+    const o2 = await open(browser, { init: `if(!sessionStorage.getItem("s2")){sessionStorage.setItem("s2","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a10:true,a50:true,profOk:true,account:1000}))}` });
+    const s2 = await o2.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
+    ok(s2.a10 === false && s2.a50 === false && s2.atr === true && s2.nt43 === 1, "mise à jour : alertes de setups coupées une fois, alerte de sortie gardée");
+    await o2.ctx.close();
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors[0] : ""));
     await ctx.close();
   });

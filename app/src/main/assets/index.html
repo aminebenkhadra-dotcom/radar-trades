@@ -503,7 +503,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt selon les règles</label>
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt selon les règles</label>
-      <label class="wide chk"><input type="checkbox" id="a-tr"> Surveiller mes trades et mes positions Binance : sortie à envisager, break-even, stop absent, liquidation proche, position fermée</label>
+      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade (trades suivis et positions Binance), ou quand une liquidation est proche</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
@@ -4423,6 +4423,7 @@ function alertStatus(){
 function applyWatch(){
   if(NATIVE){try{if(S.a10||S.a50||S.atr)Android.startWatch(!!S.a10,!!S.a50,+S.amin||30);else Android.stopWatch()}catch(e){}}
   alertStatus()}
+if(!S.nt43){S.nt43=1;S.a10=false;S.a50=false;saveSettings();if(!BG)applyWatch()}
 $("a-10").checked=!!S.a10;$("a-50").checked=!!S.a50;$("a-min").value=String(S.amin||30);
 $("a-10").addEventListener("change",function(){S.a10=this.checked;saveSettings();applyWatch()});
 $("a-50").addEventListener("change",function(){S.a50=this.checked;saveSettings();applyWatch()});
@@ -4438,7 +4439,8 @@ function protect(cb){
   var op=S.atr?openTrades():[],bn=hasBn(),prev={},i=0,bad=0,nl=0;
   try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
   /* the notification opens the trade it is about: the tag carries the trade id after a short prefix */
-  function note(title,text,tag){var id=/^(ns|sx|lq|pu|pp)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"",tab="trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:"");
+  /* only two events notify: a trade to leave, and a liquidation close by (the other checks stay visible in Mes trades) */
+  function note(title,text,tag){if(!/^(h|lq)/.test(tag))return;var id=/^(ns|sx|lq|pu|pp)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"",tab="trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:"");
     try{if(typeof Android.protect==="function")Android.protect(title,text,tag,tab);else Android.notify(title,text,tag,tab)}catch(e){}}
   (bn?Promise.all([liveFetch(true).then(function(L){return liveIncome().then(function(){return L})}),daySync()]).then(function(a){return a[0]},function(){return null}):Promise.resolve(null)).then(function(L){
     if(L){nl=L.length;LV.list=L;LV.at=Date.now();LV.stale=false}else if(bn)LV.stale=true;
@@ -4471,8 +4473,9 @@ function protect(cb){
       return cb(S.atr?(pa.length?"contrôle de "+pa.join(" et "):"aucune position ouverte")+(bad?", "+bad+" à risque":""):"suivi des positions désactivé")}
     var t=op[i++],nm2=t.sym+" · "+(t.dir>0?"long":"short");
     checkTrade(t).then(function(h){
-      if(h.v==="exit"){bad++;if(prev[t.id]!=="exit")note(nm2+" : sortie à envisager",h.items.filter(function(x){return x.k==="no"}).slice(0,3).map(function(x){return x.t}).join(" · "),"h"+t.id)}
-      prev[t.id]=h.v;
+      var f=fiOf(t,h),out=f&&!f.none?f.out:h.v==="exit";
+      if(out){bad++;if(prev[t.id]!=="exit")note(nm2+" : sortir du trade",(f&&!f.none?"Fiabilité "+fr(f.pct,0)+" % · ":"")+h.items.filter(function(x){return x.k==="no"}).slice(0,3).map(function(x){return x.t}).join(" · "),"h"+t.id)}
+      prev[t.id]=out?"exit":h.v;
       health[t.id]=h;var b=t.sl>0&&!t.partial&&!t.unknown?beState(t,h.price):{st:"none"};
       if(h.tp&&(h.tp.act==="up"||h.tp.act==="down"||h.tp.act==="set")&&prev["tp"+t.id]!==h.tp.act){prev["tp"+t.id]=h.tp.act;
         note(nm2+" · "+(h.tp.act==="up"?"objectif à augmenter":h.tp.act==="down"?"objectif à réduire":"aucun objectif placé"),
