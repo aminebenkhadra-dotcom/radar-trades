@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,targets,mkPlan,roundPlan,sizePlan,limitPlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -262,6 +262,50 @@ test("T17", "Export : fichier Excel valide (zip, CRC, onglets)", () => {
   ok(crcOk, "CRC des fichiers");
   const wb = Buffer.from(u).toString("latin1");
   ok(wb.includes("<f>SUM(Trades!B2:B3)</f><v>3</v>") && wb.includes('<autoFilter ref="A1:B3"/>'), "formule avec valeur, filtre sur le tableau");
+});
+
+/* the 1000PEPE long of 9 November 2026, with its real prices */
+const PEPE = { entry: 0.005136, sl: 0.0049054, tp1: 0.0054991, tp2: 0.0059601 };
+const XP = X(1e-7, 1, { minN: 5 });
+const AP = { capital: 800, bmode: "usdt", budget: 40, lev: 10, mtype: "isolated", marginPct: 10, fee: 0.05, slip: 0.02, mmr: 1, riskRule: 2 };
+test("T18", "Plus haut 10 jours avant 1R : pas de « Prêt »", () => {
+  const R = PEPE.entry - PEPE.sl, k = [{ h: 0.0053367, l: 0.0046 }, { h: 0.005238, l: 0.0049 }];
+  const t = E.targets([{ p: 0.005168 }], 1, PEPE.entry, R, k);
+  ok(near(t.top, 0.0053367 - PEPE.entry, 1e-10), "le plus haut (mèche comprise) à 0,87R est repéré");
+  ok(E.targets([], 1, PEPE.entry, R, [{ h: 0.0056, l: 0.0046 }]).top === 0, "plus haut au-delà de 1R : rien à signaler");
+  ok(E.targets([], 1, PEPE.entry, R, [{ h: 0.0051, l: 0.0046 }]).top === 0, "prix déjà au-dessus du plus haut : rien à signaler");
+  const a = E.judge(setup(r => { r.plan.top = 101.5; }));
+  ok(a.st === "watch" && a.blk.some(b => b.k === "top"), "statut À surveiller, raison affichée");
+});
+test("T19", "Bitcoin contre le trade", () => {
+  const a = E.judge(setup(r => { r.f.btc4 = -1; }), { strict: 1 });
+  ok(a.st === "watch" && a.blk.some(b => b.k === "btc"), "tendance BTC inverse, précision 4 contrôles : pas de « Prêt »");
+  const b = E.judge(setup(r => { r.f.btcSh = -2; }), { strict: 0 });
+  ok(b.st === "watch" && b.blk.some(x => x.k === "btc"), "BTC −2 % en 4 h, précision 3 contrôles : pas de « Prêt »");
+  ok(E.judge(setup(r => { r.f.btc4 = -1; }), { strict: 1, btcMode: "signal" }).st === "ready", "réglage « signaler seulement » : statut inchangé");
+  ok(E.judge(setup(), { strict: 1 }).st === "ready", "BTC aligné : statut inchangé");
+});
+test("T20", "Ordre limite sur la zone", () => {
+  const r = { plan: PEPE, z: { hi: 0.005074, lo: 0.00498 }, dist: 0.3, dir: 1 }, L = E.limitPlan(r, XP, AP);
+  ok(near(L.plan.entry, 0.005074, 1e-9), "entrée sur le haut de la zone");
+  ok(L.plan.sl === PEPE.sl && L.plan.tp1 === PEPE.tp1, "stop et TP1 inchangés");
+  ok(L.rrNet > 2.3 && L.rrNet < 2.5 && L.rr0 < 1.6, "R:R net ≈ 2,4 au lieu de 1,5 (" + L.rrNet.toFixed(2) + ")");
+  ok(L.sz.loss > 27 && L.sz.loss < 28 && L.sz.loss <= 40, "perte max ≈ 27 $ pour la même position (" + L.sz.loss.toFixed(2) + ")");
+  ok(E.limitPlan(Object.assign({}, r, { dist: 0 }), XP, AP) === null, "déjà dans la zone : pas d'alternative");
+  ok(E.limitPlan(Object.assign({}, r, { dist: 1 }), XP, AP) === null, "loin de la zone : le plan est déjà une limite");
+});
+test("T21", "Règle de risque personnelle", () => {
+  const z = E.sizePlan(PEPE, 1, AP, XP, true);
+  ok(z.warn.some(w => /4,6 %/.test(w) && /2,0 %/.test(w) && /34\d|35\d/.test(w)), "alerte : 4,6 % du compte, position pour 2 % : " + z.warn.join(" | "));
+  ok(z.notional > 799 && z.notional < 801, "la taille n'est pas modifiée");
+  ok(!E.sizePlan(PEPE, 1, Object.assign({}, AP, { riskRule: 0 }), XP, true).warn.length, "règle à 0 : pas d'alerte");
+  ok(!E.sizePlan(PEPE, 1, Object.assign({}, AP, { budget: 16 }), XP, true).warn.length, "perte sous 2 % : pas d'alerte");
+});
+test("T22", "TP2 au-delà du plus haut 30 jours", () => {
+  const mk = x30 => E.mkPlan({ dir: 1, x30, z: { lo: 0.00498, hi: 0.005074 }, lv: [], h4: [{ h: 0.0053367, l: 0.0046 }] }, PEPE.entry, PEPE.sl);
+  ok(mk(0.0056871).far === true, "TP2 au-dessus du plus haut 30 jours : signalé");
+  ok(mk(0.0075).far === false, "TP2 sous le plus haut 30 jours : rien à signaler");
+  ok(near(mk(0.0075).top, 0.0053367, 1e-9), "le plan porte le prix du plus haut récent");
 });
 
 /* ---------- report ---------- */

@@ -92,7 +92,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ github.run_number }}" radar-trades.apk radar-trades-chrome.zip signature.txt tests.txt \
-            --title "Radar Trades V42 · build ${{ github.run_number }}" --notes-file ci/notes.txt --latest
+            --title "Radar Trades V43 · build ${{ github.run_number }}" --notes-file ci/notes.txt --latest
       - name: Publish test build (branch)
         if: github.ref != 'refs/heads/main'
         env:

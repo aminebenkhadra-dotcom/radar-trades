@@ -511,6 +511,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide">Un setup est « Prêt » quand<select id="p-strict"><option value="2">les 6 contrôles sont validés</option><option value="1">tendance, zone, déclencheur et risque sont validés</option><option value="0">tendance, zone et risque sont validés</option></select></label>
       <label class="wide">Temporalité<select id="p-tmode"><option value="signal">Signaler les setups du lundi et du mardi</option><option value="skip">Pas de « Prêt » ni d'alerte le lundi et le mardi</option><option value="off">Ne pas tenir compte du jour</option></select></label>
+      <label class="wide">Bitcoin contre le trade<select id="p-btcmode"><option value="block">Pas de « Prêt » ni d'alerte</option><option value="signal">Le signaler seulement</option></select></label>
       <label>R:R minimum, net de frais<input id="p-minrr" inputmode="decimal"></label>
       <label>Marge du stop (× ATR 4H)<input id="p-slk" inputmode="decimal"></label>
       <label class="wide">Frais et glissement au maximum, en % du risque<input id="p-feecap" inputmode="decimal"></label>
@@ -531,6 +532,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
       <label>Marge max engagée %<input id="f-margin" inputmode="decimal"></label>
       <label>Risque total max %<input id="f-totrisk" inputmode="decimal"></label>
       <label>Perte max du jour %<input id="f-dayloss" inputmode="decimal"></label>
+      <label>Alerte si perte au stop dépasse %<input id="f-riskrule" inputmode="decimal"></label>
       <label>Frais par côté %<input id="f-fee" inputmode="decimal"></label>
       <label>Glissement prévu %<input id="f-slip" inputmode="decimal"></label>
       <div class="wide" id="prof-sim"></div>
@@ -561,7 +563,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",btcmode:"block",riskrule:2,profOk:false,profAt:0};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -680,10 +682,11 @@ function targets(lv,dir,entry,R,k60){
   var t1=near.length?near[0]:2*R,beyond=ahead.filter(function(d){return d>=t1+R&&d<=6*R});
   var wick=dir>0?Math.max.apply(null,k60.map(function(x){return x.h}))-entry:entry-Math.min.apply(null,k60.map(function(x){return x.l}));
   return{t1:t1,res:near.length>0,t2:beyond.length?beyond[0]:(wick>=t1+R&&wick<=6*R?wick:t1+2*R),
-    block:ahead.some(function(d){return d>0.3*R&&d<R})}}
+    block:ahead.some(function(d){return d>0.3*R&&d<R}),top:wick>0&&wick<R?wick:0}}
 function mkPlan(r,entry,sl){
   var dir=r.dir,R=Math.abs(entry-sl),t=targets(r.lv,dir,entry,R,r.h4);
-  r.plan={entry:entry,sl:sl,tp1:entry+dir*t.t1,tp2:entry+dir*t.t2,rr:t.t1/R,rr2:t.t2/R,zlo:r.z.lo,zhi:r.z.hi,res:t.res,block:t.block};
+  r.plan={entry:entry,sl:sl,tp1:entry+dir*t.t1,tp2:entry+dir*t.t2,rr:t.t1/R,rr2:t.t2/R,zlo:r.z.lo,zhi:r.z.hi,res:t.res,block:t.block,
+    top:t.top?entry+dir*t.top:0,far:r.x30>0&&(entry+dir*t.t2-r.x30)*dir>0};
   return r.plan}
 /* at the zone the plan is an entry at the current price; further away, a limit order on the edge of the zone */
 function replan(r,opt){
@@ -758,6 +761,9 @@ function analyze(sym,d1,h4,h1,ctx,opt){
 
   /* Bitcoin */
   if(ctx&&ctx.btc&&sym!=="BTC"){f.btc4=ctx.btc.b4*dir;f.btcSh=ctx.btc.r4h*dir}else{f.btc4=null;f.btcSh=null}
+
+  /* highest high (lowest low for a short) of the last 30 days: a TP2 beyond it is flagged */
+  var x30=d1.slice(-30).map(function(c){return dir>0?c.h:c.l});r.x30=dir>0?Math.max.apply(null,x30):Math.min.apply(null,x30);
 
   replan(r,opt);
   r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
@@ -1026,6 +1032,12 @@ function judge(r,opt){
   if(p.block){blk.push({k:"obst",sev:"watch",t:"Niveau 4H entre l'entrée et 1R : obstacle avant même le premier R"});
     add(g,"no",0,function(){return"Obstacle critique : niveau 4H avant 1R (bloque le statut « Prêt »)"})}
   else g.pts+=3;
+  /* the 10-day extreme (wicks included) sits before 1R: the entry is at the edge of the range, with no room for the first R */
+  if(p.top){var tt=(L?"Plus haut":"Plus bas")+" des 10 derniers jours à "+px(p.top)+", avant 1R : pas assez de place";
+    blk.push({k:"top",sev:"watch",t:tt});add(g,"no",0,function(){return tt+" (bloque le statut « Prêt »)"})}
+  /* Bitcoin against the trade takes "ready" away at every precision level, unless the setting says to signal only */
+  if(opt.btcMode!=="signal"&&f.btc4!==null&&(f.btc4<0||f.btcSh<=-1.5))
+    blk.push({k:"btc",sev:"watch",t:f.btc4<0?"Bitcoin en tendance inverse sur 4H":"Bitcoin : "+sgn(f.btcSh*dir,1)+" % en 4 h, contre le trade"});
   /* the leverage only decides where the liquidation sits: the size step lowers it when the stop is too far, it does not fail the setup */
   if(stopPct>=90/lev)add(g,"mid",0,function(){return"Stop à "+pct(stopPct)+" : à levier x"+lev+" la liquidation arriverait avant, un levier plus bas est indiqué dans la taille"});
   else g.pts+=1;
@@ -1229,10 +1241,10 @@ function btStats(tr){
   return{n:n,wins:w,win:n?w/n*100:0,avg:mean,se:n>1?Math.sqrt(v/(n-1)/n):0,tot:sum,pf:gl>0?gp/gl:null,streak:worst,curve:curve}}
 /*</ENGINE>*/
 /*<CORE>*/
-/* ---------- calculations shared by the app and its tests (version 42) ----------
+/* ---------- calculations shared by the app and its tests (version 43) ----------
    Contract grid and plan rounding, position size, stop coverage, final status, realised results, paper tracking.
    Pure functions: no page, no network. tools/inject.js copies this file into the app page, tests/run.js tests it. */
-var CORE_VERSION=42;
+var CORE_VERSION=43;
 var STATUS={ready:"Prêt selon les règles",watch:"À surveiller",refused:"Refusé",incomplete:"Données incomplètes",none:"Pas de trade"};
 var ST_RANK={ready:4,watch:3,incomplete:2,refused:1,none:0};
 
@@ -1332,10 +1344,25 @@ function sizePlan(p,dir,A,X,market){
     else if(o.by==="solde disponible"&&qA===0){o.limit=true;o.why.push("aucun solde Futures disponible")}
     else if(!(q>0)||(minQ>0&&q<minQ*(1-1e-9))||(minN>0&&q*e<minN*(1-1e-9))){o.minSize=true;
       o.why.push("taille trop petite pour ce contrat (minimum "+fr(Math.max(minQ*e,minN),2)+" $ de position"+(o.by!=="risque"?", taille limitée par "+o.by:"")+")")}}
+  /* the personal rule never changes the size: it says what the loss represents and which position would respect it */
+  var rule=+A.riskRule||0;
+  if(rule>0&&q>0&&o.loss>cap*rule/100*1.005)o.warn.push("perte max de "+fr(o.loss/cap*100,1)+" % du compte, au-delà de ta règle de "+fr(rule,1)+" % : pour la respecter, position d'environ "+fr(o.notional*cap*rule/100/o.loss,0)+" $");
   if(o.by==="marge max"&&q>0)o.info.push("taille réduite pour rester sous la marge max de "+fr(+A.marginPct,0)+" %");
   if(o.by==="solde disponible"&&q>0)o.info.push("taille réduite au solde Futures disponible");
   o.ok=!o.why.length;
   return o}
+/* the same plan with a limit order on the edge of the zone, when the price stands above it (below it for a short): same stop and targets,
+   a shorter distance to the stop, the size recomputed. null when it would not improve the net reward-to-risk */
+function limitPlan(r,X,A){
+  if(!r||!r.plan||!r.z||!X||!(r.dist>0)||r.dist>0.5)return null;
+  var p=r.plan,dir=r.dir,edge=dir>0?r.z.hi:r.z.lo;
+  if(!((p.entry-edge)*dir>0))return null;
+  var rp=roundPlan({entry:edge,sl:p.sl,tp1:p.tp1,tp2:p.tp2},dir,X);
+  if(!rp.ok||!((rp.plan.entry-p.sl)*dir>0)||!((p.entry-rp.plan.entry)*dir>0))return null;
+  var q=rp.plan,R=Math.abs(q.entry-q.sl),c=(2*(+A.fee||0)+(+A.slip||0))/100*q.entry,rrNet=(Math.abs(q.tp1-q.entry)-c)/(R+c),
+    c0=(2*(+A.fee||0)+(+A.slip||0))/100*p.entry,rr0=(Math.abs(p.tp1-p.entry)-c0)/(Math.abs(p.entry-p.sl)+c0);
+  if(!(rrNet>rr0))return null;
+  return{plan:q,rrNet:rrNet,rr0:rr0,sz:sizePlan(q,dir,A,X,false)}}
 /* share of winning trades needed to break even at this net reward-to-risk */
 function beWin(rrNet){return rrNet>0?1/(1+rrNet):null}
 
@@ -1577,7 +1604,7 @@ function klines(sym,interval,limit,min){
     if(!Array.isArray(p)||p.length<min)throw{code:"short"};
     return p.map(function(k){return{t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],q:+k[7],b:+k[10]}})})}
 /* precision settings handed to the engine */
-function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1}}
+function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,btcMode:S.btcmode}}
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */
 var EXI={},exiP=null,btcC=null;
 function readExi(info){((info&&info.symbols)||[]).forEach(function(s){EXI[s.symbol]=contractOf(s)})}
@@ -1610,7 +1637,7 @@ function acctState(){
   var o=openRiskOf(pos);
   return{capital:+S.account||0,bmode:S.bmode,risk:+S.risk,budget:+S.budget,lev:+S.lev,mtype:S.mtype,marginPct:+S.margin,fee:+S.fee,slip:+S.slip,mmr:+S.mmr,
     avail:bn&&LV.avail!==null&&LV.avail!==undefined&&now-LV.acctAt<10*60e3?LV.avail:null,usedMargin:o.margin,openRisk:o.risk,unbounded:o.unbounded,unknown:o.unknown,
-    totPct:+S.totrisk,dayPnl:dayPnl(),dayPct:+S.dayloss}}
+    totPct:+S.totrisk,dayPnl:dayPnl(),dayPct:+S.dayloss,riskRule:S.riskrule===undefined?2:+S.riskrule}}
 /* result realised today (local day): read on Binance when connected (fees and funding included), otherwise the trades closed in the journal */
 function dayStart(){var d=new Date();d.setHours(0,0,0,0);return+d}
 function dayPnl(){
@@ -1744,6 +1771,14 @@ function sizeView(r){
     +z.info.map(function(w){return'<div class="sub">'+esc(w.charAt(0).toUpperCase()+w.slice(1))+"</div>"}).join("")
     +(z.ok?"":'<div class="warn">'+esc(z.why.map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(". "))+".</div>")+"</div>"
     +'<div class="size"><span>Gain net à TP1 <b class="pos">+'+fr(Math.max(0,g1),2)+" $</b></span>"+(g2!==null?'<span>Gain net à TP2 <b class="pos">+'+fr(Math.max(0,g2),2)+" $</b></span>":"")+(r.costPct?"<span>Frais et glissement ≈ <b>"+fr(r.costPct,0)+" %</b> du risque</span>":"")+"</div>"}
+/* the better-placed alternative: a limit order on the zone, or waiting for the breakout of the 10-day extreme */
+function betterView(r){
+  var X=EXI[r.full]||r.xc||null,p=r.plan,L=limitPlan(r,X,acctState()),h="";
+  if(L)h+='<div class="size"><span>Limite <b>'+pp(r,L.plan.entry)+"</b></span><span>R:R net <b>"+fr(L.rrNet,1)+"</b> au lieu de "+fr(L.rr0,1)+"</span>"
+    +(L.sz.ok?"<span>Position <b>"+fr(L.sz.notional,0)+" $</b></span><span>Perte max <b>"+fr(L.sz.loss,2)+" $</b></span>":"")+"</div>"
+    +'<div class="sub">Même stop, même TP1. Si le prix repart sans repli, l\'ordre n\'est pas exécuté.</div>';
+  if(p.top)h+='<div class="sub">'+(L?"Ou attends":"Attends")+" une clôture 4H "+(r.dir>0?"au-dessus":"en dessous")+" de <b>"+pp(r,p.top)+"</b>, puis relance le scan pour recalculer le plan.</div>";
+  return h?'<div><div class="cap">Mieux placé</div>'+h+"</div>":""}
 /* the status and its reasons, in plain words */
 function statusBox(r){
   var w=(r.stWhy||[]).slice(),mi=r.st!=="ready"?missing(r):[];
@@ -1829,7 +1864,8 @@ function card(r,n,force){
      +'<dl class="plan"><div class="e"><dt>'+(r.dist<=0.5?"Entrée au prix":"Entrée limite")+'</dt><dd>'+pp(r,p.entry)+'</dd></div><div class="s"><dt>Stop</dt><dd>'+pp(r,p.sl)+'</dd></div>'
      +'<div class="t"><dt>TP1 · '+fr(p.rr,1)+'R</dt><dd>'+pp(r,p.tp1)+'</dd></div><div class="t"><dt>TP2 · '+fr(p.rr2,1)+"R</dt><dd>"+pp(r,p.tp2)+"</dd></div></dl>"
      +(r.rp&&r.rp.ok?'<div class="sub">Prix arrondis au pas du contrat ('+fr(r.tick,r.dec)+") : stop éloigné de l'entrée, objectifs rapprochés.</div>":"")
-     +sizeView(r)+beView(r)
+     +(p.far?'<div class="warn">TP2 au-delà du plus '+(r.dir>0?"haut":"bas")+" sur 30 jours ("+pp(r,r.x30)+") : compte plutôt sur TP1.</div>":"")
+     +betterView(r)+sizeView(r)+beView(r)
      +gatesView(r)+flowView(r)+gauges(r)+bookView(r)+squeezeView(r.sq)
      +'<div class="acts"><button class="take" type="button" data-take="'+sy+'"'+(openTrades().some(function(t){return t.sym===r.sym})?" disabled>Déjà dans Mes trades":">J'ai pris ce trade")+'</button><button class="copy" type="button" data-copy="'+sy+'">Copier le plan</button></div></div>'}
   return h+"</article>"}
@@ -2445,12 +2481,12 @@ $("app").addEventListener("click",function(e){
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
   var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
 $("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else if(view==="mkt"||view==="cyc")loadMkt(true);else if(view==="tmp")loadTmp(true);else scan(mode)});
-[["account","f-account"],["risk","f-risk"],["budget","f-budget"],["lev","f-lev"],["margin","f-margin"],["totrisk","f-totrisk"],["dayloss","f-dayloss"],["minvol","f-minvol"],["fee","f-fee"],["slip","f-slip"],["exclude","f-exclude"]].forEach(function(f){
+[["account","f-account"],["risk","f-risk"],["budget","f-budget"],["lev","f-lev"],["margin","f-margin"],["totrisk","f-totrisk"],["dayloss","f-dayloss"],["riskrule","f-riskrule"],["minvol","f-minvol"],["fee","f-fee"],["slip","f-slip"],["exclude","f-exclude"]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
   el.addEventListener("change",function(){
     if(f[0]==="exclude"){S.exclude=el.value.toUpperCase().replace(/[^A-Z0-9,; ]/g,"");el.value=S.exclude}
-    else{var v=parseFloat(String(el.value).replace(",","."));var zero=/^(minvol|fee|slip|totrisk|dayloss)$/.test(f[0]);
-      if(!(v>=0)||(v===0&&!zero))v=DEF[f[0]];if(f[0]==="lev")v=Math.max(1,Math.min(125,Math.floor(v)));if(/^(risk|margin|totrisk|dayloss)$/.test(f[0]))v=Math.min(100,v);S[f[0]]=v;el.value=v}
+    else{var v=parseFloat(String(el.value).replace(",","."));var zero=/^(minvol|fee|slip|totrisk|dayloss|riskrule)$/.test(f[0]);
+      if(!(v>=0)||(v===0&&!zero))v=DEF[f[0]];if(f[0]==="lev")v=Math.max(1,Math.min(125,Math.floor(v)));if(/^(risk|margin|totrisk|dayloss|riskrule)$/.test(f[0]))v=Math.min(100,v);S[f[0]]=v;el.value=v}
     if(f[0]==="account"){S.acsync=false;$("f-acsync").checked=false}
     saveSettings();profView();if(f[0]==="fee"||f[0]==="lev")rejudge();if(view==="trades"){openTrades().forEach(paint);totals()}else if(view==="one")renderOne();else render()})});
 [["bmode","f-bmode"],["mtype","f-mtype"]].forEach(function(f){var el=$(f[1]);el.value=S[f[0]];
@@ -2493,6 +2529,8 @@ function precRef(){var x=REF[+S.strict]||REF[2],y=REF42[+S.strict];
 $("p-strict").value=String(S.strict);
 $("p-tmode").value=S.tmode==="skip"||S.tmode==="off"?S.tmode:"signal";
 $("p-tmode").addEventListener("change",function(){S.tmode=this.value;saveSettings();rejudge();if(view==="tmp")renderTmp()});
+$("p-btcmode").value=S.btcmode==="signal"?"signal":"block";
+$("p-btcmode").addEventListener("change",function(){S.btcmode=this.value;saveSettings();rejudge()});
 $("p-strict").addEventListener("change",function(){S.strict=+this.value;saveSettings();rejudge()});
 [["minrr","p-minrr",1,5],["slk","p-slk",0.1,2],["feecap","p-feecap",1,50]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];

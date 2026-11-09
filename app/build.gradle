@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
 def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
-def appVersion = '42'
+def appVersion = '43'
 
 android {
     namespace 'com.amine.radartrades'

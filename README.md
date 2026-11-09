@@ -3,6 +3,18 @@
 Application Android qui scanne les contrats crypto USDT de Binance Futures, propose des setups (tendance, zone d'entrée,
 stop, objectifs, taille de position), suit les trades pris et affiche le portefeuille.
 
+## Version 43 : ne plus acheter en haut du range
+
+- **Plus haut récent.** Si le plus haut des 10 derniers jours (mèches comprises, plus bas pour un short) est avant 1R, le setup passe
+  « À surveiller ».
+- **Bitcoin contre le trade.** Tendance 4H inverse ou −1,5 % en 4 h : pas de « Prêt » ni d'alerte, quelle que soit la précision.
+  Le réglage « Bitcoin contre le trade » permet de le signaler seulement.
+- **Mieux placé.** Quand le prix est au-dessus de la zone : même plan en ordre limite, R:R net, position et perte max ; et le niveau de
+  cassure à attendre si un plus haut récent bloque.
+- **TP2.** Signalé quand il dépasse le plus haut sur 30 jours.
+- **Règle de risque.** Alerte quand la perte au stop dépasse le % réglé (2 % par défaut, 0 = off) ; la taille n'est pas modifiée.
+- Comparaison avec la version 42 sur deux ans : `replay43.yml`, `tools/backtest/compare43.js`.
+
 ## Version 42 : protection, calculs et résultats fiables
 
 Issue des deux audits (Claude et ChatGPT) et de la note de cadrage du 23 octobre 2026. Elle corrige la protection, les calculs

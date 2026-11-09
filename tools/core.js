@@ -1,7 +1,7 @@
-/* ---------- calculations shared by the app and its tests (version 42) ----------
+/* ---------- calculations shared by the app and its tests (version 43) ----------
    Contract grid and plan rounding, position size, stop coverage, final status, realised results, paper tracking.
    Pure functions: no page, no network. tools/inject.js copies this file into the app page, tests/run.js tests it. */
-var CORE_VERSION=42;
+var CORE_VERSION=43;
 var STATUS={ready:"Prêt selon les règles",watch:"À surveiller",refused:"Refusé",incomplete:"Données incomplètes",none:"Pas de trade"};
 var ST_RANK={ready:4,watch:3,incomplete:2,refused:1,none:0};
 
@@ -101,10 +101,25 @@ function sizePlan(p,dir,A,X,market){
     else if(o.by==="solde disponible"&&qA===0){o.limit=true;o.why.push("aucun solde Futures disponible")}
     else if(!(q>0)||(minQ>0&&q<minQ*(1-1e-9))||(minN>0&&q*e<minN*(1-1e-9))){o.minSize=true;
       o.why.push("taille trop petite pour ce contrat (minimum "+fr(Math.max(minQ*e,minN),2)+" $ de position"+(o.by!=="risque"?", taille limitée par "+o.by:"")+")")}}
+  /* the personal rule never changes the size: it says what the loss represents and which position would respect it */
+  var rule=+A.riskRule||0;
+  if(rule>0&&q>0&&o.loss>cap*rule/100*1.005)o.warn.push("perte max de "+fr(o.loss/cap*100,1)+" % du compte, au-delà de ta règle de "+fr(rule,1)+" % : pour la respecter, position d'environ "+fr(o.notional*cap*rule/100/o.loss,0)+" $");
   if(o.by==="marge max"&&q>0)o.info.push("taille réduite pour rester sous la marge max de "+fr(+A.marginPct,0)+" %");
   if(o.by==="solde disponible"&&q>0)o.info.push("taille réduite au solde Futures disponible");
   o.ok=!o.why.length;
   return o}
+/* the same plan with a limit order on the edge of the zone, when the price stands above it (below it for a short): same stop and targets,
+   a shorter distance to the stop, the size recomputed. null when it would not improve the net reward-to-risk */
+function limitPlan(r,X,A){
+  if(!r||!r.plan||!r.z||!X||!(r.dist>0)||r.dist>0.5)return null;
+  var p=r.plan,dir=r.dir,edge=dir>0?r.z.hi:r.z.lo;
+  if(!((p.entry-edge)*dir>0))return null;
+  var rp=roundPlan({entry:edge,sl:p.sl,tp1:p.tp1,tp2:p.tp2},dir,X);
+  if(!rp.ok||!((rp.plan.entry-p.sl)*dir>0)||!((p.entry-rp.plan.entry)*dir>0))return null;
+  var q=rp.plan,R=Math.abs(q.entry-q.sl),c=(2*(+A.fee||0)+(+A.slip||0))/100*q.entry,rrNet=(Math.abs(q.tp1-q.entry)-c)/(R+c),
+    c0=(2*(+A.fee||0)+(+A.slip||0))/100*p.entry,rr0=(Math.abs(p.tp1-p.entry)-c0)/(Math.abs(p.entry-p.sl)+c0);
+  if(!(rrNet>rr0))return null;
+  return{plan:q,rrNet:rrNet,rr0:rr0,sz:sizePlan(q,dir,A,X,false)}}
 /* share of winning trades needed to break even at this net reward-to-risk */
 function beWin(rrNet){return rrNet>0?1/(1+rrNet):null}
 

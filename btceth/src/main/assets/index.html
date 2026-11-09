@@ -277,10 +277,11 @@ function targets(lv,dir,entry,R,k60){
   var t1=near.length?near[0]:2*R,beyond=ahead.filter(function(d){return d>=t1+R&&d<=6*R});
   var wick=dir>0?Math.max.apply(null,k60.map(function(x){return x.h}))-entry:entry-Math.min.apply(null,k60.map(function(x){return x.l}));
   return{t1:t1,res:near.length>0,t2:beyond.length?beyond[0]:(wick>=t1+R&&wick<=6*R?wick:t1+2*R),
-    block:ahead.some(function(d){return d>0.3*R&&d<R})}}
+    block:ahead.some(function(d){return d>0.3*R&&d<R}),top:wick>0&&wick<R?wick:0}}
 function mkPlan(r,entry,sl){
   var dir=r.dir,R=Math.abs(entry-sl),t=targets(r.lv,dir,entry,R,r.h4);
-  r.plan={entry:entry,sl:sl,tp1:entry+dir*t.t1,tp2:entry+dir*t.t2,rr:t.t1/R,rr2:t.t2/R,zlo:r.z.lo,zhi:r.z.hi,res:t.res,block:t.block};
+  r.plan={entry:entry,sl:sl,tp1:entry+dir*t.t1,tp2:entry+dir*t.t2,rr:t.t1/R,rr2:t.t2/R,zlo:r.z.lo,zhi:r.z.hi,res:t.res,block:t.block,
+    top:t.top?entry+dir*t.top:0,far:r.x30>0&&(entry+dir*t.t2-r.x30)*dir>0};
   return r.plan}
 /* at the zone the plan is an entry at the current price; further away, a limit order on the edge of the zone */
 function replan(r,opt){
@@ -355,6 +356,9 @@ function analyze(sym,d1,h4,h1,ctx,opt){
 
   /* Bitcoin */
   if(ctx&&ctx.btc&&sym!=="BTC"){f.btc4=ctx.btc.b4*dir;f.btcSh=ctx.btc.r4h*dir}else{f.btc4=null;f.btcSh=null}
+
+  /* highest high (lowest low for a short) of the last 30 days: a TP2 beyond it is flagged */
+  var x30=d1.slice(-30).map(function(c){return dir>0?c.h:c.l});r.x30=dir>0?Math.max.apply(null,x30):Math.min.apply(null,x30);
 
   replan(r,opt);
   r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
@@ -623,6 +627,12 @@ function judge(r,opt){
   if(p.block){blk.push({k:"obst",sev:"watch",t:"Niveau 4H entre l'entrée et 1R : obstacle avant même le premier R"});
     add(g,"no",0,function(){return"Obstacle critique : niveau 4H avant 1R (bloque le statut « Prêt »)"})}
   else g.pts+=3;
+  /* the 10-day extreme (wicks included) sits before 1R: the entry is at the edge of the range, with no room for the first R */
+  if(p.top){var tt=(L?"Plus haut":"Plus bas")+" des 10 derniers jours à "+px(p.top)+", avant 1R : pas assez de place";
+    blk.push({k:"top",sev:"watch",t:tt});add(g,"no",0,function(){return tt+" (bloque le statut « Prêt »)"})}
+  /* Bitcoin against the trade takes "ready" away at every precision level, unless the setting says to signal only */
+  if(opt.btcMode!=="signal"&&f.btc4!==null&&(f.btc4<0||f.btcSh<=-1.5))
+    blk.push({k:"btc",sev:"watch",t:f.btc4<0?"Bitcoin en tendance inverse sur 4H":"Bitcoin : "+sgn(f.btcSh*dir,1)+" % en 4 h, contre le trade"});
   /* the leverage only decides where the liquidation sits: the size step lowers it when the stop is too far, it does not fail the setup */
   if(stopPct>=90/lev)add(g,"mid",0,function(){return"Stop à "+pct(stopPct)+" : à levier x"+lev+" la liquidation arriverait avant, un levier plus bas est indiqué dans la taille"});
   else g.pts+=1;
