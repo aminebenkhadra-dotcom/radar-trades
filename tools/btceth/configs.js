@@ -53,16 +53,24 @@ function beZones(dir,price,a,lv,obs){
   m.sort(function(x,y){return x.dist-y.dist||(dir>0?y.hi-x.hi:x.lo-y.lo)});
   return m}
 
-/* every configuration of one coin. ctx: {d1,h4,h1,m15}; opt: {minRR, fee} */
+/* the trader's own plan (page only; the replay keeps the defaults so its rates stay those of the measured engine):
+   stopPct: the stop sits at least this % of the price beyond the zone; atr15k: and at least this many 15m ATRs beyond it;
+   minRR2: gain/risk to TP2 at least this; maxMove: no "Prêt" after a move above this % in the last two 15m candles */
+var BE_PLAN={stopPct:0.4,atr15k:1,minRR2:3,maxMove:3};
+function beMove30(m15){if(!m15||m15.length<2)return 0;var k=m15.slice(-2),hi=Math.max(k[0].h,k[1].h),lo=Math.min(k[0].l,k[1].l);return lo>0?(hi-lo)/lo*100:0}
+
+/* every configuration of one coin. ctx: {d1,h4,h1,m15}; opt: {minRR, fee, stopPct, atr15k, minRR2, maxMove} */
 function beConfigs(sym,c,opt){
   opt=opt||{};
   var d1=c.d1,h4=c.h4,h1=c.h1,m15=c.m15||null,n1=h1.length,price=h1[n1-1].c,a=atr(h4),
     bd=bias(d1.length>90?d1.slice(-90):d1),b4=bias(h4),lv=levels(h4,0.5*a),obs=orderBlocks(h4,a),
-    minRR=+opt.minRR||BE.minRR,cost=(2*(opt.fee===undefined?BE.fee:+opt.fee)+BE.slip)/100,out=[];
+    minRR=+opt.minRR||BE.minRR,cost=(2*(opt.fee===undefined?BE.fee:+opt.fee)+BE.slip)/100,out=[],
+    a15=m15&&m15.length>=15?atr(m15):0,move=beMove30(m15),
+    pad=Math.max(BE.slk*a,(+opt.atr15k||0)*a15,(+opt.stopPct||0)/100*price);
   [1,-1].forEach(function(dir){
     var zs=beZones(dir,price,a,lv,obs).slice(0,BE.perSide);
     zs.forEach(function(z,zi){
-      var at=z.dist<=BE.atZone,entry=at?price:z.edge,sl=dir>0?z.lo-BE.slk*a:z.hi+BE.slk*a,R=Math.abs(entry-sl);
+      var at=z.dist<=BE.atZone,entry=at?price:z.edge,sl=dir>0?z.lo-pad:z.hi+pad,R=Math.abs(entry-sl);
       if(!(R>0))return;
       var r={dir:dir,lv:lv,h4:h4.slice(-60)},t=targets(lv,dir,entry,R,r.h4);
       var key=(dir>0?"L":"S")+z.kind,
@@ -73,9 +81,11 @@ function beConfigs(sym,c,opt){
       if(at&&m15&&m15.length>=60){var T=triggers(m15,dir,z,a);trig={sweep:T.sweep,bos:T.bos,candle:T.candle,rsi:T.rsiT,any:T.sweep||T.bos||T.candle||T.rsiT?1:0,r15:T.r15}}
       var st,why=[];
       if(p.rrNet<minRR||p.block){st="refused";why.push(p.block?"obstacle 4H avant 1R":"gain/risque sous "+fr(minRR,1))}
+      else if(+opt.minRR2&&p.rr2<+opt.minRR2){st="refused";why.push("gain/risque au TP2 sous "+fr(+opt.minRR2,0))}
       else if(tr==="against"){st="counter";why.push("contre la tendance 4H et 1J")}
       else if(tr==="mixed"){st="mixed";why.push("tendances 4H et 1J pas alignées")}
       else if(!at){st="wait";why.push("prix à "+fr(z.distPct,2)+" % de la zone")}
+      else if(+opt.maxMove&&move>+opt.maxMove){st="wait";why.push("mouvement de "+fr(move,1)+" % en 30 min : attendre un retest")}
       else st="ready";
       out.push({sym:sym,key:key,name:BE_NAMES[key],short:BE_SHORT[key],dir:dir,zone:{lo:z.lo,hi:z.hi,n:z.n},near:zi===0,
         at:at,dist:z.dist,distPct:Math.abs(price-z.edge)/price*100,trend:tr,trig:trig,plan:p,st:st,why:why,a:a})})});
@@ -94,6 +104,17 @@ function beSize(p,dir,A,X){
     ok=q>=(X&&X.minQty||step)&&notional>=(X&&X.minNotional||5);
   return{qty:q,notional:notional,margin:margin,marginPct:cap>0?margin/cap*100:0,loss:loss,gain:gain,liq:liq,
     liqFirst:dir>0?liq>=p.sl:liq<=p.sl,ok:ok}}
+
+/* exits of the plan: 40 % at TP1, 30 % at TP2, 30 % runner (stop moved to the entry once TP1 is hit).
+   Quantities on the contract step, the runner takes what rounding leaves; gains net of fees, runner counted at the entry. */
+var BE_SPLIT=[0.4,0.3];
+function beSplit(p,sz,X,fee){
+  if(!sz||!(sz.qty>0))return null;
+  var step=X&&X.step>0?X.step:0.001,f=(fee===undefined?BE.fee:+fee)/100,e=p.entry,
+    r=function(v){return +(Math.floor(v/step+1e-9)*step).toFixed(8)},
+    q1=r(sz.qty*BE_SPLIT[0]),q2=r(sz.qty*BE_SPLIT[1]),q3=+(sz.qty-q1-q2).toFixed(8),
+    g1=q1*(Math.abs(p.tp1-e)-f*(e+p.tp1)),g2=q2*(Math.abs(p.tp2-e)-f*(e+p.tp2)),g3=-q3*f*2*e;
+  return{q1:q1,q2:q2,q3:q3,g1:g1,g2:g2,g3:g3,both:g1+g2+g3}}
 
 /* ---------- replay: what each configuration did on this coin ----------
    At every 15m close, the configurations whose zone the price is touching are taken at the close (one trade at a time per side),

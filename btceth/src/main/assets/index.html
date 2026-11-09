@@ -122,6 +122,25 @@ h2 span{font-size:13px;color:var(--mute);font-weight:400}
 .btn{display:block;width:100%;padding:13px;border-radius:var(--r-mid);background:var(--coin);color:var(--ink);font-weight:700;margin-top:16px}
 .btn.ghost{background:var(--panel2);color:var(--text);margin-top:10px}
 .small{font-size:12px;color:var(--faint);margin-top:8px}
+/* my day: results of the day, daily stop, goal and floor of the account */
+.day{background:var(--panel);border-radius:var(--r-big);padding:12px 14px;margin-top:14px}
+.day .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.day .row b{font-size:15px}
+.day .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.day .kpi div{background:var(--ink);border-radius:var(--r-small);padding:7px 8px;font-size:12px;color:var(--mute)}
+.day .kpi b{display:block;color:var(--text);font-size:15px}
+.day .bar{height:6px;background:var(--ink);border-radius:4px;overflow:hidden;margin:2px 0 10px}
+.day .bar i{display:block;height:100%;background:var(--coin);border-radius:4px}
+.day input{flex:1;min-width:0;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:var(--r-small);padding:9px 10px;font:inherit}
+.day .add{padding:9px 14px;border-radius:var(--r-small);background:var(--panel2);font-weight:600}
+.banner{border-radius:var(--r-mid);padding:11px 14px;margin-top:12px;font-size:14px;font-weight:600}
+.banner.stop{background:color-mix(in srgb,var(--short) 22%,var(--panel));color:var(--text)}
+.banner.goal{background:color-mix(in srgb,var(--long) 22%,var(--panel));color:var(--text)}
+.pill.stopday{background:transparent;color:var(--short);border:1px solid var(--short)}
+.split{margin:0 14px;padding:10px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.split div{background:var(--ink);border-radius:var(--r-small);padding:7px 8px;font-size:12px;color:var(--mute)}
+.split b{display:block;color:var(--text);font-size:14px}
+.rule{margin:0 14px 12px;padding:9px 11px;border-radius:var(--r-small);background:color-mix(in srgb,var(--coin) 14%,var(--ink));font-size:12.5px;color:var(--text)}
 </style>
 </head>
 <body>
@@ -142,8 +161,12 @@ h2 span{font-size:13px;color:var(--mute);font-weight:400}
     <h3 id="sheetTitle">Mon profil de trade</h3>
     <div class="field"><label for="fCap">Capital du compte (USDT)</label><input id="fCap" type="number" inputmode="decimal" min="0" step="1"></div>
     <div class="field"><label for="fRisk">Risque par trade (%)</label><input id="fRisk" type="number" inputmode="decimal" min="0.1" max="10" step="0.1"></div>
-    <div class="field"><label for="fLev">Levier</label><input id="fLev" type="number" inputmode="numeric" min="1" max="50" step="1"></div>
+    <div class="field"><label for="fLev">Levier</label><input id="fLev" type="number" inputmode="numeric" min="1" max="10" step="1"></div>
     <div class="field"><label for="fMargin">Marge max par trade (%)</label><input id="fMargin" type="number" inputmode="numeric" min="1" max="100" step="1"></div>
+    <div class="field"><label for="fGoal">Objectif : passer en spot à (USDT)</label><input id="fGoal" type="number" inputmode="decimal" min="0" step="1"></div>
+    <div class="field"><label for="fFloor">Plancher : arrêter les futures sous (USDT)</label><input id="fFloor" type="number" inputmode="decimal" min="0" step="1"></div>
+    <div class="field"><label for="fMaxLoss">Trades perdants max par jour</label><input id="fMaxLoss" type="number" inputmode="numeric" min="1" max="10" step="1"></div>
+    <div class="small">Levier limité à x10 par le plan. Le stop se place au-delà de la zone d'au moins 0,4 % du prix et d'une bougie 15 min moyenne ; gain/risque d'au moins 3 au TP2.</div>
     <h3 style="margin-top:22px">Alertes</h3>
     <div class="field"><label id="lWatch">Prévenir quand une configuration devient « Prêt »</label><button class="sw" id="fWatch" role="switch" aria-checked="false" aria-labelledby="lWatch"></button></div>
     <div class="field"><label id="lNear">Prévenir aussi quand le prix arrive à 0,3 % d'une zone</label><button class="sw" id="fNear" role="switch" aria-checked="false" aria-labelledby="lNear"></button></div>
@@ -858,16 +881,24 @@ function beZones(dir,price,a,lv,obs){
   m.sort(function(x,y){return x.dist-y.dist||(dir>0?y.hi-x.hi:x.lo-y.lo)});
   return m}
 
-/* every configuration of one coin. ctx: {d1,h4,h1,m15}; opt: {minRR, fee} */
+/* the trader's own plan (page only; the replay keeps the defaults so its rates stay those of the measured engine):
+   stopPct: the stop sits at least this % of the price beyond the zone; atr15k: and at least this many 15m ATRs beyond it;
+   minRR2: gain/risk to TP2 at least this; maxMove: no "Prêt" after a move above this % in the last two 15m candles */
+var BE_PLAN={stopPct:0.4,atr15k:1,minRR2:3,maxMove:3};
+function beMove30(m15){if(!m15||m15.length<2)return 0;var k=m15.slice(-2),hi=Math.max(k[0].h,k[1].h),lo=Math.min(k[0].l,k[1].l);return lo>0?(hi-lo)/lo*100:0}
+
+/* every configuration of one coin. ctx: {d1,h4,h1,m15}; opt: {minRR, fee, stopPct, atr15k, minRR2, maxMove} */
 function beConfigs(sym,c,opt){
   opt=opt||{};
   var d1=c.d1,h4=c.h4,h1=c.h1,m15=c.m15||null,n1=h1.length,price=h1[n1-1].c,a=atr(h4),
     bd=bias(d1.length>90?d1.slice(-90):d1),b4=bias(h4),lv=levels(h4,0.5*a),obs=orderBlocks(h4,a),
-    minRR=+opt.minRR||BE.minRR,cost=(2*(opt.fee===undefined?BE.fee:+opt.fee)+BE.slip)/100,out=[];
+    minRR=+opt.minRR||BE.minRR,cost=(2*(opt.fee===undefined?BE.fee:+opt.fee)+BE.slip)/100,out=[],
+    a15=m15&&m15.length>=15?atr(m15):0,move=beMove30(m15),
+    pad=Math.max(BE.slk*a,(+opt.atr15k||0)*a15,(+opt.stopPct||0)/100*price);
   [1,-1].forEach(function(dir){
     var zs=beZones(dir,price,a,lv,obs).slice(0,BE.perSide);
     zs.forEach(function(z,zi){
-      var at=z.dist<=BE.atZone,entry=at?price:z.edge,sl=dir>0?z.lo-BE.slk*a:z.hi+BE.slk*a,R=Math.abs(entry-sl);
+      var at=z.dist<=BE.atZone,entry=at?price:z.edge,sl=dir>0?z.lo-pad:z.hi+pad,R=Math.abs(entry-sl);
       if(!(R>0))return;
       var r={dir:dir,lv:lv,h4:h4.slice(-60)},t=targets(lv,dir,entry,R,r.h4);
       var key=(dir>0?"L":"S")+z.kind,
@@ -878,9 +909,11 @@ function beConfigs(sym,c,opt){
       if(at&&m15&&m15.length>=60){var T=triggers(m15,dir,z,a);trig={sweep:T.sweep,bos:T.bos,candle:T.candle,rsi:T.rsiT,any:T.sweep||T.bos||T.candle||T.rsiT?1:0,r15:T.r15}}
       var st,why=[];
       if(p.rrNet<minRR||p.block){st="refused";why.push(p.block?"obstacle 4H avant 1R":"gain/risque sous "+fr(minRR,1))}
+      else if(+opt.minRR2&&p.rr2<+opt.minRR2){st="refused";why.push("gain/risque au TP2 sous "+fr(+opt.minRR2,0))}
       else if(tr==="against"){st="counter";why.push("contre la tendance 4H et 1J")}
       else if(tr==="mixed"){st="mixed";why.push("tendances 4H et 1J pas alignées")}
       else if(!at){st="wait";why.push("prix à "+fr(z.distPct,2)+" % de la zone")}
+      else if(+opt.maxMove&&move>+opt.maxMove){st="wait";why.push("mouvement de "+fr(move,1)+" % en 30 min : attendre un retest")}
       else st="ready";
       out.push({sym:sym,key:key,name:BE_NAMES[key],short:BE_SHORT[key],dir:dir,zone:{lo:z.lo,hi:z.hi,n:z.n},near:zi===0,
         at:at,dist:z.dist,distPct:Math.abs(price-z.edge)/price*100,trend:tr,trig:trig,plan:p,st:st,why:why,a:a})})});
@@ -899,6 +932,17 @@ function beSize(p,dir,A,X){
     ok=q>=(X&&X.minQty||step)&&notional>=(X&&X.minNotional||5);
   return{qty:q,notional:notional,margin:margin,marginPct:cap>0?margin/cap*100:0,loss:loss,gain:gain,liq:liq,
     liqFirst:dir>0?liq>=p.sl:liq<=p.sl,ok:ok}}
+
+/* exits of the plan: 40 % at TP1, 30 % at TP2, 30 % runner (stop moved to the entry once TP1 is hit).
+   Quantities on the contract step, the runner takes what rounding leaves; gains net of fees, runner counted at the entry. */
+var BE_SPLIT=[0.4,0.3];
+function beSplit(p,sz,X,fee){
+  if(!sz||!(sz.qty>0))return null;
+  var step=X&&X.step>0?X.step:0.001,f=(fee===undefined?BE.fee:+fee)/100,e=p.entry,
+    r=function(v){return +(Math.floor(v/step+1e-9)*step).toFixed(8)},
+    q1=r(sz.qty*BE_SPLIT[0]),q2=r(sz.qty*BE_SPLIT[1]),q3=+(sz.qty-q1-q2).toFixed(8),
+    g1=q1*(Math.abs(p.tp1-e)-f*(e+p.tp1)),g2=q2*(Math.abs(p.tp2-e)-f*(e+p.tp2)),g3=-q3*f*2*e;
+  return{q1:q1,q2:q2,q3:q3,g1:g1,g2:g2,g3:g3,both:g1+g2+g3}}
 
 /* ---------- replay: what each configuration did on this coin ----------
    At every 15m close, the configurations whose zone the price is touching are taken at the close (one trade at a time per side),
@@ -928,10 +972,19 @@ window.BE_HIST={"made":"2026-10-28T22:58:32.112Z","version":1,"years":{"A":["202
 
 /* ---------- state ---------- */
 var BG=/[?&]bg=1/.test(location.search);
-var DEF={capital:1000,risk:2,lev:10,margin:25,watch:false,near:false};
+var DEF={capital:760,risk:5,lev:10,margin:100,goal:1300,floor:500,maxLoss:2,watch:false,near:false};
+/* plan of 9 November 2026, applied once over an older saved profile (alerts and coin are kept) */
+var PLAN_V=1;
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var prof=Object.assign({},DEF,load("profile",{})),coin=load("coin","BTC"),DATA={},RULES=load("rules",null),busy=false;
+if((prof.planV||0)<PLAN_V){["capital","risk","lev","margin","goal","floor","maxLoss"].forEach(function(k){prof[k]=DEF[k]});prof.planV=PLAN_V;save("profile",prof)}
+if(+prof.lev>10)prof.lev=10;
+/* the day: trades closed today (local date), entered by hand */
+function today(){var d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function dayLoad(){var d=load("day",null);return d&&d.date===today()?d:{date:today(),res:[]}}
+function dayStats(d){var w=0,l=0,net=0;d.res.forEach(function(v){if(v>0)w++;else if(v<0)l++;net+=v});return{w:w,l:l,net:net}}
+function dayStopped(p,d){return dayStats(d||dayLoad()).l>=(+(p||prof).maxLoss||2)}
 var YLAB={A:"2024-25",B:"2025-26"};
 
 /* ---------- Binance public data (through the app's relay) ---------- */
@@ -948,7 +1001,7 @@ function rules(){
 function fetchCoin(sym){
   return Promise.all([kl(sym,"1d",400),kl(sym,"4h",200),kl(sym,"1h",200),kl(sym,"15m",300),getJSON("/fapi/v1/ticker/24hr?symbol="+sym+"USDT"),rules()])
     .then(function(r){var c={d1:r[0],h4:r[1],h1:r[2],m15:r[3]},tk=r[4];
-      var R=beConfigs(sym,c,{});R.chg=+tk.priceChangePercent;R.at=Date.now();R.c=c;R.X=(r[5]||{})[sym]||null;return R})}
+      var R=beConfigs(sym,c,BE_PLAN);R.chg=+tk.priceChangePercent;R.at=Date.now();R.c=c;R.X=(r[5]||{})[sym]||null;return R})}
 
 /* ---------- prices on the contract grid ---------- */
 function decOf(step){if(!(step>0))return 2;var s=String(step);if(s.indexOf("e-")>0)return +s.split("e-")[1];var i=s.indexOf(".");return i<0?0:s.length-i-1}
@@ -1020,21 +1073,34 @@ function drawHist(h){
   return '<div class="hist"><div class="t">TP1 touché avant le stop · '+esc(h.label)+' · '+nA+' et '+nB+' cas</div>'+rows+'</div>'}
 
 function card(c,R){
-  var X=R.X,p=gridPlan(c.plan,c.dir,X),sz=beSize(p,c.dir,prof,X),h=hist(R.sym,c.key,c.trend),L=c.dir>0?"L":"S";
+  var X=R.X,p=gridPlan(c.plan,c.dir,X),sz=beSize(p,c.dir,prof,X),h=hist(R.sym,c.key,c.trend),L=c.dir>0?"L":"S",
+    st=c.st==="ready"&&dayStopped()?"stopday":c.st,sp=beSplit(p,sz,X),dq=decOf(X&&X.step||0.001);
   var size="";
   if(sz){var marginOk=sz.marginPct<=+prof.margin;
     size='<div class="size"><span>Taille <b>'+fr(sz.qty,decOf(X&&X.step||0.001))+' '+R.sym+'</b></span><span>Marge <b class="'+(marginOk?"":"bad")+'">'+money(sz.margin)+'</b> ('+fr(sz.marginPct,0)+' %)</span><span>Perte au stop <b>'+money(sz.loss)+'</b></span><span>Gain TP1 <b>'+money(sz.gain)+'</b></span>'+
-      (sz.liqFirst?'<span class="bad">Liquidation avant le stop : baisse le levier</span>':"")+(!marginOk?'<span class="bad">Marge au-dessus de ton maximum</span>':"")+(!sz.ok?'<span class="bad">Sous la taille minimale Binance</span>':"")+'</div>'}
+      (sz.liqFirst?'<span class="bad">Liquidation avant le stop : baisse le levier</span>':"")+(!marginOk?'<span class="bad">Marge au-dessus de ton maximum</span>':"")+(!sz.ok?'<span class="bad">Sous la taille minimale Binance</span>':"")+'</div>';
+    if(sp)size+='<div class="split"><div>TP1 · 40 %<b>'+fr(sp.q1,dq)+'</b>'+sgn(sp.g1,0)+' $</div><div>TP2 · 30 %<b>'+fr(sp.q2,dq)+'</b>'+sgn(sp.g2,0)+' $</div><div>Runner · 30 %<b>'+fr(sp.q3,dq)+'</b>sans TP</div></div>'}
+  var rule=st==="ready"?'<div class="rule">Ordre limite avec le stop attaché. Une fois exécuté : TP1 et TP2 en « Reduce Only ». Après le TP1, stop au prix d\'entrée : c\'est la seule modification permise.</div>':
+    st==="stopday"?'<div class="rule">Stop du jour atteint : '+(+prof.maxLoss||2)+' trades perdants aujourd\'hui. Pas de nouvelle entrée avant demain.</div>':"";
   var T=c.trig,chips=T?['<span class="'+(T.sweep?"on":"")+'">Mèche de liquidité</span>','<span class="'+(T.bos?"on":"")+'">Cassure 15 min</span>','<span class="'+(T.candle?"on":"")+'">Bougie de retournement</span>','<span class="'+(T.rsi?"on":"")+'">RSI 15 min qui tourne</span>'].join(""):"";
   var more='<div class="more">'+(T?'Signaux 15 minutes au contact (information : ils n\'ont pas amélioré le résultat sur deux ans)<div class="chips">'+chips+'</div>':'Pas encore au contact : les signaux 15 minutes s\'afficheront quand le prix sera dans la zone.')+
     '<p>Zone '+P(c.zone.lo,R.sym)+' – '+P(c.zone.hi,R.sym)+' · prix à '+fr(c.distPct,2)+' % · stop à '+fr(Math.abs(p.entry-p.sl)/p.entry*100,2)+' % de l\'entrée · gain/risque net après frais '+fr(c.plan.rrNet,2)+'.</p>'+
     (sz?'<p>Liquidation estimée vers '+P(sz.liq,R.sym)+' au levier '+prof.lev+'.</p>':"")+'</div>';
-  return '<article class="cfg '+L+' '+c.st+'"><button class="hd" aria-expanded="false"><span class="dir">'+(c.dir>0?"LONG":"SHORT")+'</span><span class="nm">'+esc(c.short)+'</span><span class="pill '+c.st+'">'+BE_STATUS[c.st]+'</span></button>'+
+  return '<article class="cfg '+L+' '+st+'"><button class="hd" aria-expanded="false"><span class="dir">'+(c.dir>0?"LONG":"SHORT")+'</span><span class="nm">'+esc(c.short)+'</span><span class="pill '+st+'">'+(st==="stopday"?"Stop du jour":BE_STATUS[st])+'</span></button>'+
     drawLadder(c,p,R.price)+
     '<div class="nums"><div>Entrée<b>'+P(p.entry,R.sym)+'</b></div><div>Stop<b>'+P(p.sl,R.sym)+'</b></div><div>TP1<b>'+P(p.tp1,R.sym)+'</b></div><div>Gain/risque<b>'+fr(p.rr,1)+'</b></div></div>'+
     (c.why.length?'<div class="why">'+esc(c.why.join(" · "))+'</div>':"")+
-    size+drawHist(h)+more+'</article>'}
+    rule+size+drawHist(h)+more+'</article>'}
 
+function dayPanel(){
+  var d=dayLoad(),s=dayStats(d),cap=+prof.capital,goal=+prof.goal,floor=+prof.floor,maxL=+prof.maxLoss||2,b="";
+  if(floor>0&&cap<=floor)b+='<div class="banner stop">Plancher de '+money(floor)+' atteint : arrête les futures et passe ce qui reste en spot.</div>';
+  else if(goal>0&&cap>=goal)b+='<div class="banner goal">Objectif de '+money(goal)+' atteint : transfère en spot et arrête les futures.</div>';
+  if(s.l>=maxL)b+='<div class="banner stop">Stop du jour : '+s.l+' trade'+(s.l>1?"s":"")+' perdant'+(s.l>1?"s":"")+'. Plus d\'entrée aujourd\'hui.</div>';
+  var span=goal>floor?goal-floor:0,pct=span?Math.max(0,Math.min(100,(cap-floor)/span*100)):0;
+  return b+'<section class="day" aria-label="Ma journée"><div class="kpi"><div>Capital<b>'+money(cap)+'</b></div><div>Aujourd\'hui<b class="'+(s.net>=0?"up":"dn")+'">'+sgn(s.net,0)+' $</b></div><div>Pertes du jour<b>'+s.l+' / '+maxL+'</b></div></div>'+
+    (span?'<div class="row" style="font-size:12px;color:var(--mute);justify-content:space-between"><span>Plancher '+money(floor)+'</span><span>Objectif '+money(goal)+'</span></div><div class="bar"><i style="width:'+fr(pct,1).replace(",",".")+'%"></i></div>':"")+
+    '<div class="row"><input id="dayRes" type="text" inputmode="decimal" placeholder="Résultat ($) : -37 ou 60" aria-label="Résultat d\'un trade fermé en dollars"><button class="add" id="dayAdd">Ajouter</button>'+(d.res.length?'<button class="add" id="dayUndo" aria-label="Annuler le dernier résultat">↶</button>':"")+'</div></section>'}
 function render(){
   var R=DATA[coin],main=document.getElementById("main");
   document.body.className=coin==="ETH"?"eth":"";
@@ -1046,15 +1112,18 @@ function render(){
   var ready=R.list.filter(function(c){return c.st==="ready"}).length,live=R.list.filter(function(c){return c.st!=="refused"});
   var h='<section class="hero"><div class="glow"></div><div class="price">'+fr(R.price,R.sym==="BTC"?1:2)+'<small>USDT</small></div>'+
     '<div class="sub"><span class="chg '+(R.chg>=0?"up":"dn")+'">'+sgn(R.chg,2)+' %</span><span>sur 24 h</span><span class="stamp">'+new Date(R.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+'</span></div></section>'+
-    '<div class="tf" aria-label="Tendance et RSI par unité de temps">'+tfs+'</div>'+drawChart(R)+
+    dayPanel()+'<div class="tf" aria-label="Tendance et RSI par unité de temps">'+tfs+'</div>'+drawChart(R)+
     '<h2>Configurations <span>'+(ready?ready+" prête"+(ready>1?"s":""):live.length+" à suivre")+'</span></h2>'+
     '<p class="lead">Les zones 4H les plus proches, en long sous le prix et en short au-dessus. Touche une carte pour le détail.</p>';
   var refused=R.list.filter(function(c){return c.st==="refused"});
   h+=live.length?live.map(function(c){return card(c,R)}).join(""):'<div class="empty">Aucune configuration jouable pour le moment. Reviens après la prochaine bougie 4H.</div>';
   if(refused.length)h+='<h2>Écartées <span>'+refused.length+'</span></h2>'+refused.map(function(c){var p=gridPlan(c.plan,c.dir,R.X);
     return '<div class="off '+(c.dir>0?"L":"S")+'"><span class="dir">'+(c.dir>0?"LONG":"SHORT")+'</span><span class="nm">'+esc(c.short)+' <em>'+P(p.entry,R.sym)+'</em></span><span class="rs">'+esc(c.why.join(" · "))+'</span></div>'}).join("");
-  h+='<p class="note">Les taux sont des fréquences passées sur deux années séparées, frais compris : ils ne donnent pas la chance d\'un trade précis. Aucune configuration n\'a gagné de façon régulière les deux années. Ce n\'est pas un conseil financier.</p>';
+  h+='<p class="note">Les taux sont des fréquences passées sur deux années séparées, frais compris, mesurées avec le stop d\'origine du moteur (le stop de ton plan est plus large) : ils ne donnent pas la chance d\'un trade précis. Aucune configuration n\'a gagné de façon régulière les deux années. Ce n\'est pas un conseil financier.</p>';
   main.innerHTML=h;
+  var addB=document.getElementById("dayAdd");if(addB)addB.onclick=function(){var inp=document.getElementById("dayRes"),v=parseFloat(String(inp.value).replace(",","."));
+    if(isNaN(v)||v===0)return;var d=dayLoad();d.res.push(v);save("day",d);prof.capital=Math.max(0,+(+prof.capital+v).toFixed(2));save("profile",prof);render()};
+  var undo=document.getElementById("dayUndo");if(undo)undo.onclick=function(){var d=dayLoad(),v=d.res.pop();if(v===undefined)return;save("day",d);prof.capital=Math.max(0,+(+prof.capital-v).toFixed(2));save("profile",prof);render()};
   main.querySelectorAll(".cfg .hd").forEach(function(b){b.onclick=function(){var a=b.parentNode,o=a.classList.toggle("open");b.setAttribute("aria-expanded",String(o))}})}
 
 function refresh(){
@@ -1069,13 +1138,15 @@ function sw(id,v){document.getElementById(id).setAttribute("aria-checked",String
 function openSheet(){
   document.getElementById("fCap").value=prof.capital;document.getElementById("fRisk").value=prof.risk;
   document.getElementById("fLev").value=prof.lev;document.getElementById("fMargin").value=prof.margin;
+  document.getElementById("fGoal").value=prof.goal;document.getElementById("fFloor").value=prof.floor;document.getElementById("fMaxLoss").value=prof.maxLoss;
   var on=window.Android&&Android.watching?Android.watching():prof.watch;sw("fWatch",on);sw("fNear",prof.near);
   var lc=window.Android&&Android.lastCheck?Android.lastCheck():"";document.getElementById("lastCheck").textContent=lc?"Dernier contrôle en arrière-plan : "+lc:"";
   sheet.classList.add("on")}
 ["fWatch","fNear"].forEach(function(id){document.getElementById(id).onclick=function(){var b=this;b.setAttribute("aria-checked",String(b.getAttribute("aria-checked")!=="true"))}});
 document.getElementById("save").onclick=function(){
   function num(id,min,max,d){var v=parseFloat(document.getElementById(id).value);return isNaN(v)?d:Math.min(max,Math.max(min,v))}
-  prof.capital=num("fCap",0,1e9,DEF.capital);prof.risk=num("fRisk",0.1,10,DEF.risk);prof.lev=Math.round(num("fLev",1,50,DEF.lev));prof.margin=num("fMargin",1,100,DEF.margin);
+  prof.capital=num("fCap",0,1e9,DEF.capital);prof.risk=num("fRisk",0.1,10,DEF.risk);prof.lev=Math.round(num("fLev",1,10,DEF.lev));prof.margin=num("fMargin",1,100,DEF.margin);
+  prof.goal=num("fGoal",0,1e9,DEF.goal);prof.floor=num("fFloor",0,1e9,DEF.floor);prof.maxLoss=Math.round(num("fMaxLoss",1,10,DEF.maxLoss));
   prof.watch=document.getElementById("fWatch").getAttribute("aria-checked")==="true";prof.near=document.getElementById("fNear").getAttribute("aria-checked")==="true";
   save("profile",prof);
   if(window.Android){if(prof.watch&&Android.startWatch)Android.startWatch(15);else if(!prof.watch&&Android.stopWatch)Android.stopWatch()}
@@ -1093,6 +1164,7 @@ window.bgScan=function(){
       R.list.forEach(function(c){
         var near=p.near&&c.st==="wait"&&c.distPct<=0.3,tag=R.sym+c.key+Math.round(c.zone.lo)+(near?"n":"r");
         if((c.st!=="ready"&&!near)||seen[tag])return;
+        if(c.st==="ready"&&(dayStopped(p)||(+p.floor>0&&+p.capital<=+p.floor)))return;
         seen[tag]=now;sent++;var pl=gridPlan(c.plan,c.dir,R.X);
         Android.notify((near?"Prix proche · ":"Prêt · ")+R.sym+" "+(c.dir>0?"long":"short"),c.short+" · entrée "+P(pl.entry,R.sym)+" · stop "+P(pl.sl,R.sym)+" · TP1 "+P(pl.tp1,R.sym),tag)})});
     save("seen",seen);

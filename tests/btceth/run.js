@@ -80,7 +80,7 @@ const check = (ok, what) => { console.log((ok ? "PASS " : "FAIL ") + what); if (
     return { dir: c.dir, e: p.entry, sl: p.sl, tp: p.tp1, loss: s && s.loss, grid: [p.entry, p.sl, p.tp1].every(v => Math.abs(v * 10 - Math.round(v * 10)) < 1e-6) }; }); });
   check(plans.every(p => (p.e - p.sl) * p.dir > 0 && (p.tp - p.e) * p.dir > 0), "stop et TP1 du bon côté de l'entrée sur toutes les cartes");
   check(plans.every(p => p.grid), "prix arrondis au pas de cotation BTC (0,1)");
-  check(plans.every(p => p.loss > 0 && p.loss <= 20.0001), "perte au stop, frais compris, jamais au-dessus de 2 % de 1 000 USDT");
+  check(plans.every(p => p.loss > 0 && p.loss <= 38.0001), "perte au stop, frais compris, jamais au-dessus de 5 % de 760 USDT (profil du plan)");
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "btc.png"), fullPage: true });
   await page.locator(".cfg .hd").first().click();
   check(await page.locator(".cfg.open .more").isVisible(), "une carte s'ouvre sur son détail");

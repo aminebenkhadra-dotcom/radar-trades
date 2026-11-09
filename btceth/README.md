@@ -12,6 +12,22 @@ entrée, stop, TP1, TP2, gain/risque, taille de position selon le profil (capita
   arrive à 0,3 % d'une zone). Jamais deux fois la même zone en 12 h.
 - **Données** : prix publics de Binance Futures (BTCUSDT, ETHUSDT) uniquement. Aucune clé API, aucun ordre.
 
+## Plan de trading (9 novembre 2026)
+
+- **Profil** : capital 760 USDT, risque 5 % par trade, levier x10 au plus (le champ ne monte plus au-dessus), marge isolée.
+  Appliqué une fois par-dessus un profil déjà enregistré ; les alertes sont conservées.
+- **Stop** : au-delà de la zone d'au moins 0,4 % du prix et d'une bougie 15 minutes moyenne (ATR 15 min), jamais moins que
+  0,5 ATR 4H. La taille s'adapte pour garder la même perte en dollars.
+- **Filtres** : gain/risque au TP2 d'au moins 3 ; pas de « Prêt » juste après un mouvement de plus de 3 % sur les deux
+  dernières bougies 15 minutes (on attend un retest).
+- **Sorties** : chaque carte donne les quantités TP1 40 %, TP2 30 % et runner 30 %, avec le rappel de remonter le stop au prix
+  d'entrée après le TP1.
+- **Ma journée** : le résultat de chaque trade fermé met à jour le capital ; après 2 trades perdants dans la journée, les
+  configurations passent en « Stop du jour » et les alertes « Prêt » s'arrêtent. Bandeaux à l'objectif (1 300 USDT : passer
+  en spot) et au plancher (500 USDT : arrêter les futures).
+- Ces règles ne s'appliquent qu'à l'écran et aux alertes (`BE_PLAN`) ; le rejeu garde le moteur d'origine, donc les taux
+  affichés restent ceux du stop d'origine.
+
 ## Ce que valent les configurations
 
 `tools/btceth/replay.js` rejoue le moteur sur l'historique 15 minutes (branche `btceth-data`, workflow `btceth-data.yml`) :
