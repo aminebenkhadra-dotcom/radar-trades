@@ -503,7 +503,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt selon les règles</label>
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt selon les règles</label>
-      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade (trades suivis et positions Binance), ou quand une liquidation est proche</label>
+      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
@@ -4439,8 +4439,9 @@ function protect(cb){
   var op=S.atr?openTrades():[],bn=hasBn(),prev={},i=0,bad=0,nl=0;
   try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
   /* the notification opens the trade it is about: the tag carries the trade id after a short prefix */
-  /* only two events notify: a trade to leave, and a liquidation close by (the other checks stay visible in Mes trades) */
-  function note(title,text,tag){if(!/^(h|lq)/.test(tag))return;var id=/^(ns|sx|lq|pu|pp)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"",tab="trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:"");
+  /* only three events notify: a trade to leave, the green light to move the stop to break-even, and a liquidation close by
+     (the other checks stay visible in Mes trades) */
+  function note(title,text,tag){if(!/^(h|lq|be)/.test(tag))return;var id=/^(ns|sx|lq|pu|pp)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"",tab="trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:"");
     try{if(typeof Android.protect==="function")Android.protect(title,text,tag,tab);else Android.notify(title,text,tag,tab)}catch(e){}}
   (bn?Promise.all([liveFetch(true).then(function(L){return liveIncome().then(function(){return L})}),daySync()]).then(function(a){return a[0]},function(){return null}):Promise.resolve(null)).then(function(L){
     if(L){nl=L.length;LV.list=L;LV.at=Date.now();LV.stale=false}else if(bn)LV.stale=true;
@@ -4480,7 +4481,8 @@ function protect(cb){
       if(h.tp&&(h.tp.act==="up"||h.tp.act==="down"||h.tp.act==="set")&&prev["tp"+t.id]!==h.tp.act){prev["tp"+t.id]=h.tp.act;
         note(nm2+" · "+(h.tp.act==="up"?"objectif à augmenter":h.tp.act==="down"?"objectif à réduire":"aucun objectif placé"),
           h.tp.act==="set"?"Repère possible pour ton TP : "+px(h.tp.px)+". "+h.tp.why+".":"Vise "+px(h.tp.px)+" au lieu de "+px(t.tp)+". "+h.tp.why+".","tp"+t.id)}
-      if(b.st==="go"&&!prev["be"+t.id]){prev["be"+t.id]=1;
+      /* no break-even note on a trade the same check says to leave */
+      if(b.st==="go"&&!out&&!prev["be"+t.id]){prev["be"+t.id]=1;
         note(nm2+" · feu vert break-even",(t.live?"Monte ton stop sur Binance à ":"Tu peux placer ton stop à ")+px(b.be)+" (break-even net de frais) pour sécuriser le trade.","be"+t.id)}
       next()},function(){next()})}}
 /* called by the watch service inside its hidden copy of this page: positions first (their alerts come first), then the setups */
