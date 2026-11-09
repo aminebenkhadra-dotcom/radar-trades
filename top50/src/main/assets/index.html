@@ -796,6 +796,26 @@ function btFrames(m,d1){
    key = L|S + c (order block and 4H level together) | o (order block) | f (4H level that changed side) | s (4H level) */
 function cfgOf(r){var f=r.f||{};if(!r.z)return null;
   return{key:(r.dir>0?"L":"S")+(f.conf?"c":f.zkind?"o":f.flip?"f":"s"),k:f.kN||0}}
+/* state of an open trade, from candles alone: the candle-based points of the trade check in Mes trades (trend 4H and 1J, volume and
+   flow, opposite or same-side setup, progress, distance to the stop, age, momentum). t: {dir,entry,sl,tp,t,r0}. hard: both trends
+   against the trade, or the 4H against it with an opposite setup. r: progress in risk units. Calibrated by tools/backtest/state42.js. */
+function tradeState(sym,d1,h4,h1,m15,t,now,opt){
+  var dir=t.dir,price=h1[h1.length-1].c,sc=0,b4=bias(h4),bd=bias(d1.length>90?d1.slice(-90):d1);
+  sc+=b4===dir?2:b4===0?-1:-3;sc+=bd===dir?1:bd===-dir?-2:0;
+  var eng=judge(analyze(sym,d1,h4,h1,null,opt||{}),{quiet:true,strict:0,noBook:true});
+  var a4=atr(h4),fl=flowRead(h1,h4,dir,{entry:t.entry,tp1:t.tp>0?t.tp:t.entry+dir*3*a4},a4,null);
+  if(fl){if(fl.v==="no")sc-=1;else if(fl.v==="ok")sc+=1}
+  var opp=!!(eng.plan&&eng.dir===-dir&&eng.score>=50);
+  if(opp)sc-=3;else if(eng.plan&&eng.dir===dir)sc+=1;
+  var risk=t.r0||Math.abs(t.entry-t.sl),rNow=risk>0?(price-t.entry)*dir/risk:0,left=risk>0&&t.sl>0?(price-t.sl)*dir/risk:1;
+  if(rNow>=1)sc+=1;if(left<0.25)sc-=1;
+  if(now-t.t>48*36e5&&rNow<0.5)sc-=1;
+  var r1=rsi(closes(h1)),r15=null;
+  if(m15&&m15.length>30){var rs=rsiSeries(closes(m15));r15=rs[rs.length-1]}
+  if(dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55)))sc-=1;
+  return{sc:sc,hard:b4===-dir&&(bd===-dir||opp),r:rNow,known:risk>0}}
+/* cell of the calibration table for a trade state: H (hard) or score band a..d, then progress band 0..4 */
+function stateKey(s){var r=s.r;return(s.hard?"H":s.sc<=-3?"a":s.sc<=0?"b":s.sc<=3?"c":"d")+(r<-0.5?0:r<0?1:r<0.5?2:r<1?3:4)}
 var BT_WARM=96*34;
 /* Bitcoin's state at every 15m close, for the Marché check of altcoins */
 function btMarket(m,d1){var F=btFrames(m,d1),out={},i;
@@ -808,6 +828,9 @@ function btStep(S,n){
   var m=S.m,F=S.F,o=S.opt,N=m.length-1,cost=(2*(o.fee===undefined?PREC.fee:+o.fee)+0.02)/100,end=Math.min(N,S.i+n),jo={quiet:true,noBook:true},k;
   for(k in o)jo[k]=o[k];
   for(;S.i<end;S.i++){var i=S.i;F.step(i);
+    /* o.state: every 4 hours of a replayed trade, its state as the app would read it (study of the reliability label) */
+    if(o.state&&S.cur&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%16===0){var ts=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t,m[i].t,o);
+      S.cur.rec.hs.push([ts.sc,ts.hard?1:0,+ts.r.toFixed(2),stateKey(ts)])}
     if(i<BT_WARM||i<S.free)continue;
     var d1=F.get("d1",400);if(d1.length<55)continue;
     if(S.first===null)S.first=m[i].t;
@@ -822,7 +845,8 @@ function btStep(S,n){
       continue}
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r)});
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
+    if(o.state&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}
