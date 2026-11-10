@@ -130,6 +130,16 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## Stop à déplacer après le break-even (Mes trades)
+
+Une fois le stop au break-even ou mieux, étiquette verte « Sécuriser · SL ↑ prix » (↓ pour un short) et encadré « Sécuriser
+plus » : stop proposé à une unité de risque derrière le meilleur prix atteint depuis l'entrée (`trailStop`, règle `r1`), dès
+qu'il verrouille au moins 0,1 R de plus que le stop actuel ; jamais sous le break-even, jamais sur un trade « Sortir ».
+Six règles comparées sur deux ans (`trail.yml`, `tools/backtest/trail42.js`, `results/trail-v42.json`, 2 223 trades passés
+par +1 R) : aucune ne bat nettement le TP fixe en moyenne (+0,92 R) ; `r1` est la plus régulière (+0,89 et +0,92 R), avec
+8 trades sur 100 au-delà de 2,5 R. Bouton « J'ai déplacé mon stop » pour les trades suivis à la main ; pour Binance, l'appli
+lit le nouveau stop. Une notification à chaque demi-unité de risque verrouillée en plus.
+
 ## TP à réduire (Mes trades)
 
 Étiquette orange « Prudence · TP ↓ prix » quand un niveau 4H se trouve avant l'objectif et que la tendance n'est plus franche

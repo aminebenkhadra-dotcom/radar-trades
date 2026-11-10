@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,tpDown,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,tpDown,trailStop,swing4,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -331,6 +331,16 @@ test("T22", "TP à réduire : un niveau 4H avant l'objectif, tendance qui n'est 
   ok(E.tpDown(d1, h4, h1, m.slice(-500), Object.assign({}, t, { tp: 0 })) === null && E.tpUp(d1, h4, h1, m.slice(-500), t) === null, "pas d'objectif : pas de signal ; et jamais « augmenter » en même temps");
   const st = E.tradeState("LVL", d1, h4, h1, m.slice(-500), t, Date.UTC(2026, 10, 10), {});
   ok(st.sc > 0 && !st.hard, "le trade n'est pas à sortir (score " + st.sc + ") : c'est bien un cas « réduire », pas « sortir »");
+});
+
+test("T23", "Stop suiveur après le break-even : jamais avant +1 R, jamais sous le break-even", () => {
+  const t = { dir: 1, entry: 100, r0: 2 }, s = { dir: -1, entry: 100, r0: 2 };
+  ok(E.trailStop("r1", t, 101.9, 1, 0) === null, "long à +0,95 R au mieux : pas encore de stop à déplacer");
+  ok(near(E.trailStop("r1", t, 102, 1, 0), 100.12), "à +1 R : le stop ne va pas plus loin que le break-even net de frais (100,12)");
+  ok(near(E.trailStop("r1", t, 107, 1, 0), 105), "plus haut à 107 (+3,5 R) : stop à 105, soit 1 R derrière et +2,5 R verrouillés");
+  ok(near(E.trailStop("r1", s, 94, 1, 0), 96), "short, plus bas à 94 : stop à 96");
+  ok(near(E.trailStop("step", t, 107, 1, 0), 104) && near(E.trailStop("a2", t, 107, 1.5, 0), 104) && near(E.trailStop("sw", t, 107, 1, 103), 102.9), "autres règles comparées dans le test : paliers, 2 ATR, dernier creux 4H");
+  ok(E.swing4([{ l: 9, h: 12 }, { l: 5, h: 11 }, { l: 6, h: 13 }, { l: 7, h: 12 }, { l: 8, h: 12 }, { l: 7, h: 14 }, { l: 8, h: 12 }, { l: 1, h: 99 }], 1) === 5, "dernier creux 4H : sur les six bougies closes, sans la bougie en cours");
 });
 
 /* ---------- report ---------- */

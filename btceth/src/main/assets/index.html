@@ -831,6 +831,40 @@ function tpDown(d1,h4,h1,m15,t){
   else return null;
   if(!((sug-be)*dir>0)||!((sug-price)*dir>0.2*a4)||!((t.tp-sug)*dir>0.3*a4))return null;
   return{px:sug,kind:kind,lvl:kind==="lvl"?before[0].p:0,rev:b4===-dir,weak:weak}}
+/* where a stop already at break-even may be moved to lock profit, once the trade has gained one risk unit. t: {dir,entry,r0};
+   far: the best price reached since the entry; a4: 4H ATR; sw: the last 4H swing against the trade (lowest low of the six closed
+   4H candles for a long, highest high for a short). Rules: be (entry plus fees, no further), step (one risk unit behind each full
+   unit gained), r1 (one risk unit behind the best price), a1 / a2 (one / two 4H ATR behind the best price), sw (just beyond the
+   last 4H swing). Never under break-even; null before +1 R. Compared by tools/backtest/trail42.js. */
+function trailStop(rule,t,far,a4,sw){
+  var d=t.dir,R=t.r0,be=t.entry*(1+d*0.0012),g=(far-t.entry)*d/R,p;if(!(R>0)||g<1)return null;
+  if(rule==="be")p=be;
+  else if(rule==="step")p=t.entry+d*(Math.floor(g+1e-9)-1)*R;
+  else if(rule==="r1")p=far-d*R;
+  else if(rule==="a1")p=far-d*a4;
+  else if(rule==="a2")p=far-d*2*a4;
+  else if(rule==="sw")p=sw>0?sw-d*0.1*a4:be;
+  else return null;
+  return d>0?Math.max(p,be):Math.min(p,be)}
+function swing4(h4,dir){var k=h4.slice(-7,-1),v=dir>0?Infinity:-Infinity;k.forEach(function(c){v=dir>0?Math.min(v,c.l):Math.max(v,c.h)});return isFinite(v)?v:0}
+var TRAIL_RULES=["be","step","r1","a1","a2","sw"];
+/* o.trail: each replayed trade is also run with every trailing rule, from its entry: original stop until +1 R, then the rule; the
+   first target stays in place for "be" only, the others let the trade run. Stop before target in one candle, gaps at the open,
+   10 days at most, fees in. Result in rec.tr[rule] = [R, how]. */
+function btTrail(S,F,m,i,N){
+  if(!S.sims||!S.sims.length)return;var c=m[i],a4=0,h4=null;
+  S.sims=S.sims.filter(function(q){
+    if(i<=q.i)return true;
+    var t=q.t,d=t.dir,left=0;
+    if(!h4){h4=F.get("h4",200);a4=atr(h4)}
+    TRAIL_RULES.forEach(function(r){var v=q.v[r];if(v.done)return;
+      if(d>0?c.l<=v.sl:c.h>=v.sl){var f=d>0?Math.min(c.o,v.sl):Math.max(c.o,v.sl);v.done=[+((f-t.entry)*d/t.r0-q.cr).toFixed(3),v.sl===t.sl?"sl":"lock"];return}
+      if(r==="be"&&(d>0?c.h>=t.tp:c.l<=t.tp)){v.done=[+(Math.abs(t.tp-t.entry)/t.r0-q.cr).toFixed(3),"tp"];return}
+      if(i>=q.end||i>=N){v.done=[+((c.c-t.entry)*d/t.r0-q.cr).toFixed(3),"time"];return}
+      left++});
+    q.far=d>0?Math.max(q.far,c.h):Math.min(q.far,c.l);
+    if(left){var sw=swing4(h4,d);TRAIL_RULES.forEach(function(r){var v=q.v[r];if(v.done)return;var p=trailStop(r,t,q.far,a4,sw);if(p!==null)v.sl=d>0?Math.max(v.sl,p):Math.min(v.sl,p)});return true}
+    q.rec.tr={};TRAIL_RULES.forEach(function(r){q.rec.tr[r]=q.v[r].done});q.rec.far=+((q.far-t.entry)*d/t.r0).toFixed(2);return false})}
 /* cell of the calibration table for a trade state: H (hard) or score band a..d, then progress band 0..4 */
 function stateKey(s){var r=s.r;return(s.hard?"H":s.sc<=-3?"a":s.sc<=0?"b":s.sc<=3?"c":"d")+(r<-0.5?0:r<0?1:r<0.5?2:r<1?3:4)}
 var BT_WARM=96*34;
@@ -845,6 +879,7 @@ function btStep(S,n){
   var m=S.m,F=S.F,o=S.opt,N=m.length-1,cost=(2*(o.fee===undefined?PREC.fee:+o.fee)+0.02)/100,end=Math.min(N,S.i+n),jo={quiet:true,noBook:true},k;
   for(k in o)jo[k]=o[k];
   for(;S.i<end;S.i++){var i=S.i;F.step(i);
+    if(o.trail)btTrail(S,F,m,i,N);
     /* o.state: every 4 hours of a replayed trade, its state as the app would read it (study of the reliability label) */
     if(o.state&&S.cur&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%16===0){var ts=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t,m[i].t,o);
       S.cur.rec.hs.push([ts.sc,ts.hard?1:0,+ts.r.toFixed(2),stateKey(ts)])}
@@ -883,6 +918,8 @@ function btStep(S,n){
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
+    if(o.trail&&res.how!=="open"){var tq={i:i,end:i+960,cr:cost*e/R,far:e,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
+      TRAIL_RULES.forEach(function(r){tq.v[r]={sl:p.sl,done:null}});(S.sims=S.sims||[]).push(tq)}
     if((o.state||o.tpup||o.tpdn)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
     S.free=j+17}
   if(S.i>=N)S.done=true;

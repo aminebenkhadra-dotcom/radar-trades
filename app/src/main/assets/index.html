@@ -259,7 +259,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .btcv{width:100%;height:170px;display:block;background:var(--sunk);border-radius:10px;margin-top:6px}
 .verdict.neg{color:var(--bad)}
 .tr .bar{height:6px}
-.fi{margin-left:auto;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}.fi:empty{display:none}.fi b{font-weight:700}.fi.tpu{margin-left:0;background:rgba(88,166,255,.14);color:#7cb8ff}.fi.tpu.dn{background:rgba(240,160,60,.16);color:#f0a84a}.fi.tpu[hidden]{display:none}.fi.tpu+.fi{margin-left:auto}
+.fi{margin-left:auto;font-size:12.5px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}.fi:empty{display:none}.fi b{font-weight:700}.fi.tpu{margin-left:0;background:rgba(88,166,255,.14);color:#7cb8ff}.fi.tpu.dn{background:rgba(240,160,60,.16);color:#f0a84a}.fi.tpu.sl{background:var(--good-soft);color:var(--good)}.fi.tpu+.fi.tpu{margin-left:0}.fi.tpu[hidden]{display:none}.fi.tpu+.fi{margin-left:auto}
 .fi.stay{background:var(--good-soft);color:var(--good)}.fi.out{background:var(--bad-soft);color:var(--bad)}.lv .fi:not(:empty)+.ldot{margin-left:8px}
 .afv{margin-left:auto;font-weight:600;font-size:13px;padding:4px 10px;border-radius:999px;background:var(--sunk);color:var(--ink)}.afv small{font-weight:400;color:var(--muted)}.af.good .afv{background:var(--good-soft);color:var(--good)}.af.early .afv{background:var(--bad-soft);color:var(--bad)}
 .cfgn{font-size:17px;font-weight:600;color:var(--ink)}.cfgr{display:flex;align-items:center;gap:12px}.cfgr b{flex:none;white-space:nowrap;font-size:30px;font-family:var(--mono);color:var(--ink)}.cfgr b.pos{color:var(--good)}.cfgr b.neg{color:var(--bad)}.cfgr span{color:var(--muted);font-size:13px}
@@ -504,7 +504,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt selon les règles</label>
       <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt selon les règles</label>
-      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, viser plus haut que mon TP ou quand il vaut mieux le réduire, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
+      <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, viser plus haut que mon TP ou le réduire, déplacer mon stop pour sécuriser mes gains, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
@@ -2169,13 +2169,27 @@ function beState(t,price){
   if(price===undefined)return{st:"wait",be:be,goPx:goPx};
   var rNow=r0?(price-t.entry)*dir/r0:0;
   return{st:(price-goPx)*dir>=0?"go":rNow>=0.6?"soon":"wait",be:be,goPx:goPx}}
+/* TRAIL: two-year replay of version 42, the 2223 trades that reached +1 R, run with six trailing rules (tools/backtest/trail42.js).
+   Kept: the stop one risk unit behind the best price. Average result in R against the fixed first target, share of trades ending
+   beyond 2.5 R and the best one. */
+var TRAIL={"n":2223,"base":0.92,"r1":0.91,"big":8,"best":6.6,"zero":26};
+/* the stop to move to, when it locks at least a tenth of a risk unit more than the current stop; never on a trade to leave */
+function trailOn(t){
+  var h=health[t.id],a=h&&!h.err&&h.trl,f=fiOf(t,h);if(!a||!(t.sl>0)||(t.live&&(t.unknown||t.partial))||(f&&f.out))return null;
+  var be=bePrice(t);
+  if((t.sl-be)*t.dir<-be*1e-6)return null;
+  return(a.px-t.sl)*t.dir>=0.1*a.r0?a:null}
+function paintTrail(t){var lb=$("ts-"+t.id);if(!lb)return;var a=trailOn(t);lb.hidden=!a;lb.innerHTML=a?"Sécuriser · <b>SL "+(t.dir>0?"↑ ":"↓ ")+px(a.px)+"</b>":""}
 function paintBE(t,price){
+  paintTrail(t);
   var el=$("be-"+t.id);if(!el)return;
   /* a live Binance position without a known, complete stop gets the protection box instead */
   if(t.live&&(t.unknown||t.partial||!(t.sl>0))){el.innerHTML="";el.className="be";el.dataset.k="";return}
-  var b=beState(t,price),k=b.st+"|"+px(b.be)+"|"+(b.goPx?px(b.goPx):""),lv=!!t.live;
+  var b=beState(t,price),tr=b.st==="done"?trailOn(t):null,k=b.st+"|"+px(b.be)+"|"+(b.goPx?px(b.goPx):"")+"|"+(tr?px(tr.px):""),lv=!!t.live;
   if(el.dataset.k===k)return;el.dataset.k=k;el.className="be "+b.st;
-  var txt=b.st==="done"?"<b>Trade sécurisé</b><span>"+(lv?"Ton stop sur Binance":"Ton stop")+" est déjà au break-even net ou mieux.</span>":
+  var q=+t.qty||0,txt=tr?"<b>Sécuriser plus</b><span>"+(lv?"Déplace ton stop sur Binance à <b>":"Déplace ton stop à <b>")+px(tr.px)+"</b> : "+sgn(tr.lock,1)+" R verrouillés"+(q?" ("+sgn((tr.px-t.entry)*t.dir*q,2)+" $)":"")+". Puis laisse courir, TP ouvert ou relevé.<br>Test sur 2 ans : "+TRAIL.big+" trades sur 100 finissent au-delà de 2,5 R, pour un gain moyen égal au TP fixe."
+      +(lv?"":'<br><button class="ghost" type="button" data-trl="'+t.id+'" style="margin-top:8px">J\'ai déplacé mon stop</button>')+"</span>":
+    b.st==="done"?"<b>Trade sécurisé</b><span>"+(lv?"Ton stop sur Binance":"Ton stop")+" est déjà au break-even net ou mieux.</span>":
     b.st==="go"?"<b>Feu vert</b><span>"+(lv?"Monte ton stop sur Binance à <b>":"Tu peux placer ton stop à <b>")+px(b.be)+"</b>, le break-even net de frais."+(lv?" L'appli verra le changement toute seule.":"")+"</span>":
     b.st==="soon"?"<b>Bientôt</b><span>Feu vert à partir de "+px(b.goPx)+". Break-even net : "+px(b.be)+".</span>":
     "<b>Pas encore</b><span>Feu vert à partir de "+px(b.goPx)+". Break-even net : "+px(b.be)+".</span>";
@@ -2219,7 +2233,7 @@ function renderTrades(){
       +(Date.now()-cv.at>2*36e5?'<div class="warn">Copie de plus de 2 heures : ouvre l\'appli sur ton téléphone pour l\'actualiser.</div>':"")
       +(cv.list.length?"":'<div class="sub">Aucune position ouverte sur Binance Futures.</div>')
       +copyTrades().map(function(t){var id=t.id;
-        return'<article class="card tr lv"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+"</span>"+(t.lev?'<span class="tag">x'+fr(t.lev,0)+" · "+(t.iso?"isolée":"croisée")+"</span>":"")+'<span class="fi tpu" id="tu-'+id+'" hidden></span><span class="fi" id="fi-'+id+'"></span></div>'
+        return'<article class="card tr lv"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+"</span>"+(t.lev?'<span class="tag">x'+fr(t.lev,0)+" · "+(t.iso?"isolée":"croisée")+"</span>":"")+'<span class="fi tpu" id="tu-'+id+'" hidden></span><span class="fi tpu sl" id="ts-'+id+'" hidden></span><span class="fi" id="fi-'+id+'"></span></div>'
           +(t.unknown?'<div class="hbox"><div class="hrow"><span class="hdot"></span><b>Protection inconnue</b></div><span class="sub">Le téléphone n\'a pas pu lire les ordres stop de cette position.</span></div>':!(t.sl>0)?'<div class="alarm"><b>Aucun stop-loss sur Binance</b><span>Sans stop, rien ne limite la perte avant la liquidation'+(t.liq>0?" à "+px(t.liq):"")+".</span></div>":t.partial?'<div class="alarm"><b>Stop partiel</b><span>Le stop ne couvre pas toute la position.</span></div>':"")
           +'<div id="hl-'+id+'"></div><div class="sub" id="fx-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
           +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
@@ -2232,7 +2246,7 @@ function renderTrades(){
   if(!op.length)h+=on?'<div class="sub">Aucun trade suivi à la main. Tes positions Binance sont suivies automatiquement au-dessus.</div>'
     :'<div class="empty">Aucun trade suivi. Dans l\'onglet Scanner, ouvre un setup et appuie sur « J\'ai pris ce trade ».</div>';
   h+=op.map(function(t){var id=t.id,twin=LV.list&&LV.list.some(function(p){return p.full===t.full&&p.dir===t.dir});
-    return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="fi tpu" id="tu-'+id+'" hidden></span><span class="fi" id="fi-'+id+'"></span></div><div class="sub">depuis le '+when(t.t)+"</div>"
+    return'<article class="card tr"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+'</span><span class="fi tpu" id="tu-'+id+'" hidden></span><span class="fi tpu sl" id="ts-'+id+'" hidden></span><span class="fi" id="fi-'+id+'"></span></div><div class="sub">depuis le '+when(t.t)+"</div>"
       +(twin?'<div class="sub">Cette position existe aussi sur ton compte Binance : elle est suivie en direct plus haut, avec tes vrais stop et objectif.</div>':"")
       +'<div id="hl-'+id+'"></div><div class="sub" id="fx-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
       +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
@@ -2295,6 +2309,8 @@ $("view-trades").addEventListener("click",function(e){
   var tk2=e.target.closest("[data-tpok]");
   if(tk2){var tt=trade(tk2.dataset.tpok),hh=tt&&health[tt.id];
     if(tt&&hh&&hh.tp&&hh.tp.px){tt.tp=+hh.tp.px.toPrecision(6);hh.tp={act:"keep",done:true};saveTrades();renderTrades()}return}
+  var bt=e.target.closest("[data-trl]");
+  if(bt){var tt=trade(bt.dataset.trl),ta=tt&&trailOn(tt);if(tt&&ta&&!tt.live){tt.sl=+ta.px.toPrecision(8);saveTrades();renderTrades()}return}
   var bb=e.target.closest("[data-be]");
   if(bb){var tb=trade(bb.dataset.be);if(tb){if(!tb.r0)tb.r0=Math.abs(tb.entry-tb.sl);tb.sl=+bePrice(tb).toPrecision(6);saveTrades();renderTrades()}return}
   var hc=e.target.closest("[data-hc]");if(hc){var th=trade(hc.dataset.hc);if(th)runHealth(th,true);return}
@@ -2389,7 +2405,14 @@ function checkTrade(t){
       tp={act:"up",px:tup.px,why:tup.lvl?"Prix proche de l'objectif, tendance 1J et 4H intactes, prochain niveau vers "+px(tup.lvl):"Prix proche de l'objectif, tendance 1J et 4H intactes, aucun niveau au-delà : objectif repoussé d'un cran"};
     else if(before.length)tp={act:"keep",why:"Une "+lvl+" vers "+px(before[0].p)+" sur le chemin, mais la tendance reste solide"};
     var fi=null;try{fi=tradeState(t.sym,d1,h4,h1,m15,t,Date.now(),opts())}catch(e){}
-    return{v:v,sc:sc,fi:fi,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
+    /* stop to lock profit once the stop is at break-even: one risk unit behind the best price reached since the entry */
+    var trl=null;try{
+      /* the risk unit is the one kept when the stop was moved (r0); a stop already past the entry with no r0 kept gives none */
+      var trR=t.r0||((t.entry-t.sl)*dir>0?Math.abs(t.entry-t.sl):0),trF=price,trS=h1.length&&h1[0].t<=t.t?h1:h4,trW=trS===h1?36e5:144e5;
+      trS.forEach(function(c){if(c.t+trW>t.t)trF=dir>0?Math.max(trF,c.h):Math.min(trF,c.l)});
+      var trP=trR>0?trailStop("r1",{dir:dir,entry:t.entry,r0:trR},trF,atr(h4),0):null;
+      if(trP!==null&&(price-trP)*dir>0.25*atr(h1))trl={px:trP,far:trF,r0:trR,lock:(trP-t.entry)*dir/trR}}catch(e){}
+    return{v:v,sc:sc,fi:fi,trl:trl,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
 /* TPUP: two-year replay of version 42, the 880 trades where the raise signal appeared (tools/backtest/tpup42.js): % that reached the
    raised target and % that fell back to the stop when it was left in place, and the average results in R */
 var TPUP={"n":880,"trades":4357,"reach":59,"back":35,"reachBE":50,"base":1.59,"a":1.59,"b":1.61,"c":1.65,"baseTp":87,"newRR":3.28};
@@ -2610,7 +2633,7 @@ function renderLive(){
   L.forEach(function(p){var t=liveTrade(p);paintHealth(t);paintBE(t,p.mark);paintTP(t);paintLive(p);paintVP(t)});liveTotals();focusNow()}
 function liveCard(p){
   var t=liveTrade(p),id=t.id,acc=LV.acct||+S.account||0,known=p.ordOk&&!LV.stale,cov=known?p.cover:null,risk=known&&p.sls.length?p.covRisk:null;
-  var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="fi tpu" id="tu-'+id+'" hidden></span><span class="fi" id="fi-'+id+'"></span><span class="ldot" title="Suivi en direct"></span></div>';
+  var h='<article class="card tr lv"><div class="trh"><span class="sym">'+esc(p.sym)+"<small>"+esc(p.quote)+'</small></span><span class="pill '+(p.dir>0?"long":"short")+'">'+(p.dir>0?"Long":"Short")+'</span><span class="tag">x'+fr(p.lev,0)+" · "+(p.iso?"isolée":"croisée")+'</span><span class="fi tpu" id="tu-'+id+'" hidden></span><span class="fi tpu sl" id="ts-'+id+'" hidden></span><span class="fi" id="fi-'+id+'"></span><span class="ldot" title="Suivi en direct"></span></div>';
   /* protection: unknown, none, partial or full; a partial stop never reads as full protection */
   if(!known)h+='<div class="hbox"><div class="hrow"><span class="hdot"></span><b>Protection inconnue</b></div><span class="sub">Les ordres stop de cette position n\'ont pas pu être lus'+(p.ordAt?" (dernière lecture réussie à "+new Date(p.ordAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+")":"")+". Vérifie sur Binance qu'un stop protège toute la position.</span></div>";
   else if(cov===0)h+='<div class="alarm"><b>Aucun stop-loss sur Binance</b><span>'+(p.trail?"Seul un stop suiveur est actif. ":"")+"Sans stop, rien ne limite la perte avant la liquidation"+(p.liq>0?" à "+px(p.liq):"")+". Place-le dans Binance : Positions, puis TP/SL.</span></div>";
@@ -4582,9 +4605,9 @@ function protect(cb){
   var op=S.atr?openTrades():[],bn=hasBn(),prev={},i=0,bad=0,nl=0;
   try{prev=JSON.parse(localStorage.getItem("radar-health")||"{}")||{}}catch(e){}
   /* the notification opens the trade it is about: the tag carries the trade id after a short prefix */
-  /* only four events notify: a trade to leave, the green light to move the stop to break-even, room to raise the target or reason to lower it, and a liquidation close by
+  /* only four events notify: a trade to leave, the green light to move the stop to break-even, room to raise the target or reason to lower it, a stop to move to lock profit, and a liquidation close by
      (the other checks stay visible in Mes trades) */
-  function note(title,text,tag){if(!/^(h|lq|be|tp)/.test(tag))return;var id=/^(ns|sx|lq|pu|pp)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"",tab="trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:"");
+  function note(title,text,tag){if(!/^(h|lq|be|tp|sl)/.test(tag))return;var id=/^(ns|sx|lq|pu|pp)/.test(tag)?"bn"+tag.slice(2):/^(tp|be)/.test(tag)?tag.slice(2):/^h/.test(tag)?tag.slice(1):"",tab="trades"+(id&&/^[A-Za-z0-9]{1,30}$/.test(id)?"~"+id:"");
     try{if(typeof Android.protect==="function")Android.protect(title,text,tag,tab);else Android.notify(title,text,tag,tab)}catch(e){}}
   (bn?Promise.all([liveFetch(true).then(function(L){return liveIncome().then(function(){return L})}),daySync()]).then(function(a){return a[0]},function(){return null}):Promise.resolve(null)).then(function(L){
     if(L){nl=L.length;LV.list=L;LV.at=Date.now();LV.stale=false}else if(bn)LV.stale=true;
@@ -4626,6 +4649,9 @@ function protect(cb){
         if(ta==="up")note(nm2+" · potentiel au-delà de ton TP","Tu peux viser "+px(h.tp.px)+" au lieu de "+px(t.tp)+". Monte d'abord ton stop au break-even, ou garde la moitié à ton TP actuel.","tp"+t.id);
         else note(nm2+" · TP à réduire","Mieux vaut viser "+px(h.tp.px)+" au lieu de "+px(t.tp)+" : "+h.tp.why+".","tp"+t.id)}}
       else delete prev["tp"+t.id];
+      var tl=out?null:trailOn(t);
+      if(tl&&!(tl.lock<(prev["sl"+t.id]||0)+0.5)){prev["sl"+t.id]=tl.lock;
+        note(nm2+" · stop à "+(t.dir>0?"remonter":"descendre"),"Déplace ton stop à "+px(tl.px)+" pour verrouiller "+sgn(tl.lock,1)+" R, et laisse courir.","sl"+t.id)}
       /* no break-even note on a trade the same check says to leave */
       if(b.st==="go"&&!out&&!prev["be"+t.id]){prev["be"+t.id]=1;
         note(nm2+" · feu vert break-even",(t.live?"Monte ton stop sur Binance à ":"Tu peux placer ton stop à ")+px(b.be)+" (break-even net de frais) pour sécuriser le trade.","be"+t.id)}
