@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,tradeState,stateKey,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -287,6 +287,26 @@ test("T18", "Après sortie : le trade gardé est suivi jusqu'au stop ou à l'obj
 
 test("T19", "Fiabilité d'un trade actif : cases de la table de calibration", () => {
   ok(E.stateKey({ sc: 5, hard: false, r: 0.2 }) === "d2" && E.stateKey({ sc: 0, hard: false, r: -0.7 }) === "b0" && E.stateKey({ sc: -3, hard: false, r: 1.4 }) === "a4" && E.stateKey({ sc: 2, hard: true, r: 0.6 }) === "H3", "score et avancement rangés dans la bonne case");
+});
+
+/* ---------- 9. synchronisation ---------- */
+test("T20", "Synchronisation : fusion des données du téléphone et de Chrome", () => {
+  const tr = (id, sl) => ({ id, sym: "SOL", sl });
+  const B = { "radar-trades": [tr("a", 1), tr("b", 1)], "radar-settings": { risk: 2, lev: 10, fee: 0.05 }, "radar-coins": ["BTC"] };
+  let M = E.syncMerge(B, { "radar-trades": [tr("a", 1), tr("b", 1), tr("c", 1)], "radar-settings": { risk: 1, lev: 10, fee: 0.05 }, "radar-coins": ["BTC"] }, B, false);
+  ok(M["radar-trades"].length === 3 && M["radar-settings"].risk === 1, "rien changé ici : on prend la copie partagée (trade ajouté, risque à 1 %)");
+  const L = { "radar-trades": [tr("a", 2), tr("d", 1)], "radar-settings": { risk: 2, lev: 5, fee: 0.05 }, "radar-coins": ["BTC", "ETH"] };       // ici : a modifié, b supprimé, d ajouté, levier 5
+  const R = { "radar-trades": [tr("a", 1), tr("b", 1), tr("c", 1)], "radar-settings": { risk: 1, lev: 10, fee: 0.05 }, "radar-coins": ["BTC"] };  // là-bas : c ajouté, risque 1
+  M = E.syncMerge(L, R, B, false);
+  const idsM = M["radar-trades"].map(x => x.id).join("");
+  ok(idsM === "adc" && M["radar-trades"][0].sl === 2, "les deux ont changé : trades fusionnés un par un (a modifié, b supprimé, c et d ajoutés) : " + idsM);
+  ok(M["radar-settings"].risk === 1 && M["radar-settings"].lev === 5, "réglages fusionnés champ par champ : risque du téléphone, levier de Chrome");
+  ok(M["radar-coins"].join() === "BTC,ETH", "liste simple changée d'un seul côté : gardée");
+  M = E.syncMerge({ "radar-trades": [tr("a", 1)], "radar-settings": { risk: 2 } }, { "radar-trades": [tr("a", 5), tr("z", 1)], "radar-settings": { risk: 1 } }, {}, true);
+  ok(M["radar-trades"].length === 2 && M["radar-trades"][0].sl === 5 && M["radar-settings"].risk === 1, "nouvel appareil qui rejoint : en cas de désaccord la copie partagée gagne, rien n'est perdu");
+  M = E.syncMerge({ k: [tr("a", 9)] }, { k: [] }, { k: [tr("a", 1)] }, false);
+  ok(M.k.length === 1 && M.k[0].sl === 9, "modifié ici, supprimé là-bas : la modification de cet appareil est gardée");
+  ok(JSON.stringify(E.syncMerge({ k: 1 }, {}, { k: 1 }, false)) === "{}", "supprimé là-bas, intact ici : supprimé");
 });
 
 /* ---------- report ---------- */

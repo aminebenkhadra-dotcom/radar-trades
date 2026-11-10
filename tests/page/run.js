@@ -85,6 +85,28 @@ const BRIDGE = `(() => {
 })();`;
 
 /* ---------- the page and its network ---------- */
+/* a private GitHub repository holding one file, as the contents API serves it: sha checked on writes, ETag on reads, CORS */
+function github(route, u, G) {
+  const rq = route.request(), m = rq.method(), cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "GET,PUT,OPTIONS", "access-control-expose-headers": "ETag" };
+  const send = (st, b, h) => route.fulfill({ status: st, headers: Object.assign({ "content-type": "application/json" }, cors, h || {}), body: b === undefined ? "" : JSON.stringify(b) });
+  if (m === "OPTIONS") return send(204);
+  if ((rq.headers().authorization || "") !== "Bearer " + G.token) return send(401, { message: "Bad credentials" });
+  if (u.pathname === "/repos/" + G.repo) return send(200, { private: true });
+  if (u.pathname !== "/repos/" + G.repo + "/contents/radar-trades.json") return send(404, { message: "Not Found" });
+  G.calls = (G.calls || 0) + 1;
+  if (m === "GET") {
+    if (!G.sha) return send(404, { message: "Not Found" });
+    if (rq.headers()["if-none-match"] === '"' + G.sha + '"') return send(304, undefined, { etag: '"' + G.sha + '"' });
+    return send(200, { sha: G.sha, content: G.content, encoding: "base64" }, { etag: '"' + G.sha + '"' });
+  }
+  if (m === "PUT") {
+    const b = JSON.parse(rq.postData() || "{}");
+    if ((G.sha || b.sha) && b.sha !== G.sha) return send(409, { message: "sha mismatch" });
+    G.content = b.content; G.sha = "s" + (G.n = (G.n || 0) + 1); G.puts = (G.puts || 0) + 1; G.text = Buffer.from(b.content, "base64").toString("utf8");
+    return send(200, { content: { sha: G.sha } });
+  }
+  return send(405, {});
+}
 async function open(browser, o) {
   o = o || {};
   const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, colorScheme: "dark", timezoneId: "Africa/Casablanca" });
@@ -93,9 +115,11 @@ async function open(browser, o) {
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|net::ERR|fonts\.g/.test(m.text())) errors.push("console: " + m.text()); });
   if (o.session) await page.addInitScript(`if(!sessionStorage.getItem("__M"))sessionStorage.setItem("__M",${JSON.stringify(JSON.stringify(o.session))})`);
   await page.addInitScript(BRIDGE);
+  if (o.web) await page.addInitScript("try{delete window.Android}catch(e){}window.Android=undefined;");
   if (o.init) await page.addInitScript(o.init);
   await page.route("**/*", async route => {
     const u = new URL(route.request().url());
+    if (u.hostname === "api.github.com" && o.gh) return github(route, u, o.gh);
     if (u.hostname !== "radar.local") return route.fulfill({ status: 404, body: "" });
     const q = u.searchParams, sym = q.get("symbol"), p = u.pathname, json = (b, st) => route.fulfill({ status: st || 200, contentType: "application/json", body: JSON.stringify(b) });
     if (p === "/" || p === "/index.html") return route.fulfill({ status: 200, contentType: "text/html", body: HTML });
@@ -373,6 +397,44 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(await page.$eval("#view-aft .af", e => /Si tu étais resté/.test(e.textContent)), "carte affichée dans l'onglet");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
+  });
+
+  await test("P14", "Synchronisation : téléphone et Chrome partagent les mêmes données par un dépôt GitHub privé", async ok => {
+    const G = { repo: "moi/radar-sync", token: "github_pat_TESTTOKEN0123456789abcdef" }, cfg = JSON.stringify({ repo: G.repo, token: G.token, dev: "test" });
+    const tr = { id: "m7", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.99, qty: 0.5, sl: last("ETHUSDT") * 0.95, tp: last("ETHUSDT") * 1.08, t: NOW - 36e5 };
+    const data = () => JSON.parse(G.text).data, wait = async (f, ms) => { const t = Date.now(); while (Date.now() - t < (ms || 30000)) { try { if (G.text && f(data())) return true; } catch (e) {} await new Promise(r => setTimeout(r, 200)); } return false; };
+    /* 1. the phone: Binance keys, one position with its stop, one trade followed by hand, risk set to 1.5 % */
+    const ph = await open(browser, { gh: G, session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [{ symbol: "SOLUSDT", side: "SELL", positionSide: "BOTH", type: "STOP_MARKET", stopPrice: "140", origQty: "0", closePosition: "true" }] } }, suffix: "#trades",
+      init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:1.5,atr:true,nt43:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([tr]))})}` });
+    await ph.page.click('.tabs button[data-v="trades"]').catch(() => {});
+    ok(await wait(d => d["radar-live-view"] && d["radar-live-view"].list.length === 1 && d["radar-trades"].length === 1), "téléphone : réglages, trade suivi et copie de la position envoyés dans le dépôt");
+    const d1 = data();
+    ok(d1["radar-settings"].risk === 1.5 && d1["radar-settings"].atr === undefined && d1["radar-live-view"].list[0].sl === 140, "réglages envoyés sans les interrupteurs d'alerte ; stop de la position dans la copie");
+    ok(!/TESTTOKEN|apiKey|secret/i.test(G.text) && !("radar-sync" in d1), "ni clé API ni code d'accès dans le fichier");
+    /* 2. Chrome: no bridge, no keys, same repository */
+    const web = await open(browser, { gh: G, web: true, suffix: "#trades", init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:2,atr:false,nt43:1,profOk:true,account:500}))}` });
+    await web.page.waitForFunction(() => { try { return JSON.parse(localStorage.getItem("radar-trades") || "[]").length === 1 && JSON.parse(localStorage.getItem("radar-settings")).risk === 1.5; } catch (e) { return false; } }, null, { timeout: 30000 });
+    await web.page.waitForTimeout(2500); await web.page.waitForLoadState("load");
+    const ws = await web.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
+    ok(ws.risk === 1.5 && ws.account === 1000 && ws.atr === false, "Chrome : reçoit le trade et les réglages du téléphone, garde son propre interrupteur d'alerte");
+    await web.page.waitForFunction(() => document.querySelector('.tabs button[data-v="trades"]'), null, { timeout: 20000 });
+    await web.page.click('.tabs button[data-v="trades"]');
+    await web.page.waitForFunction(() => /copie de ton téléphone/.test(document.querySelector("#view-trades").textContent) && document.querySelector("#net-cpbnSOLUSDTL") && /\$/.test(document.querySelector("#net-cpbnSOLUSDTL").textContent), null, { timeout: 40000 });
+    ok(true, "Chrome : position Binance affichée en copie, avec son gain en direct");
+    await web.page.waitForFunction(() => /Fiabilité/.test((document.querySelector("#fi-cpbnSOLUSDTL") || {}).textContent || ""), null, { timeout: 60000 }).catch(() => {});
+    ok(/Fiabilité \d+ % · (Sortir|Attendre)/.test(await web.page.textContent("#fi-cpbnSOLUSDTL")), "Chrome : étiquette de fiabilité sur la position copiée (" + await web.page.textContent("#fi-cpbnSOLUSDTL") + ")");
+    if (SHOTS) await web.page.screenshot({ path: path.join(SHOTS, "p14-chrome.png"), fullPage: false });
+    /* 3. a change made on Chrome comes back to the phone */
+    await web.page.click('[data-del="m7"]'); await web.page.click('[data-del="m7"]');
+    ok(await wait(d => d["radar-trades"].length === 0, 20000), "Chrome : trade supprimé, envoyé dans le dépôt");
+    await ph.page.evaluate(() => document.getElementById("sy-now").click());
+    await ph.page.waitForFunction(() => JSON.parse(localStorage.getItem("radar-trades") || "[1]").length === 0, null, { timeout: 20000 });
+    const ps = await ph.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
+    ok(ps.atr === true && ps.risk === 1.5, "téléphone : la suppression est arrivée, ses alertes n'ont pas bougé");
+    ok(G.puts <= 6, "envois limités : " + G.puts + " écritures dans le dépôt, " + G.calls + " appels");
+    const er = ph.errors.concat(web.errors);
+    ok(er.length === 0, "aucune erreur JavaScript" + (er.length ? " : " + er.slice(0, 3).join(" / ") : ""));
+    await ph.ctx.close(); await web.ctx.close();
   });
 
   await browser.close();

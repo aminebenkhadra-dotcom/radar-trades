@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>Radar Trades</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -550,6 +550,11 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
       <div class="wide"><div class="cap">Sauvegarde</div><div class="sub">Journal des trades, réglages, saisies du portefeuille et suivi sans argent dans un fichier. Les clés API n'y sont jamais : elles restent chiffrées sur ce téléphone.</div></div>
       <div class="wide acts"><button class="ghost" type="button" id="bk-out">Exporter mes données</button><button class="ghost" type="button" id="bk-in">Importer une sauvegarde</button></div>
       <div class="wide sub" id="bk-st"></div>
+      <div class="wide"><div class="cap">Synchronisation téléphone et Chrome</div><div class="sub">Mêmes réglages, trades suivis, Après sortie et suivi sans argent sur tes appareils, par un dépôt GitHub privé à toi. Les clés API ne sont jamais envoyées. À activer une fois sur chaque appareil, avec le même dépôt.</div></div>
+      <label class="wide">Dépôt GitHub privé (compte/nom)<input id="sy-repo" autocapitalize="none" spellcheck="false" placeholder="moncompte/radar-sync"></label>
+      <label class="wide">Code d'accès GitHub<input id="sy-tok" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+      <div class="wide acts"><button class="ghost" type="button" id="sy-on">Activer</button><button class="ghost" type="button" id="sy-now" hidden>Synchroniser maintenant</button><button class="ghost danger" type="button" id="sy-off" hidden>Désactiver</button></div>
+      <div class="wide sub" id="sy-st"></div>
     </div>
   </details>
 
@@ -1610,6 +1615,29 @@ function afterVerdict(a){
   var v=a.out?(a.out.why==="sl"?"good":"early"):Math.abs(gain)<unit?"flat":gain>0?"early":"good";
   return{v:v,gain:gain,final:!!a.out,byStop:L.byStop,byTp:L.byTp,px:p,
     best:(d>0?(a.hi||a.exit)-a.exit:a.exit-(a.lo||a.exit))/a.exit*100,worst:(d>0?(a.lo||a.exit)-a.exit:a.exit-(a.hi||a.exit))/a.exit*100}}
+
+/* ---------- synchronisation between devices ----------
+   Three-way merge of the synced data. L: this device, R: the shared copy, B: the state at the last sync of this device (maps of
+   key -> value). A side that has not changed since B gives way to the other, deletions included. When both changed: lists of
+   items with an id are merged item by item, objects field by field; what still conflicts goes to this device, or to the shared
+   copy when the device joins (join: first sync, no base). */
+function syncMerge(L,R,B,join){
+  function J(v){return v===undefined?"":JSON.stringify(v)}
+  function obj(v){return v&&typeof v==="object"&&!Array.isArray(v)}
+  function ids(v){return v===undefined||(Array.isArray(v)&&v.every(function(x){return obj(x)&&(typeof x.id==="string"||typeof x.id==="number")}))}
+  function m3(l,r,b){
+    var sl=J(l),sr=J(r),sb=J(b);
+    if(sl===sr||sr===sb)return l;if(sl===sb)return r;
+    if(Array.isArray(l)&&Array.isArray(r)&&ids(l)&&ids(r)&&ids(b)){
+      var out=[],seen={},by=function(a){var o={};(a||[]).forEach(function(x){o[x.id]=x});return o},ml=by(l),mr=by(r),mb=by(b);
+      (join?r.concat(l):l.concat(r)).forEach(function(x){if(seen[x.id])return;seen[x.id]=1;var v=m3(ml[x.id],mr[x.id],mb[x.id]);if(v!==undefined)out.push(v)});
+      return out}
+    if(obj(l)&&obj(r)){var o={},ks={};[l,r].forEach(function(x){Object.keys(x).forEach(function(k){ks[k]=1})});
+      Object.keys(ks).forEach(function(k){var v=m3(l[k],r[k],obj(b)?b[k]:undefined);if(v!==undefined)o[k]=v});return o}
+    return join?r:l}
+  var out={},ks={};[L,R,B].forEach(function(x){Object.keys(x||{}).forEach(function(k){ks[k]=1})});
+  Object.keys(ks).forEach(function(k){var v=m3((L||{})[k],(R||{})[k],(B||{})[k]);if(v!==undefined)out[k]=v});
+  return out}
 /*</CORE>*/
 
 /* ---------- live data: Binance public market data, relayed by the app ---------- */
@@ -2033,7 +2061,7 @@ var T=loadTrades(), view="scan", polling=false, lastPx={}, armed={};
 function loadTrades(){try{var a=JSON.parse(localStorage.getItem("radar-trades")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
 function saveTrades(){try{localStorage.setItem("radar-trades",JSON.stringify(T))}catch(e){}}
 function openTrades(){return T.filter(function(t){return!t.closed})}
-function trade(id){for(var i=0;i<T.length;i++)if(T[i].id===id)return T[i];return null}
+function trade(id){for(var i=0;i<T.length;i++)if(T[i].id===id)return T[i];var c=copyTrades();for(i=0;i<c.length;i++)if(c[i].id===id)return c[i];return null}
 function num(v){v=parseFloat(String(v).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:NaN}
 function pnl(t,price){
   var gross=t.dir*(price-t.entry)*t.qty,fee=(+S.fee||0)/100*(t.entry+price)*t.qty;
@@ -2093,6 +2121,19 @@ function renderTrades(){
   var op=openTrades(),cl=T.filter(function(t){return t.closed}),on=hasBn();
   tcount();
   var h='<div class="stack" id="live"></div>';
+  var cv=copyView();
+  if(cv){h+='<div class="lvh"><h2>Positions Binance</h2><span class="sub" style="margin-left:auto">copie de ton téléphone · '+when(cv.at)+"</span></div>"
+      +(Date.now()-cv.at>2*36e5?'<div class="warn">Copie de plus de 2 heures : ouvre l\'appli sur ton téléphone pour l\'actualiser.</div>':"")
+      +(cv.list.length?"":'<div class="sub">Aucune position ouverte sur Binance Futures.</div>')
+      +copyTrades().map(function(t){var id=t.id;
+        return'<article class="card tr lv"><div class="trh"><span class="sym">'+esc(t.sym)+'<small>USDT</small></span><span class="pill '+(t.dir>0?"long":"short")+'">'+(t.dir>0?"Long":"Short")+"</span>"+(t.lev?'<span class="tag">x'+fr(t.lev,0)+" · "+(t.iso?"isolée":"croisée")+"</span>":"")+'<span class="fi" id="fi-'+id+'"></span></div>'
+          +(t.unknown?'<div class="hbox"><div class="hrow"><span class="hdot"></span><b>Protection inconnue</b></div><span class="sub">Le téléphone n\'a pas pu lire les ordres stop de cette position.</span></div>':!(t.sl>0)?'<div class="alarm"><b>Aucun stop-loss sur Binance</b><span>Sans stop, rien ne limite la perte avant la liquidation'+(t.liq>0?" à "+px(t.liq):"")+".</span></div>":t.partial?'<div class="alarm"><b>Stop partiel</b><span>Le stop ne couvre pas toute la position.</span></div>':"")
+          +'<div id="hl-'+id+'"></div><div class="sub" id="fx-'+id+'"></div><div class="be" id="be-'+id+'"></div><div class="be" id="tp-'+id+'"></div>'
+          +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
+          +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+(t.sl>0?px(t.sl):"–")+'</span><span id="px-'+id+'">–</span><span>TP '+(t.tp>0?px(t.tp):"–")+"</span></div></div>"
+          +'<div class="funnel plain two" id="od-'+id+'"></div><details class="set opd" id="op-'+id+'"></details>'+vpBox(id)
+          +'<div class="warn" id="al-'+id+'" hidden></div><div class="sub">Entrée '+px(t.entry)+" · quantité "+fr(t.qty,t.qty>=100?0:t.qty>=1?3:4)+(t.liq>0?" · liquidation "+px(t.liq):"")+" · position lue par ton téléphone, non modifiable ici.</div></article>"}).join("")
+      +'<div class="lvh"><h2>Suivi à la main</h2><span class="sub">trades pris depuis le scanner ou ajoutés ici</span></div>'}
   if(on)h+='<div class="lvh"><h2>Suivi à la main</h2><span class="sub">trades pris depuis le scanner ou ajoutés ici</span></div>';
   h+='<div class="funnel two"><div><b id="sum-open">–</b><span>net en cours</span></div><div><b id="sum-done">–</b><span>net réalisé</span></div></div>';
   if(!op.length)h+=on?'<div class="sub">Aucun trade suivi à la main. Tes positions Binance sont suivies automatiquement au-dessus.</div>'
@@ -2121,8 +2162,9 @@ function renderTrades(){
     +'<button class="ghost danger" type="button" data-wipe="1">Effacer l\'historique</button>';
   $("view-trades").innerHTML=h;armed={};
   renderLive();
-  op.forEach(paint);op.forEach(paintHealth);op.forEach(paintTP);op.forEach(paintVP);totals();focusNow()}
-function tcount(){$("tcount").textContent=(openTrades().length+(LV.list?LV.list.length:0))||""}
+  var cps=copyTrades();cps.concat(op).forEach(function(t){paint(t);paintHealth(t);paintTP(t);paintVP(t)});totals();focusNow();
+  if(cps.length)healthQueue(cps,false)}
+function tcount(){$("tcount").textContent=(openTrades().length+(LV.list?LV.list.length:copyTrades().length))||""}
 function totals(){
   var op=openTrades(),sum=0,ok=op.length>0;
   op.forEach(function(t){var p=lastPx[t.full];if(p===undefined)ok=false;else sum+=pnl(t,p).net});
@@ -2140,17 +2182,18 @@ function paint(t){
   if(span&&rail){var pos=Math.max(0,Math.min(1,(p-t.sl)/span)),e=Math.max(0,Math.min(1,(t.entry-t.sl)/span));
     rail.style.setProperty("--e",(e*100).toFixed(1)+"%");rail.querySelector("i").style.left=(pos*100).toFixed(1)+"%"}
   var al=$("al-"+t.id),hitS=t.dir>0?p<=t.sl:p>=t.sl,hitT=t.dir>0?p>=t.tp:p<=t.tp;
+  if(t.copy){al.hidden=true;return}
   al.hidden=!(hitS||hitT);al.className=hitT?"warn okmsg":"warn";
   al.textContent=hitS?"Le prix a franchi ton stop. Vérifie sur Binance si la position est fermée, puis clôture-la ici.":hitT?"Objectif atteint. Vérifie sur Binance si la position est fermée, puis clôture-la ici.":"";
   var cb=document.querySelector('[data-close="'+t.id+'"]');if(cb&&armed["c"+t.id])cb.textContent="Confirmer la clôture à "+px(p)}
 function tick(){
   if(polling||view!=="trades"||document.hidden)return;
-  var seen={},list=openTrades().filter(function(t){if(seen[t.full])return false;seen[t.full]=1;return true});
+  var cp=copyTrades(),seen={},list=openTrades().concat(cp).filter(function(t){if(seen[t.full])return false;seen[t.full]=1;return true});
   if(!list.length)return;
   polling=true;
   Promise.all(list.map(function(t){
     return get("ticker/price?symbol="+encodeURIComponent(t.full),true).then(function(d){if(d&&isFinite(+d.price))lastPx[t.full]=+d.price},function(){})
-  })).then(function(){polling=false;openTrades().forEach(paint);totals()})}
+  })).then(function(){polling=false;openTrades().concat(cp).forEach(paint);totals()})}
 setInterval(tick,2500);
 document.addEventListener("visibilitychange",tick);
 
@@ -2302,7 +2345,7 @@ function runHealth(t,force){
   return checkTrade(t).then(function(r){health[t.id]=r},function(e){health[t.id]={err:why(e)}}).then(function(){healthBusy[t.id]=false;paintHealth(t);paintBE(t,lastPx[t.full]);paintTP(t);paintOdds(t,lastPx[t.full]);paintOpt(t,lastPx[t.full]);paintVP(t)})}
 function checkDue(){
   if(view!=="trades"||document.hidden)return;
-  healthQueue(liveTrades().concat(openTrades()),false)}
+  healthQueue(liveTrades().concat(copyTrades()).concat(openTrades()),false)}
 setInterval(checkDue,60000);
 /* one check at a time: each one reads four timeframes, the order book and the squeeze data */
 var hq=[],hqOn=false;
@@ -2362,7 +2405,7 @@ function liveSync(L){
     var full=k.slice(0,-1),qm=full.match(/(USDT|USDC)$/);
     c.push({k:k,full:full,sym:qm?full.slice(0,-qm[0].length):full,dir:k.slice(-1)==="L"?1:-1,t0:m.t||now,tc:now,net:null});
     if(m.mk>0&&qm&&qm[0]==="USDT")aftAdd({sym:full.slice(0,-4),full:full,dir:k.slice(-1)==="L"?1:-1,entry:m.en||m.e||0,qty:m.q||0,sl:m.sl||0,tp:m.tp||0,r0:m.r0||0,t0:m.t||now,tc:now,seen:m.at||0,exit:m.mk,approx:true,src:"binance"})});
-  saveLive()}
+  saveLive();try{syLive(L)}catch(e){}}
 /* ---------- realised results: Binance's income history read in full (paged), converted to USDT, counted net per exit ---------- */
 function incomeRange(type,from,to){
   return pagedRows(function(a,b){return xapi("binance","inc:"+type+":"+a+":"+b)},Math.floor(Math.max(from,Date.now()-89*864e5)),Math.floor(to),0)}
@@ -4488,8 +4531,11 @@ function protect(cb){
 /* called by the watch service inside its hidden copy of this page: positions first (their alerts come first), then the setups */
 window.bgScan=function(t10,t50){
   var m=t50?"50":t10?"10":null;
-  function end(msg){try{Android.done(msg)}catch(e){}}
+  function fin(msg){try{Android.done(msg)}catch(e){}}
+  function end(msg){var d=false,go=function(){if(d)return;d=true;fin(msg)};setTimeout(go,20000);sySync().then(go,go)}
   S=loadSettings();T=loadTrades();
+  var start0=function(){S=loadSettings();T=loadTrades();bgRun()},st=false,once=function(){if(st)return;st=true;start0()};setTimeout(once,20000);sySync().then(once,once);
+  function bgRun(){
   protect(function(pmsg){
     if(!m)return end(pmsg);
     if(busy)return end(pmsg+" · scan déjà en cours");
@@ -4511,7 +4557,116 @@ window.bgScan=function(t10,t50){
       try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
       var sw=S.side==="long"?"long":S.side==="short"?"short":"setup";
       end(pmsg+" · "+(n?n+" "+sw+(n>1?"s prêts":" prêt"):"aucun "+sw+" prêt"))};
-    scan(m)})};
+    scan(m)})}};
+
+/* ---------- synchronisation between the phone and Chrome, through one file in a private GitHub repository of the user ----------
+   The file holds the settings, the trades followed by hand, Après sortie, the portfolio entries, the paper tracking and a copy of the
+   Binance positions as the phone last read them. Never the API keys, nor the access code itself. Alert switches stay per device.
+   Each sync is a three-way merge (syncMerge) between this device, the file and the state of the last sync of this device. */
+var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","atr","amin"];
+var SY={cfg:null,busy:false,dirty:false,at:0,err:"",etag:"",sha:"",last:null,apply:false,reload:false,timer:0,again:false};
+function syCfg(){try{var c=JSON.parse(localStorage.getItem("radar-sync")||"null");return c&&c.repo&&c.token?c:null}catch(e){return null}}
+SY.cfg=syCfg();
+(function(){var set=Storage.prototype.setItem,del=Storage.prototype.removeItem;
+  function hit(k){if(SY.apply||!SY.cfg||SYK.indexOf(k)<0)return;SY.dirty=true;clearTimeout(SY.timer);SY.timer=setTimeout(sySync,5000)}
+  try{Storage.prototype.setItem=function(k,v){var old=this===localStorage&&SYK.indexOf(k)>=0?this.getItem(k):null;set.call(this,k,v);if(this===localStorage&&old!==String(v))hit(k)};
+    Storage.prototype.removeItem=function(k){del.call(this,k);if(this===localStorage)hit(k)}}catch(e){}})();
+function syLocal(){var o={};SYK.forEach(function(k){var v=localStorage.getItem(k),p;if(v===null)return;try{p=JSON.parse(v)}catch(e){return}
+  if(k==="radar-settings"&&p&&typeof p==="object"){p=Object.assign({},p);SYLOC.forEach(function(f){delete p[f]})}o[k]=p});return o}
+function syBase(){try{var b=JSON.parse(localStorage.getItem("radar-sync-base")||"null");return b&&typeof b==="object"?b:null}catch(e){return null}}
+function syReq(method,body,etag){
+  var c=SY.cfg,h={Authorization:"Bearer "+c.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  if(etag)h["If-None-Match"]=etag;if(body)h["Content-Type"]="application/json";
+  return fetch("https://api.github.com/repos/"+c.repo+"/contents/radar-trades.json",{method:method,headers:h,body:body?JSON.stringify(body):undefined,cache:"no-store"})}
+function syText(b64){var s=atob(String(b64||"").replace(/\s/g,"")),u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return new TextDecoder().decode(u)}
+function syGet(){
+  return syReq("GET",null,SY.last?SY.etag:"").then(function(r){
+    if(r.status===304)return{same:true};
+    /* 404 is both "no file yet" and "repository not reachable with this code": told apart by a second look at the repository itself */
+    if(r.status===404)return fetch("https://api.github.com/repos/"+SY.cfg.repo,{headers:{Authorization:"Bearer "+SY.cfg.token,Accept:"application/vnd.github+json"},cache:"no-store"}).then(function(q){
+      if(q.status===200){SY.sha="";SY.etag="";return{doc:null}}throw{msg:"Dépôt introuvable, ou code d'accès sans droit sur ce dépôt."}});
+    if(r.status===401)throw{msg:"Code d'accès GitHub refusé ou expiré."};
+    if(r.status===403||r.status===429)throw{msg:"GitHub refuse l'accès pour l'instant (droits du code, ou trop de demandes)."};
+    if(!r.ok)throw{msg:"GitHub a répondu "+r.status+"."};
+    var et=r.headers.get("ETag")||"";
+    return r.json().then(function(j){SY.sha=j.sha||"";SY.etag=et;
+      if(j.content)return{doc:JSON.parse(syText(j.content))};
+      /* above 1 MB GitHub leaves the content out: it is read again in raw form */
+      return fetch("https://api.github.com/repos/"+SY.cfg.repo+"/contents/radar-trades.json",{headers:{Authorization:"Bearer "+SY.cfg.token,Accept:"application/vnd.github.raw+json"},cache:"no-store"})
+        .then(function(q){if(!q.ok)throw{msg:"Fichier de synchronisation illisible."};return q.json()}).then(function(d){return{doc:d}})})})}
+function syPut(data){
+  var txt=JSON.stringify({app:"radar-trades-sync",v:1,at:new Date().toISOString(),dev:SY.cfg.dev||"",data:data}),body={message:"sync "+(SY.cfg.dev||""),content:u8b64(new Uint8Array(xlUtf8(txt)))};
+  if(SY.sha)body.sha=SY.sha;
+  return syReq("PUT",body).then(function(r){
+    if(r.status===409||r.status===422)throw{again:true};
+    if(r.status===401||r.status===403||r.status===404)throw{msg:"GitHub refuse l'écriture : le code d'accès doit avoir le droit « Contents : lecture et écriture » sur ce dépôt."};
+    if(!r.ok)throw{msg:"GitHub a répondu "+r.status+" à l'envoi."};
+    return r.json().then(function(j){SY.sha=j.content&&j.content.sha||"";SY.etag=""})})}
+function syWrite(M,L){
+  var ch=[];SY.apply=true;
+  try{SYK.forEach(function(k){var a=M[k],b=L[k];if(JSON.stringify(a)===JSON.stringify(b))return;ch.push(k);
+    if(a===undefined){localStorage.removeItem(k);return}
+    if(k==="radar-settings"){var cur={};try{cur=JSON.parse(localStorage.getItem(k)||"{}")||{}}catch(e){}a=Object.assign({},a);SYLOC.forEach(function(f){if(cur[f]!==undefined)a[f]=cur[f]})}
+    localStorage.setItem(k,JSON.stringify(a))})}catch(e){}
+  SY.apply=false;return ch}
+function sySync(){
+  if(!SY.cfg)return Promise.resolve(false);if(SY.busy){SY.again=true;return Promise.resolve(false)}
+  SY.busy=true;clearTimeout(SY.timer);var tries=0;
+  function run(){
+    return syGet().then(function(rem){
+      var L=syLocal(),B=syBase(),R=rem.same?SY.last:rem.doc&&rem.doc.data&&typeof rem.doc.data==="object"?rem.doc.data:null;
+      var M=R?syncMerge(L,R,B||{},!B):L,ch=syWrite(M,L),push=!R||JSON.stringify(M)!==JSON.stringify(R);
+      function done(){SY.last=M;try{SY.apply=true;localStorage.setItem("radar-sync-base",JSON.stringify(M))}catch(e){}SY.apply=false;
+        SY.dirty=false;SY.at=Date.now();SY.err="";if(ch.length)syReload(ch)}
+      return push?syPut(M).then(done):done()})
+    .catch(function(e){if(e&&e.again&&tries++<2){SY.last=null;SY.etag="";return run()}throw e})}
+  return run().then(function(){return true},function(e){SY.err=e&&e.msg?e.msg:"Réseau indisponible : nouvelle tentative plus tard.";return false})
+    .then(function(ok){SY.busy=false;syView();if(SY.again){SY.again=false;SY.timer=setTimeout(sySync,3000)}return ok})}
+/* data that came from the other device: lists are re-read at once; changed settings restart the page when nothing is being typed */
+var SYBOOT=Date.now();
+function syReload(ch){
+  T=loadTrades();AF=aftLoad();
+  if(ch.indexOf("radar-settings")>=0){var n=loadSettings();Object.keys(n).forEach(function(k){S[k]=n[k]});
+    if(BG)return;
+    /* the values are in use at once; the settings form is redrawn by a restart, right after opening or the next time the page comes back */
+    SY.reload=true;if(Date.now()-SYBOOT<10000){syIdle();if(!SY.reload)return}
+    try{profView()}catch(e){}}
+  if(BG)return;
+  tcount();if(view==="trades")renderTrades();else if(view==="aft"){renderAft();loadAft()}}
+function syIdle(){if(!SY.reload||BG||busy)return;var a=document.activeElement;if(a&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))return;SY.reload=false;location.reload()}
+setInterval(function(){
+  if(!SY.cfg||document.hidden||BG)return;
+  if(SY.dirty?Date.now()-SY.at>20e3:Date.now()-SY.at>90e3)sySync()},15000);
+document.addEventListener("visibilitychange",function(){if(document.hidden)return;syIdle();if(SY.cfg&&Date.now()-SY.at>15e3)sySync()});
+if(SY.cfg&&!BG)setTimeout(sySync,1200);
+/* copy of the Binance positions for the devices without the keys: written by the device that reads them, when something that
+   matters changed or every 5 minutes */
+var syLvSig="",syLvAt=0;
+function syLive(L){
+  if(!SY.cfg||!Array.isArray(L))return;
+  var list=L.map(function(p){var t=liveTrade(p);return{id:t.id,sym:t.sym,full:t.full,dir:t.dir,entry:t.entry,qty:t.qty,sl:t.sl>0?t.sl:0,tp:t.tp>0?t.tp:0,t:t.t,r0:t.r0||0,
+      unknown:!!t.unknown,partial:!!t.partial,lev:p.lev||0,iso:!!p.iso,liq:p.liq>0?p.liq:0}}),
+    sig=JSON.stringify(list.map(function(x){return[x.id,x.entry,x.qty,x.sl,x.tp,x.unknown,x.partial]}));
+  if(sig===syLvSig&&Date.now()-syLvAt<5*60e3)return;syLvSig=sig;syLvAt=Date.now();
+  try{localStorage.setItem("radar-live-view",JSON.stringify({at:Date.now(),list:list}))}catch(e){}}
+function copyView(){if(hasBn())return null;try{var v=JSON.parse(localStorage.getItem("radar-live-view")||"null");return v&&Array.isArray(v.list)?v:null}catch(e){return null}}
+function copyTrades(){var v=copyView();return v?v.list.map(function(x){var t=Object.assign({},x);t.id="cp"+String(x.id).replace(/[^A-Za-z0-9]/g,"");t.sl=x.sl>0?x.sl:NaN;t.tp=x.tp>0?x.tp:NaN;t.live=true;t.copy=true;return t}):[]}
+/* settings block */
+function syView(){
+  var st=$("sy-st");if(!st)return;var c=SY.cfg;
+  $("sy-repo").value=c?c.repo:$("sy-repo").value;$("sy-on").textContent=c?"Mettre à jour le code":"Activer";$("sy-now").hidden=!c;$("sy-off").hidden=!c;
+  st.textContent=!c?"Synchronisation désactivée.":SY.busy?"Synchronisation en cours…":SY.err?"Erreur : "+SY.err:SY.at?"Synchronisé à "+new Date(SY.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+".":"Pas encore synchronisé."}
+$("sy-on").addEventListener("click",function(){
+  var repo=$("sy-repo").value.trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/+$/,""),tok=$("sy-tok").value.trim();
+  if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)){$("sy-st").textContent="Dépôt à écrire sous la forme compte/nom, par exemple moncompte/radar-sync.";return}
+  if(!tok&&SY.cfg)tok=SY.cfg.token;
+  if(!/^[A-Za-z0-9_]{20,255}$/.test(tok)){$("sy-st").textContent="Colle le code d'accès GitHub (il commence par github_pat_).";return}
+  SY.cfg={repo:repo,token:tok,dev:CANPF?"téléphone":"Chrome"};SY.last=null;SY.etag="";SY.sha="";
+  try{localStorage.setItem("radar-sync",JSON.stringify(SY.cfg));SY.apply=true;localStorage.removeItem("radar-sync-base");SY.apply=false}catch(e){}
+  $("sy-tok").value="";syView();sySync()});
+$("sy-now").addEventListener("click",function(){sySync()});
+$("sy-off").addEventListener("click",function(){SY.cfg=null;SY.last=null;try{SY.apply=true;localStorage.removeItem("radar-sync");localStorage.removeItem("radar-sync-base");SY.apply=false}catch(e){}syView()});
+syView();
 
 /* ---------- backup: the user's own data in one file; the API keys never leave the phone's encrypted store ---------- */
 var BKEYS=["radar-settings","radar-trades","radar-after","radar-live","radar-manual","radar-cost","radar-paper","radar-health","radar-coins"];

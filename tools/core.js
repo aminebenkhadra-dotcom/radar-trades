@@ -351,3 +351,26 @@ function afterVerdict(a){
   var v=a.out?(a.out.why==="sl"?"good":"early"):Math.abs(gain)<unit?"flat":gain>0?"early":"good";
   return{v:v,gain:gain,final:!!a.out,byStop:L.byStop,byTp:L.byTp,px:p,
     best:(d>0?(a.hi||a.exit)-a.exit:a.exit-(a.lo||a.exit))/a.exit*100,worst:(d>0?(a.lo||a.exit)-a.exit:a.exit-(a.hi||a.exit))/a.exit*100}}
+
+/* ---------- synchronisation between devices ----------
+   Three-way merge of the synced data. L: this device, R: the shared copy, B: the state at the last sync of this device (maps of
+   key -> value). A side that has not changed since B gives way to the other, deletions included. When both changed: lists of
+   items with an id are merged item by item, objects field by field; what still conflicts goes to this device, or to the shared
+   copy when the device joins (join: first sync, no base). */
+function syncMerge(L,R,B,join){
+  function J(v){return v===undefined?"":JSON.stringify(v)}
+  function obj(v){return v&&typeof v==="object"&&!Array.isArray(v)}
+  function ids(v){return v===undefined||(Array.isArray(v)&&v.every(function(x){return obj(x)&&(typeof x.id==="string"||typeof x.id==="number")}))}
+  function m3(l,r,b){
+    var sl=J(l),sr=J(r),sb=J(b);
+    if(sl===sr||sr===sb)return l;if(sl===sb)return r;
+    if(Array.isArray(l)&&Array.isArray(r)&&ids(l)&&ids(r)&&ids(b)){
+      var out=[],seen={},by=function(a){var o={};(a||[]).forEach(function(x){o[x.id]=x});return o},ml=by(l),mr=by(r),mb=by(b);
+      (join?r.concat(l):l.concat(r)).forEach(function(x){if(seen[x.id])return;seen[x.id]=1;var v=m3(ml[x.id],mr[x.id],mb[x.id]);if(v!==undefined)out.push(v)});
+      return out}
+    if(obj(l)&&obj(r)){var o={},ks={};[l,r].forEach(function(x){Object.keys(x).forEach(function(k){ks[k]=1})});
+      Object.keys(ks).forEach(function(k){var v=m3(l[k],r[k],obj(b)?b[k]:undefined);if(v!==undefined)o[k]=v});return o}
+    return join?r:l}
+  var out={},ks={};[L,R,B].forEach(function(x){Object.keys(x||{}).forEach(function(k){ks[k]=1})});
+  Object.keys(ks).forEach(function(k){var v=m3((L||{})[k],(R||{})[k],(B||{})[k]);if(v!==undefined)out[k]=v});
+  return out}

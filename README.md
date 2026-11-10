@@ -121,6 +121,17 @@ tendance, pas une garantie.
 0,01 R. Elles changent la part de trades positifs : 34 % avec stop et TP fixes, environ 40 % avec break-even ou stop suiveur,
 50 % en encaissant la moitié à +1R. L'onglet Mes trades les propose comme options, avec la taille, les frais et le funding.
 
+## Synchronisation téléphone et Chrome
+
+Réglages → « Synchronisation téléphone et Chrome » : un dépôt GitHub privé de l'utilisateur (compte/nom) et un code d'accès
+GitHub limité à ce dépôt (fine-grained token, droit « Contents : read and write »). À activer une fois sur chaque appareil.
+Un seul fichier, `radar-trades.json` : réglages (sans les interrupteurs d'alerte, propres à chaque appareil), trades suivis à
+la main, Après sortie, saisies du portefeuille, suivi sans argent, et une copie des positions Binance telles que le téléphone
+les a lues (`radar-live-view`). Jamais les clés API ni le code d'accès. Chaque synchro est une fusion à trois (`syncMerge` :
+cet appareil, le fichier, l'état de la dernière synchro) : listes fusionnées élément par élément, réglages champ par champ.
+Envoi 5 secondes après un changement, lecture toutes les 90 secondes quand l'appli est ouverte, et à chaque contrôle en
+arrière-plan sur le téléphone. Dans Chrome, sans clés, Mes trades affiche la copie des positions avec son heure.
+
 ## Fiabilité d'un trade actif (Mes trades)
 
 Chaque trade actif porte une étiquette « Fiabilité x % · Attendre / Sortir ». Le moteur lit l'état du trade (`tradeState` :
