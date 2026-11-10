@@ -633,6 +633,23 @@ function tpUp(d1,h4,h1,m15,t){
   if(before.length>=2)return null;
   var r0=t.r0||Math.abs(t.entry-t.sl);
   return after.length?{px:after[0].p-dir*0.1*a4,lvl:after[0].p}:{px:t.tp+dir*Math.max(r0||0,a4),lvl:0}}
+/* reason to lower the target of an open trade, from candles alone. The trade is no longer carried by a clean trend (4H or 1J not with
+   it, or momentum fading) or two 4H levels stand before the target. kind "lvl": a 4H level stands before the target, the proposed
+   target sits just before it. kind "exh": no level, but the 4H trend has turned against the trade, or momentum fades while the 4H
+   is no longer with it: the proposed target is half a 4H ATR ahead of the price. Always beyond break-even and ahead of the price.
+   Measured by tools/backtest/tpdn42.js. */
+function tpDown(d1,h4,h1,m15,t){
+  var dir=t.dir,price=h1[h1.length-1].c;if(!(t.tp>0))return null;
+  if(!((t.tp-price)*dir>0))return null;
+  var b4=bias(h4),bd=bias(d1.length>90?d1.slice(-90):d1),r1=rsi(closes(h1)),r15=null;if(m15&&m15.length>30){var rs=rsiSeries(closes(m15));r15=rs[rs.length-1]}
+  var weak=dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55)),strong=b4===dir&&bd===dir&&!weak;
+  var a4=atr(h4),ahead=levels(h4,0.5*a4).filter(function(l){return(l.p-price)*dir>0.3*a4}).sort(function(x,y){return(x.p-y.p)*dir});
+  var before=ahead.filter(function(l){return(t.tp-l.p)*dir>0.4*a4}),be=t.entry*(1+dir*0.0015),sug,kind;
+  if(before.length&&(!strong||before.length>=2)){sug=before[0].p-dir*0.1*a4;kind="lvl"}
+  else if(!before.length&&(b4===-dir||(weak&&b4!==dir))){sug=price+dir*0.5*a4;kind="exh"}
+  else return null;
+  if(!((sug-be)*dir>0)||!((sug-price)*dir>0.2*a4)||!((t.tp-sug)*dir>0.3*a4))return null;
+  return{px:sug,kind:kind,lvl:kind==="lvl"?before[0].p:0,rev:b4===-dir,weak:weak}}
 /* cell of the calibration table for a trade state: H (hard) or score band a..d, then progress band 0..4 */
 function stateKey(s){var r=s.r;return(s.hard?"H":s.sc<=-3?"a":s.sc<=0?"b":s.sc<=3?"c":"d")+(r<-0.5?0:r<0?1:r<0.5?2:r<1?3:4)}
 var BT_WARM=96*34;
@@ -661,6 +678,15 @@ function btStep(S,n){
           if(!res){j=Math.min(j,N);res={how:"time",r:ct.dir*(m[j].c-ct.entry)/cR}}
           res.r=+(res.r-cc).toFixed(3);return res};
         S.cur.rec.up={k:i-S.cur.i,px:tu.px,rr:+(Math.abs(tu.px-ct.entry)/cR).toFixed(2),r:+((m[i].c-ct.entry)*ct.dir/cR).toFixed(2),a:alt(ct.sl,false),b:alt(ct.entry,false),c:alt(ct.sl,true)}}}
+    /* o.tpdn: the first hour of a replayed trade where the target could be lowered, and what the lowered target then gave (stop unchanged) */
+    if(o.tpdn&&S.cur&&!S.cur.rec.dn&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%4===0){var td=tpDown(F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t);
+      if(td){var dt=S.cur.t,dR=dt.r0,dlim=Math.min(N,S.cur.i+960),dj,dc,dres=null,dst=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),dt,m[i].t,o);
+        for(dj=i+1;dj<=dlim;dj++){dc=m[dj];
+          if(dt.dir>0?dc.l<=dt.sl:dc.h>=dt.sl){var df=dt.dir>0?Math.min(dc.o,dt.sl):Math.max(dc.o,dt.sl);dres={how:"sl",r:dt.dir*(df-dt.entry)/dR};break}
+          if(dt.dir>0?dc.h>=td.px:dc.l<=td.px){dres={how:"tp",r:Math.abs(td.px-dt.entry)/dR};break}}
+        if(!dres){dj=Math.min(dj,N);dres={how:"time",r:dt.dir*(m[dj].c-dt.entry)/dR}}
+        dres.r=+(dres.r-S.cur.rec.cr).toFixed(3);
+        S.cur.rec.dn={k:i-S.cur.i,kind:td.kind,rev:td.rev?1:0,weak:td.weak?1:0,out:dst.hard||dst.sc<=0?1:0,rr:+(Math.abs(td.px-dt.entry)/dR).toFixed(2),r:+((m[i].c-dt.entry)*dt.dir/dR).toFixed(2),a:dres}}}
     if(i<BT_WARM||i<S.free)continue;
     var d1=F.get("d1",400);if(d1.length<55)continue;
     if(S.first===null)S.first=m[i].t;
@@ -676,7 +702,7 @@ function btStep(S,n){
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
-    if((o.state||o.tpup)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
+    if((o.state||o.tpup||o.tpdn)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}
