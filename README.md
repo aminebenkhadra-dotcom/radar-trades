@@ -130,6 +130,18 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## TP à réduire (Mes trades)
+
+Étiquette orange « Prudence · TP ↓ prix » quand un niveau 4H se trouve avant l'objectif et que la tendance n'est plus franche
+(4H ou 1J plus dans le sens du trade, ou élan qui s'essouffle), ou que deux niveaux barrent la route (`tpDown`, type « lvl ») ;
+jamais quand le conseil est « Sortir ». Mesuré sur deux ans (`tpdn.yml`, `tools/backtest/tpdn42.js`, `results/tpdn-v42.json`,
+635 signaux) : objectif d'origine atteint 21 fois sur 100, objectif réduit 50 fois sur 100, gain moyen +0,05 R par trade
+(+0,06 et +0,04 selon l'année). Le cas « tendance retournée sans niveau » (type « exh ») n'a pas d'étiquette : dans le test il
+tombait toujours dans un état « Sortir », et réduire l'objectif n'y apportait rien. Une notification à l'apparition du signal.
+
+Après sortie : le verdict reste celui du stop et de l'objectif du trade fermé (premier touché), et le prix continue d'être
+suivi après, jusqu'à la suppression.
+
 ## Synchronisation téléphone et Chrome
 
 Réglages → « Synchronisation téléphone et Chrome » : un dépôt GitHub privé de l'utilisateur (compte/nom) et un code d'accès

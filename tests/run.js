@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,tpDown,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -273,9 +273,12 @@ test("T18", "Après sortie : le trade gardé est suivi jusqu'au stop ou à l'obj
   let v = E.afterVerdict(Object.assign({}, a, w));
   ok(v.v === "early" && near(v.gain, 2) && !v.final, "pour l'instant rester ferait +2 par unité : sortie trop tôt (provisoire)");
   const a2 = Object.assign({}, a, w), w2 = E.afterWalk(a2, [k(1, 104.5, 107, 104, 106), k(2, 106, 106.5, 97, 99), k(3, 99, 120, 99, 118)], t + 9 * H);
-  ok(w2.out && w2.out.why === "sl" && near(w2.out.px, 98) && near(w2.hi, 107), "suite : le stop à 98 est touché avant l'objectif, le plus haut reste 107");
+  ok(w2.out && w2.out.why === "sl" && near(w2.out.px, 98), "suite : le stop à 98 est touché avant l'objectif");
+  ok(near(w2.hi, 120) && near(w2.last, 118), "le prix reste suivi après le stop : plus haut 120, dernier prix 118");
   v = E.afterVerdict(Object.assign({}, a2, w2));
-  ok(v.v === "good" && near(v.gain, -6) && v.final, "bonne décision : rester aurait coûté 6 par unité");
+  ok(v.v === "good" && near(v.gain, -6) && v.final && near(v.now, 118), "le verdict reste celui du trade : bonne décision, rester aurait coûté 6 par unité, même si le prix est remonté ensuite");
+  const w5 = E.afterWalk(Object.assign({}, a2, w2), [k(4, 118, 119, 90, 91)], t + 9 * H);
+  ok(w5.out.why === "sl" && w5.out.t === w2.out.t && near(w5.last, 91) && near(w5.lo, 90), "lectures suivantes : le verdict ne change plus, le prix continue d'être suivi");
   const w3 = E.afterWalk(a, [k(0, 104, 111, 103.5, 110.5)], t + 9 * H);
   ok(w3.out && w3.out.why === "tp" && E.afterVerdict(Object.assign({}, a, w3)).v === "early", "objectif atteint après la sortie : sortie trop tôt");
   const s = { dir: -1, entry: 100, exit: 102.05, sl: 102, tp: 94, r0: 2, tc: t }, L = E.afterLevels(s);
@@ -318,6 +321,16 @@ test("T21", "Potentiel au-delà du TP : le signal ne sort que près de l'objecti
   ok(E.tpUp(d1, h4, h1, null, Object.assign({}, t, { tp: L * 1.2 })) === null, "objectif encore loin : pas de signal");
   ok(E.tpUp(d1, h4, h1, null, { dir: -1, entry: L * 1.1, sl: L * 1.12, tp: L * 0.99, r0: L * 0.02 }) === null, "short contre les tendances : pas de signal");
   ok(E.tpUp(d1, h4, h1, null, Object.assign({}, t, { tp: 0 })) === null, "pas d'objectif placé : pas de signal");
+});
+
+test("T22", "TP à réduire : un niveau 4H avant l'objectif, tendance qui n'est plus franche ou deux niveaux", () => {
+  const SY = require("./synth.js"), m = SY.path(SY.LEVELS, Date.UTC(2026, 10, 10), 0.003), d1 = SY.agg(m, 864e5, 90), h4 = SY.agg(m, 144e5, 200), h1 = SY.agg(m, 36e5, 200), L = m[m.length - 1].c;
+  const t = { dir: 1, entry: L * 0.997, sl: L * 0.975, tp: L * 1.07, r0: L * 0.022, t: Date.UTC(2026, 10, 10) - 5 * 36e5 }, dn = E.tpDown(d1, h4, h1, m.slice(-500), t);
+  ok(dn && dn.kind === "lvl" && dn.px > L && dn.px < t.tp && dn.lvl > dn.px, "long avec deux niveaux 4H avant son objectif : objectif réduit proposé juste avant le premier (" + (dn ? dn.px.toFixed(1) + " au lieu de " + t.tp.toFixed(1) : "rien") + ")");
+  ok(E.tpDown(d1, h4, h1, m.slice(-500), Object.assign({}, t, { tp: L * 1.012 })) === null, "objectif placé avant le premier niveau : rien à réduire");
+  ok(E.tpDown(d1, h4, h1, m.slice(-500), Object.assign({}, t, { tp: 0 })) === null && E.tpUp(d1, h4, h1, m.slice(-500), t) === null, "pas d'objectif : pas de signal ; et jamais « augmenter » en même temps");
+  const st = E.tradeState("LVL", d1, h4, h1, m.slice(-500), t, Date.UTC(2026, 10, 10), {});
+  ok(st.sc > 0 && !st.hard, "le trade n'est pas à sortir (score " + st.sc + ") : c'est bien un cas « réduire », pas « sortir »");
 });
 
 /* ---------- report ---------- */

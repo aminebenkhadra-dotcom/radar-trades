@@ -332,16 +332,18 @@ function xlsxBytes(sheets){
 /* ---------- after the exit: what the trade would have done had it been kept ----------
    a: {dir,exit,sl,tp,tc,at,hi,lo}. Candles {t,o,h,l,c} opening at or after the exit (or after a.at, when continued) are walked in order:
    the stop first, then the target, as everywhere else. A stop or target the exit price had already reached is ignored (the trade
-   left through it): the walk then only follows the price. Returns {out:null|{why:"sl"|"tp",t,px}, hi, lo, last, at}. */
+   left through it): the walk then only follows the price. The first stop or target reached is kept in out, and settles the verdict;
+   the walk goes on after it, so the price stays followed until the user deletes the trade.
+   Returns {out:null|{why:"sl"|"tp",t,px}, hi, lo, last, at}. */
 function afterLevels(a){var d=a.dir,e=a.exit,tol=e*0.0015;
   return{sl:a.sl>0&&(e-a.sl)*d>tol?a.sl:0,tp:a.tp>0&&(a.tp-e)*d>tol?a.tp:0,
     byStop:a.sl>0&&(e-a.sl)*d<=tol,byTp:a.tp>0&&(a.tp-e)*d<=tol}}
 function afterWalk(a,candles,now){
-  var d=a.dir,L=afterLevels(a),from=a.at||a.tc,hi=a.hi>0?a.hi:a.exit,lo=a.lo>0?a.lo:a.exit,last=a.last>0?a.last:a.exit,at=from,out=null;
+  var d=a.dir,L=afterLevels(a),from=a.at||a.tc,hi=a.hi>0?a.hi:a.exit,lo=a.lo>0?a.lo:a.exit,last=a.last>0?a.last:a.exit,at=from,out=a.out||null;
   for(var i=0;i<(candles||[]).length;i++){var c=candles[i];
     if(c.t<from||c.t>now)continue;
-    if(L.sl&&(d>0?c.l<=L.sl:c.h>=L.sl)){var gap=d>0?c.o<=L.sl:c.o>=L.sl;out={why:"sl",t:c.t,px:gap?c.o:L.sl};if(d>0)lo=Math.min(lo,out.px);else hi=Math.max(hi,out.px);last=out.px;at=c.t;break}
-    if(L.tp&&(d>0?c.h>=L.tp:c.l<=L.tp)){out={why:"tp",t:c.t,px:L.tp};if(d>0)hi=Math.max(hi,L.tp);else lo=Math.min(lo,L.tp);last=L.tp;at=c.t;break}
+    if(!out&&L.sl&&(d>0?c.l<=L.sl:c.h>=L.sl)){var gap=d>0?c.o<=L.sl:c.o>=L.sl;out={why:"sl",t:c.t,px:gap?c.o:L.sl}}
+    else if(!out&&L.tp&&(d>0?c.h>=L.tp:c.l<=L.tp))out={why:"tp",t:c.t,px:L.tp};
     if(c.h>hi)hi=c.h;if(c.l<lo)lo=c.l;last=c.c;at=c.t}
   return{out:out,hi:hi,lo:lo,last:last,at:at}}
 /* verdict of an exit: gain is what staying would have added per unit (price reached by the kept trade minus the exit price, in the
@@ -349,7 +351,7 @@ function afterWalk(a,candles,now){
 function afterVerdict(a){
   var d=a.dir,L=afterLevels(a),p=a.out?a.out.px:a.last>0?a.last:a.exit,gain=(p-a.exit)*d,unit=a.r0>0?0.1*a.r0:a.exit*0.0015;
   var v=a.out?(a.out.why==="sl"?"good":"early"):Math.abs(gain)<unit?"flat":gain>0?"early":"good";
-  return{v:v,gain:gain,final:!!a.out,byStop:L.byStop,byTp:L.byTp,px:p,
+  return{v:v,gain:gain,final:!!a.out,byStop:L.byStop,byTp:L.byTp,px:p,now:a.last>0?a.last:a.exit,
     best:(d>0?(a.hi||a.exit)-a.exit:a.exit-(a.lo||a.exit))/a.exit*100,worst:(d>0?(a.lo||a.exit)-a.exit:a.exit-(a.hi||a.exit))/a.exit*100}}
 
 /* ---------- synchronisation between devices ----------
