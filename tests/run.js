@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -307,6 +307,17 @@ test("T20", "Synchronisation : fusion des données du téléphone et de Chrome",
   M = E.syncMerge({ k: [tr("a", 9)] }, { k: [] }, { k: [tr("a", 1)] }, false);
   ok(M.k.length === 1 && M.k[0].sl === 9, "modifié ici, supprimé là-bas : la modification de cet appareil est gardée");
   ok(JSON.stringify(E.syncMerge({ k: 1 }, {}, { k: 1 }, false)) === "{}", "supprimé là-bas, intact ici : supprimé");
+});
+
+test("T21", "Potentiel au-delà du TP : le signal ne sort que près de l'objectif, tendances intactes", () => {
+  const zig = (n, step, p0, dur) => { const k = []; let p = p0; for (let i = 0; i < n; i++) { const d = (i % 5 < 3 ? 1 : -0.9) * step * p0, o = p, c = p + d; k.push({ t: i * dur, o, h: Math.max(o, c) + step * p0 * 0.2, l: Math.min(o, c) - step * p0 * 0.2, c, v: 1000, q: 1000 * c, b: 500 }); p = c; } return k; };
+  const d1 = zig(120, 0.01, 50, 864e5), h4 = zig(200, 0.004, 80, 144e5), h1 = zig(200, 0.002, 95, 36e5), L = h1[h1.length - 1].c;
+  [d1, h4].forEach(k => { const f = L / k[k.length - 1].c; k.forEach(c => { c.o *= f; c.h *= f; c.l *= f; c.c *= f; }); });
+  const t = { dir: 1, entry: L * 0.9, sl: L * 0.88, tp: L * 1.01, r0: L * 0.02 }, u = E.tpUp(d1, h4, h1, null, t);
+  ok(u && u.px > t.tp, "long à 9 % de son objectif, 4H et 1J haussiers : objectif relevé proposé (" + (u ? (u.px / t.tp * 100 - 100).toFixed(1) + " % plus loin" : "rien") + ")");
+  ok(E.tpUp(d1, h4, h1, null, Object.assign({}, t, { tp: L * 1.2 })) === null, "objectif encore loin : pas de signal");
+  ok(E.tpUp(d1, h4, h1, null, { dir: -1, entry: L * 1.1, sl: L * 1.12, tp: L * 0.99, r0: L * 0.02 }) === null, "short contre les tendances : pas de signal");
+  ok(E.tpUp(d1, h4, h1, null, Object.assign({}, t, { tp: 0 })) === null, "pas d'objectif placé : pas de signal");
 });
 
 /* ---------- report ---------- */

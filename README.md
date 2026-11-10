@@ -121,6 +121,15 @@ tendance, pas une garantie.
 0,01 R. Elles changent la part de trades positifs : 34 % avec stop et TP fixes, environ 40 % avec break-even ou stop suiveur,
 50 % en encaissant la moitié à +1R. L'onglet Mes trades les propose comme options, avec la taille, les frais et le funding.
 
+## Potentiel au-delà du TP (Mes trades)
+
+Étiquette « Potentiel · TP ↑ prix » sur un trade actif quand le prix a fait les trois quarts du chemin vers l'objectif, que les
+tendances 4H et 1J vont dans le sens du trade et que l'élan n'est ni essoufflé ni excessif (`tpUp` dans le moteur) ; pas
+d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `tools/backtest/tpup42.js`, `results/tpup-v42.json`,
+880 signaux sur 4 357 trades) : objectif relevé atteint 59 fois sur 100, retour au stop 35 fois sur 100 si le stop reste en
+place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
+de garder la moitié au TP actuel. Une notification à l'apparition du signal.
+
 ## Synchronisation téléphone et Chrome
 
 Réglages → « Synchronisation téléphone et Chrome » : un dépôt GitHub privé de l'utilisateur (compte/nom) et un code d'accès

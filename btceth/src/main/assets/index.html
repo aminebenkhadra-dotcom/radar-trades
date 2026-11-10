@@ -798,6 +798,22 @@ function tradeState(sym,d1,h4,h1,m15,t,now,opt){
   if(m15&&m15.length>30){var rs=rsiSeries(closes(m15));r15=rs[rs.length-1]}
   if(dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55)))sc-=1;
   return{sc:sc,hard:b4===-dir&&(bd===-dir||opp),r:rNow,known:risk>0}}
+/* room to raise the target of an open trade, from candles alone: the price has covered three quarters of the way to the target, the
+   4H and 1J trends both go with the trade, momentum is neither fading nor stretched, and at most one 4H level stands before the target.
+   Proposed target: just before the next 4H level beyond the current one, or one risk unit (or one 4H ATR) further when there is none.
+   Measured by tools/backtest/tpup42.js. */
+function tpUp(d1,h4,h1,m15,t){
+  var dir=t.dir,price=h1[h1.length-1].c;if(!(t.tp>0))return null;
+  var left=(t.tp-price)*dir,span=Math.abs(t.tp-t.entry);if(!(left>0)||!span||left/span>=0.25)return null;
+  if(bias(h4)!==dir||bias(d1.length>90?d1.slice(-90):d1)!==dir)return null;
+  var r1=rsi(closes(h1)),r15=null;if(m15&&m15.length>30){var rs=rsiSeries(closes(m15));r15=rs[rs.length-1]}
+  if(dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55)))return null;
+  if(dir>0?r1>=72:r1<=28)return null;
+  var a4=atr(h4),ahead=levels(h4,0.5*a4).filter(function(l){return(l.p-price)*dir>0.3*a4}).sort(function(x,y){return(x.p-y.p)*dir});
+  var before=ahead.filter(function(l){return(t.tp-l.p)*dir>0.4*a4}),after=ahead.filter(function(l){return(l.p-t.tp)*dir>0.4*a4});
+  if(before.length>=2)return null;
+  var r0=t.r0||Math.abs(t.entry-t.sl);
+  return after.length?{px:after[0].p-dir*0.1*a4,lvl:after[0].p}:{px:t.tp+dir*Math.max(r0||0,a4),lvl:0}}
 /* cell of the calibration table for a trade state: H (hard) or score band a..d, then progress band 0..4 */
 function stateKey(s){var r=s.r;return(s.hard?"H":s.sc<=-3?"a":s.sc<=0?"b":s.sc<=3?"c":"d")+(r<-0.5?0:r<0?1:r<0.5?2:r<1?3:4)}
 var BT_WARM=96*34;
@@ -815,6 +831,17 @@ function btStep(S,n){
     /* o.state: every 4 hours of a replayed trade, its state as the app would read it (study of the reliability label) */
     if(o.state&&S.cur&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%16===0){var ts=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t,m[i].t,o);
       S.cur.rec.hs.push([ts.sc,ts.hard?1:0,+ts.r.toFixed(2),stateKey(ts)])}
+    /* o.tpup: the first hour of a replayed trade where the target could be raised, and what the raised target then gave: with the
+       stop left where it was (a), with the stop moved to the entry (b), with the stop moved to the old target once it is passed (c) */
+    if(o.tpup&&S.cur&&!S.cur.rec.up&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%4===0){var tu=tpUp(F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t);
+      if(tu){var ct=S.cur.t,cR=ct.r0,cc=S.cur.rec.cr,lim=Math.min(N,S.cur.i+960),alt=function(sl0,trail){var sl=sl0,j,c,res=null;
+          for(j=i+1;j<=lim;j++){c=m[j];
+            if(ct.dir>0?c.l<=sl:c.h>=sl){var fl=ct.dir>0?Math.min(c.o,sl):Math.max(c.o,sl);res={how:sl===sl0?"sl":"lock",r:ct.dir*(fl-ct.entry)/cR};break}
+            if(ct.dir>0?c.h>=tu.px:c.l<=tu.px){res={how:"tp",r:Math.abs(tu.px-ct.entry)/cR};break}
+            if(trail&&(ct.dir>0?c.h>=ct.tp:c.l<=ct.tp))sl=ct.tp-ct.dir*0.25*cR}
+          if(!res){j=Math.min(j,N);res={how:"time",r:ct.dir*(m[j].c-ct.entry)/cR}}
+          res.r=+(res.r-cc).toFixed(3);return res};
+        S.cur.rec.up={k:i-S.cur.i,px:tu.px,rr:+(Math.abs(tu.px-ct.entry)/cR).toFixed(2),r:+((m[i].c-ct.entry)*ct.dir/cR).toFixed(2),a:alt(ct.sl,false),b:alt(ct.entry,false),c:alt(ct.sl,true)}}}
     if(i<BT_WARM||i<S.free)continue;
     var d1=F.get("d1",400);if(d1.length<55)continue;
     if(S.first===null)S.first=m[i].t;
@@ -830,7 +857,7 @@ function btStep(S,n){
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
-    if(o.state&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
+    if((o.state||o.tpup)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}
