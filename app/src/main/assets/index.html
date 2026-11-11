@@ -502,8 +502,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <details class="set" id="alerts">
     <summary>Alertes en arrière-plan<b id="al-badge"></b></summary>
     <div class="grid">
-      <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un setup du Top 10 est prêt selon les règles</label>
-      <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un setup du Top 50 est prêt selon les règles</label>
+      <label class="wide chk"><input type="checkbox" id="a-10"> M'alerter quand un trade du Top 10 est prêt à saisir (toutes les règles au vert)</label>
+      <label class="wide chk"><input type="checkbox" id="a-50"> M'alerter quand un trade du Top 50 est prêt à saisir (toutes les règles au vert)</label>
       <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, viser plus haut que mon TP ou le réduire, déplacer mon stop pour sécuriser mes gains, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
@@ -571,7 +571,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={nt43:0,nt44:0,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -4589,7 +4589,8 @@ function alertStatus(){
 function applyWatch(){
   if(NATIVE){try{if(S.a10||S.a50||S.atr)Android.startWatch(!!S.a10,!!S.a50,+S.amin||30);else Android.stopWatch()}catch(e){}}
   alertStatus()}
-if(!S.nt43){S.nt43=1;S.a10=false;S.a50=false;saveSettings();if(!BG)applyWatch()}
+/* setup alerts: switched off once (nt43), then back on for the Top 50 at the user's request (nt44); the two boxes stay his to change */
+if(!S.nt44){S.nt43=1;S.nt44=1;S.a50=true;saveSettings();if(!BG)applyWatch()}
 $("a-10").checked=!!S.a10;$("a-50").checked=!!S.a50;$("a-min").value=String(S.amin||30);
 $("a-10").addEventListener("change",function(){S.a10=this.checked;saveSettings();applyWatch()});
 $("a-50").addEventListener("change",function(){S.a50=this.checked;saveSettings();applyWatch()});
@@ -4678,8 +4679,9 @@ window.bgScan=function(t10,t50){
         if(!r.plan||r.st!=="ready")return;
         if((S.side==="long"&&r.dir<0)||(S.side==="short"&&r.dir>0))return;
         n++;var id=r.sym+(r.dir>0?"L":"S")+"r",z=r.sz;if(seen[id])return;seen[id]=now;
-        try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt selon les règles · "+passed(r)+"/6 contrôles",
-          (ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")
+        var cm=null;try{var cf=cfgOf(r);cm=cf?cfgMix(cf.key,"cfg"):null}catch(e){}
+        try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt à saisir · "+passed(r)+"/6 contrôles",
+          (cm?"Ce type de setup a atteint son TP1 "+fr(cm.win,0)+" fois sur 100 en 2 ans · ":"")+(ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")
           +"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(z&&z.ok?" · "+fr(z.qty,z.qd)+" à x"+z.lev+" · perte max "+fr(z.loss,2)+" $":"")
           +" · scan de "+new Date(st.stamp).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),id,m+"~"+r.sym)}catch(e){}});
       try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
@@ -4691,7 +4693,7 @@ window.bgScan=function(t10,t50){
    The file holds the settings, the trades followed by hand, Après sortie, the portfolio entries, the paper tracking and a copy of the
    Binance positions as the phone last read them. Never the API keys, nor the access code itself. Alert switches stay per device.
    Each sync is a three-way merge (syncMerge) between this device, the file and the state of the last sync of this device. */
-var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","atr","amin"];
+var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","atr","amin","nt43","nt44"];
 var SY={cfg:null,busy:false,dirty:false,at:0,err:"",etag:"",sha:"",last:null,apply:false,reload:false,timer:0,again:false};
 function syCfg(){try{var c=JSON.parse(localStorage.getItem("radar-sync")||"null");return c&&c.repo&&c.token?c:null}catch(e){return null}}
 SY.cfg=syCfg();

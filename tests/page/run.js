@@ -250,7 +250,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
 
   await test("P7", "Alertes en arrière-plan : trades, seulement « sortir » ou liquidation proche ; entrée seulement sur « Prêt »", async ok => {
     const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [] } }, suffix: "?bg=1",
-      init: `localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:true,nt43:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: -1, entry: last("ETHUSDT") * 0.99, qty: 1, sl: last("ETHUSDT") * 1.03, tp: last("ETHUSDT") * 0.9, t: NOW - 5 * 36e5 }, { id: "x2", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.9, qty: 0.1, sl: last("ETHUSDT") * 0.88, tp: last("ETHUSDT") * 1.2, t: NOW - 5 * 36e5 }, { id: "x3", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.88, tp: last("ZIGUSDT") * 1.01, t: NOW - 5 * 36e5 }, { id: "x4", sym: "LVL", full: "LVLUSDT", dir: 1, entry: last("LVLUSDT") * 0.997, qty: 1, sl: last("LVLUSDT") * 0.975, tp: last("LVLUSDT") * 1.07, t: NOW - 5 * 36e5 }, { id: "x5", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.902, r0: last("ZIGUSDT") * 0.02, tp: last("ZIGUSDT") * 1.3, t: NOW - 5 * 36e5 }]))})` });
+      init: `localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:true,nt43:1,nt44:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: -1, entry: last("ETHUSDT") * 0.99, qty: 1, sl: last("ETHUSDT") * 1.03, tp: last("ETHUSDT") * 0.9, t: NOW - 5 * 36e5 }, { id: "x2", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.9, qty: 0.1, sl: last("ETHUSDT") * 0.88, tp: last("ETHUSDT") * 1.2, t: NOW - 5 * 36e5 }, { id: "x3", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.88, tp: last("ZIGUSDT") * 1.01, t: NOW - 5 * 36e5 }, { id: "x4", sym: "LVL", full: "LVLUSDT", dir: 1, entry: last("LVLUSDT") * 0.997, qty: 1, sl: last("LVLUSDT") * 0.975, tp: last("LVLUSDT") * 1.07, t: NOW - 5 * 36e5 }, { id: "x5", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.902, r0: last("ZIGUSDT") * 0.02, tp: last("ZIGUSDT") * 1.3, t: NOW - 5 * 36e5 }]))})` });
     await page.evaluate(() => window.bgScan(false, true));
     await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
     const M = await page.evaluate(() => window.__M);
@@ -268,11 +268,14 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const sl = prot.filter(n => /ZIG · long · stop à remonter/.test(n.title));
     ok(sl.length === 1 && sl[0].tag === "slx5" && /pour verrouiller \+\d/.test(sl[0].text), "long sécurisé au break-even et monté de 5 R : une alerte « stop à remonter » (" + (sl[0] ? sl[0].text : "aucune") + ")");
     ok(M.notes.length === 0 || M.notes[0].ch === "protect", "la protection passe avant les setups");
-    ok(set.every(n => /prêt selon les règles/.test(n.title) && !/%/.test(n.title)), "alertes d'entrée : uniquement « prêt selon les règles », sans pourcentage (" + set.length + ")");
+    ok(set.every(n => /prêt à saisir · \d\/6 contrôles/.test(n.title) && !/%/.test(n.title) && /Entrée .* Stop .* TP1 /.test(n.text)), "alertes d'entrée : uniquement « prêt à saisir », avec entrée, stop et TP1 (" + set.length + (set[0] ? " · " + set[0].text.slice(0, 70) : "") + ")");
     ok(/contrôle de 1 position Binance et 5 trades suivis/.test(M.done), "résumé du contrôle : " + M.done);
     const o2 = await open(browser, { init: `if(!sessionStorage.getItem("s2")){sessionStorage.setItem("s2","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a10:true,a50:true,profOk:true,account:1000}))}` });
     const s2 = await o2.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
-    ok(s2.a10 === false && s2.a50 === false && s2.atr === true && s2.nt43 === 1, "mise à jour : alertes de setups coupées une fois, alerte de sortie gardée");
+    ok(s2.a10 === true && s2.a50 === true && s2.atr === true && s2.nt44 === 1, "mise à jour : alerte « trade prêt à saisir » activée pour le Top 50, les autres réglages gardés");
+    const o3 = await open(browser, { init: `if(!sessionStorage.getItem("s3")){sessionStorage.setItem("s3","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:false,nt43:1,nt44:1,profOk:true,account:1000}))}` });
+    ok((await o3.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")))).a50 === false, "une fois faite, la mise à jour ne recoche plus la case si tu la décoches");
+    await o3.ctx.close();
     await o2.ctx.close();
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors[0] : ""));
     await ctx.close();
@@ -436,14 +439,14 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const data = () => JSON.parse(G.text).data, wait = async (f, ms) => { const t = Date.now(); while (Date.now() - t < (ms || 30000)) { try { if (G.text && f(data())) return true; } catch (e) {} await new Promise(r => setTimeout(r, 200)); } return false; };
     /* 1. the phone: Binance keys, one position with its stop, one trade followed by hand, risk set to 1.5 % */
     const ph = await open(browser, { gh: G, session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [{ symbol: "SOLUSDT", side: "SELL", positionSide: "BOTH", type: "STOP_MARKET", stopPrice: "140", origQty: "0", closePosition: "true" }] } }, suffix: "#trades",
-      init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:1.5,atr:true,nt43:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([tr]))})}` });
+      init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:1.5,atr:true,nt43:1,nt44:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([tr]))})}` });
     await ph.page.click('.tabs button[data-v="trades"]').catch(() => {});
     ok(await wait(d => d["radar-live-view"] && d["radar-live-view"].list.length === 1 && d["radar-trades"].length === 1), "téléphone : réglages, trade suivi et copie de la position envoyés dans le dépôt");
     const d1 = data();
     ok(d1["radar-settings"].risk === 1.5 && d1["radar-settings"].atr === undefined && d1["radar-live-view"].list[0].sl === 140, "réglages envoyés sans les interrupteurs d'alerte ; stop de la position dans la copie");
     ok(!/TESTTOKEN|apiKey|secret/i.test(G.text) && !("radar-sync" in d1), "ni clé API ni code d'accès dans le fichier");
     /* 2. Chrome: no bridge, no keys, same repository */
-    const web = await open(browser, { gh: G, web: true, suffix: "#trades", init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:2,atr:false,nt43:1,profOk:true,account:500}))}` });
+    const web = await open(browser, { gh: G, web: true, suffix: "#trades", init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:2,atr:false,nt43:1,nt44:1,profOk:true,account:500}))}` });
     await web.page.waitForFunction(() => { try { return JSON.parse(localStorage.getItem("radar-trades") || "[]").length === 1 && JSON.parse(localStorage.getItem("radar-settings")).risk === 1.5; } catch (e) { return false; } }, null, { timeout: 30000 });
     await web.page.waitForTimeout(2500); await web.page.waitForLoadState("load");
     const ws = await web.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));

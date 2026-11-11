@@ -130,6 +130,13 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## Alerte « trade prêt à saisir »
+
+Notification quand un setup du Top 50 (ou du Top 10) passe à « Prêt selon les règles » : toutes les règles au vert, prix dans
+la zone d'entrée, limites du compte respectées. Titre « SOL · Long prêt à saisir · 6/6 contrôles » ; texte : taux de réussite
+passé de ce type de setup, entrée, stop, TP1 et taille. Une fois par setup et par sens toutes les 4 heures. Activée d'office
+pour le Top 50 à la mise à jour (drapeau `nt44`, enregistré dans les réglages) ; les deux cases restent modifiables.
+
 ## Stop à déplacer après le break-even (Mes trades)
 
 Une fois le stop au break-even ou mieux, étiquette verte « Sécuriser · SL ↑ prix » (↓ pour un short) et encadré « Sécuriser
