@@ -471,6 +471,30 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await ph.ctx.close(); await web.ctx.close();
   });
 
+  await test("P15", "Notification d'un trade prêt : un appui ouvre directement ce trade", async ok => {
+    const { ctx, page, errors } = await open(browser, {});
+    await waitScan(page);
+    const mode = await page.$eval('.tabs button[aria-selected="true"]', b => b.dataset.v);
+    const syms = await page.$$eval('#view-scan button.row[data-s]', a => a.map(b => b.dataset.s)), s = syms[syms.length - 1];
+    ok(syms.length >= 2, syms.length + " setups dans la liste « " + mode + " » ; cible : " + s + ", le dernier");
+    const opened = () => page.evaluate(x => { const b = document.querySelector('#view-scan button.row[data-s="' + x[0] + '"]'), a = b && b.closest("article"); return { sel: document.querySelector('.tabs button[data-v="' + x[1] + '"]').getAttribute("aria-selected"), vis: !document.querySelector("#view-scan").hidden, flash: !!a && a.classList.contains("flash"), exp: b ? b.getAttribute("aria-expanded") : null, box: !!a && !!a.querySelector(".stbox") }; }, [s, mode]);
+    const before = await opened();
+    /* 1. the app is already open on another tab: Android calls window.openTab with the notification's target */
+    await page.click('.tabs button[data-v="trades"]');
+    await page.evaluate(x => { window.__scans = 0; window.openTab(x[1] + "~" + x[0]); }, [s, mode]);
+    await page.waitForFunction(x => { const b = document.querySelector('#view-scan button.row[data-s="' + x + '"]'); return b && b.closest("article").classList.contains("flash"); }, s, { timeout: 15000 }).catch(() => {});
+    const a1 = await opened();
+    ok(before.exp !== "true" && a1.sel === "true" && a1.vis && a1.flash && a1.exp === "true" && a1.box, "appli déjà ouverte : bon onglet, trade " + s + " déplié et mis en avant (dernier de la liste, fermé avant)");
+    /* 2. the app was closed: Android opens the page with the target in the address */
+    await page.evaluate(x => { location.hash = "#" + x[1] + "~" + x[0]; location.reload(); }, [s, mode]);
+    await page.waitForFunction(x => { const b = document.querySelector('#view-scan button.row[data-s="' + x + '"]'); return b && b.closest("article").classList.contains("flash"); }, s, { timeout: 30000 }).catch(() => {});
+    const a2 = await opened(), st = await page.evaluate(() => (document.querySelector("#status") || {}).textContent || "");
+    ok(a2.sel === "true" && a2.flash && a2.exp === "true" && a2.box, "appli fermée : elle s'ouvre directement sur le trade " + s);
+    ok(!/en cours|Lecture/.test(st), "le trade est affiché tel qu'il a été notifié, sans relancer de scan (" + st.trim().slice(0, 60) + ")");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
   await browser.close();
   const fail = results.filter(r => !r.ok).length;
   console.log("\n" + (results.length - fail) + "/" + results.length + " tests de page réussis");

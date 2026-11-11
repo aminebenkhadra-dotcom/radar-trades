@@ -2208,7 +2208,7 @@ function setView(v){
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
   $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-aft").hidden=view!=="aft";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-cap").hidden=view!=="cap";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(isScan){mode=v;useStore(v);openSym=firstSetup();statusLine();render();
-    if(!busy&&(!live||Date.now()-stamp>15*60e3))scan(v)}
+    if(!busy&&(!live||Date.now()-stamp>15*60e3)&&!focusHas())scan(v)}
   else if(isHeat){statusLine();hsym=v==="hbtc"?"BTC":"ETH";loadHeat(true)}
   else if(view==="news"){statusLine();loadNews(false)}
   else if(view==="res"){statusLine();loadRes()}
@@ -4830,10 +4830,14 @@ function loadStores(){
 var focusWant=null;
 window.openTab=function(v){var p=String(v||"").split("~"),t=p[0],x=p[1]||"";
   if(!/^(all|10|50|trades|news|res|one|fund|pf|earn|sim|cap|hbtc|heth|mkt|cyc|tmp)$/.test(t))return;
+  /* the scan that raised the notification was made by the background copy of the page: its results are read again first */
+  loadStores();
   focusWant=x&&/^[A-Za-z0-9]{1,30}$/.test(x)?{v:t,x:x,at:Date.now()}:null;setView(t);focusNow()};
+/* true when the setup a notification points to is in the results on screen: it is shown as it was notified, without a new scan */
+function focusHas(){var f=focusWant;return!!(f&&results.some(function(x){return x.sym===f.x&&x.plan}))}
 function flash(el){if(!el)return;try{el.scrollIntoView({block:"center",behavior:"smooth"})}catch(e){el.scrollIntoView()}el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash")}
 function focusNow(){
-  var f=focusWant;if(!f)return;if(Date.now()-f.at>120e3){focusWant=null;return}
+  var f=focusWant;if(!f)return;if(Date.now()-f.at>300e3){focusWant=null;return}
   if(f.v==="trades"){var el=$("hl-"+f.x);if(el){focusWant=null;setTimeout(function(){flash(el.closest("article"))},150)}return}
   var r=null;results.forEach(function(x){if(x.sym===f.x&&x.plan)r=x});if(!r)return;
   focusWant=null;openSym=r.sym;render();setTimeout(function(){var b=document.querySelector('#view-scan button.row[data-s="'+r.sym+'"]');if(b)flash(b.closest("article"))},150)}
