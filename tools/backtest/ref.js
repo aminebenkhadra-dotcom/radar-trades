@@ -7,14 +7,15 @@ const E = new Function(SRC + ";return {btStart,btStep,btStats,btMarket,analyze,e
 const DIR = process.argv[2], OUT = process.argv[3], STRICT = +(process.argv[4] || 1), PART = (process.argv[5] || "0/1").split("/").map(Number), EXTRA = process.argv[6] ? JSON.parse(process.argv[6]) : {};
 const SKIP = { PAXGUSDT: 1 }, { syms } = L.listSymbols(DIR), t0 = Date.now();
 const B = L.loadSymbol(DIR, "BTCUSDT"), btc = E.btMarket(B.m15, B.d1);
-let trades = [], evals = 0, shadow = [];
+let trades = [], evals = 0, shadow = [], fn = {};
 syms.filter(s => !SKIP[s]).forEach((sym, idx) => {
   if (idx % PART[1] !== PART[0]) return;
   const D = L.loadSymbol(DIR, sym), S = E.btStart(sym.replace(/USDT$/, ""), D.m15, D.d1, Object.assign({ strict: STRICT, btc }, EXTRA));
   while (!E.btStep(S, 5000)) { }
   evals += S.evals; S.trades.forEach(t => trades.push(Object.assign({ sym: S.sym }, t)));
   (S.shadow || []).forEach(t => shadow.push(Object.assign({ sym: S.sym }, t)));
+  if (S.fn) fn[S.sym] = { t0: S.first, s: S.fn.join("") };
 });
 const tag = process.env.TAG || ("ref-" + STRICT + (process.argv[6] ? "x" : ""));
-fs.writeFileSync(path.join(OUT, tag + "-" + PART[0] + ".json"), JSON.stringify({ trades, evals, shadow }));
+fs.writeFileSync(path.join(OUT, tag + "-" + PART[0] + ".json"), JSON.stringify(EXTRA.funnel ? { evals, fn } : { trades, evals, shadow }));
 console.log(tag, "part", PART.join("/"), "evals", evals, "trades", trades.length, Math.round((Date.now() - t0) / 1000) + "s");
