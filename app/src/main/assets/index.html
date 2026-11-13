@@ -519,6 +519,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <div class="grid">
       <label class="wide">Un setup est « Prêt » quand<select id="p-strict"><option value="2">les 6 contrôles sont validés</option><option value="1">tendance, zone, déclencheur et risque sont validés</option><option value="0">tendance, zone et risque sont validés</option></select></label>
       <label class="wide">Temporalité<select id="p-tmode"><option value="signal">Signaler les setups du lundi et du mardi</option><option value="skip">Pas de « Prêt » ni d'alerte le lundi et le mardi</option><option value="off">Ne pas tenir compte du jour</option></select></label>
+      <label class="wide">Conseil de sortie des trades actifs<select id="p-exlv"><option value="2">Réactif : sortir tôt, quitte à couper des trades gagnants</option><option value="1">Équilibré</option><option value="0">Tardif : seulement quand presque tout est contre le trade</option></select></label>
+      <div class="wide sub" id="p-exlv-s"></div>
       <label>R:R minimum, net de frais<input id="p-minrr" inputmode="decimal"></label>
       <label>Marge du stop (× ATR 4H)<input id="p-slk" inputmode="decimal"></label>
       <label class="wide">Frais et glissement au maximum, en % du risque<input id="p-feecap" inputmode="decimal"></label>
@@ -574,7 +576,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={nt43:0,nt44:0,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={nt43:0,nt44:0,exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
 var MAXDEEP=60;
 var $=function(id){return document.getElementById(id)};
 var S=loadSettings(), live=false, busy=false, results=[], funnel=null, openSym=null, stamp=null, mode="all", stores={}, onScanDone=null;
@@ -2485,18 +2487,24 @@ function paintTP(t){
    the trade. Per state [samples, % that reached TP1, average result of holding minus closing right then, in R]. cell = score band
    (a: -3 or less, b: -2 to 0, c: 1 to 3, d: 4 or more) + progress band (0: under -0.5 R, 1: to 0, 2: to 0.5, 3: to 1, 4: beyond). */
 var STATECAL={"trades":4357,"samples":26745,"band":{"H":[3,0.0,-0.313],"a":[456,5.0,-0.104],"all":[26745,38.3,-0.023],"b":[1083,11.7,-0.074],"c":[7621,25.9,-0.072],"d":[17582,46.2,0.003],"r0":[1929,10.3,0.013],"r1":[7002,23.3,-0.005],"r2":[8500,36.2,-0.022],"r3":[5696,50.4,-0.036],"r4":[3618,68.3,-0.061]},"cell":{"H0":[3,0.0,-0.313],"a0":[193,4.1,-0.045],"a1":[211,5.2,-0.182],"a2":[51,7.8,0.003],"a3":[1,0.0,-0.18],"b0":[331,7.9,0.003],"b1":[566,15.7,-0.054],"b2":[172,6.4,-0.282],"b3":[13,7.7,-0.061],"b4":[1,0.0,-0.842],"c0":[1006,11.3,0.024],"c1":[2754,22.2,-0.023],"c2":[3039,29.9,-0.135],"c3":[817,41.7,-0.124],"c4":[5,40.0,-0.075],"d0":[396,13.3,0.027],"d1":[3471,26.5,0.028],"d2":[5238,41.1,0.051],"d3":[4865,52.0,-0.021],"d4":[3612,68.4,-0.061]}};
+/* EXITS: two-year replay of version 42 with the state of every trade read each hour, each exit level run as a rule (the trade is
+   closed the first hour its score is at or under the level, tools/backtest/exit42.js). Per level 0 / 1 / 2 (score at most 0, 1, 2):
+   trades closed early, share of the trades that ended on their stop that got the advice first (sl) and their average result at
+   that exit (slR), share of the trades that reached their target cut by the advice (tp), change of the average result per trade. */
+var EXITS={"0":{"exits":15,"sl":18,"slR":-0.54,"tp":7,"gain":0.005,"gA":0,"gB":0.011},"1":{"exits":22,"sl":27,"slR":-0.58,"tp":9,"gain":0.009,"gA":0.007,"gB":0.011},"2":{"exits":40,"sl":48,"slR":-0.5,"tp":22,"gain":0.006,"gA":0.012,"gB":-0.003}};
+function exLevel(){var v=+S.exlv;return v===0||v===1?v:2}
 function fiOf(t,h){
   var s=h&&!h.err&&h.fi;if(!s)return null;
   if(!s.known)return{none:true};
   var key=stateKey(s),k=key.charAt(0)==="H"?"a"+key.charAt(1):key,c=STATECAL.cell[k],b=STATECAL.band[k.charAt(0)],x=c&&c[0]>=150?c:b;
-  return{pct:x[1],n:x[0],hold:b[2],out:s.hard||s.sc<=0||h.v==="exit",r:s.r}}
+  return{pct:x[1],n:x[0],hold:b[2],out:s.hard||s.sc<=exLevel()||h.v==="exit",r:s.r}}
 function paintFi(t){
   var el=$("fi-"+t.id),bx=$("fx-"+t.id),h=health[t.id],f=fiOf(t,h);if(!el)return;
   if(!f){el.className="fi";el.textContent=healthBusy[t.id]?"Fiabilité…":"";if(bx)bx.textContent="";return}
   if(f.none){el.className="fi";el.textContent="Fiabilité ? · pas de stop";if(bx)bx.textContent="Fiabilité non calculée : elle se mesure par rapport à ton stop. Place un stop sur toute la position.";return}
   el.className="fi "+(f.out?"out":"stay");el.innerHTML="Fiabilité "+fr(f.pct,0)+" % · <b>"+(f.out?"Sortir":"Attendre")+"</b>";
   if(bx)bx.textContent="Sur deux ans de test, "+fr(f.pct,0)+" % des trades dans cet état ont atteint leur objectif. "
-    +(f.out?"Rester a "+(f.hold<0?"coûté "+fr(-f.hold,2)+" R":"rapporté "+fr(f.hold,2)+" R")+" en moyenne par rapport à une sortie immédiate."
+    +(f.out?"Conseil de sortie : dans le test, il arrivait avant le stop pour "+EXITS[exLevel()].sl+" trades perdants sur 100, vers "+sgn(EXITS[exLevel()].slR,1)+" R au lieu de −1 R ; il coupait aussi "+EXITS[exLevel()].tp+" trades gagnants sur 100."
       :f.hold<=-0.04?"Trade fragile : rester a coûté "+fr(-f.hold,2)+" R en moyenne par rapport à une sortie immédiate."
       :"Rester ou sortir maintenant : même résultat moyen.")+" Indication, pas garantie."}
 var HLAB={ok:"Toujours valide",warn:"Fragile, à surveiller",exit:"Sortie à envisager"};
@@ -2505,7 +2513,8 @@ function paintHealth(t){
   var el=$("hl-"+t.id);if(!el)return;var h=health[t.id];
   if(!h){el.innerHTML='<div class="hbox"><div class="hrow"><span class="sub">'+(healthBusy[t.id]?"Vérification du trade en cours…":"Trade pas encore vérifié")+"</span></div></div>";return}
   if(h.err){el.innerHTML='<div class="hbox"><div class="hrow"><span class="sub">Vérification impossible : '+esc(h.err)+'</span><button class="ghost" type="button" data-hc="'+t.id+'" style="margin-left:auto">Revérifier</button></div></div>';return}
-  el.innerHTML='<div class="hbox '+h.v+'"><div class="hrow"><span class="hdot"></span><b>'+HLAB[h.v]+'</b><span class="sub">vérifié à '+new Date(h.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+'</span>'
+  var hf=fiOf(t,h),hv=hf&&!hf.none&&hf.out?"exit":h.v;
+  el.innerHTML='<div class="hbox '+hv+'"><div class="hrow"><span class="hdot"></span><b>'+(hv==="exit"&&h.v!=="exit"?"Sortie conseillée":HLAB[hv])+'</b><span class="sub">vérifié à '+new Date(h.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+'</span>'
     +'<button class="ghost" type="button" data-hc="'+t.id+'" style="margin-left:auto">'+(healthBusy[t.id]?"…":"Revérifier")+"</button></div>"
     +'<ul class="why">'+h.items.slice(0,7).map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></div>"}
 function runHealth(t,force){
@@ -2853,6 +2862,9 @@ function precRef(){var x=REF[+S.strict]||REF[2],y=REF42[+S.strict];
     +" Aucun niveau n'a été gagnant de façon durable : les contrôles rendent l'appli plus sélective, ils ne prédisent pas le marché. La version 42 se mesure en direct dans Résultats › Suivi sans argent."}
 $("p-strict").value=String(S.strict);
 $("p-tmode").value=S.tmode==="skip"||S.tmode==="off"?S.tmode:"signal";
+function exlvView(){var e=EXITS[exLevel()];$("p-exlv-s").textContent="Dans le test sur deux ans : le conseil « Sortir » arrive avant le stop pour "+e.sl+" trades perdants sur 100 (sortie vers "+sgn(e.slR,1)+" R au lieu de −1 R) et coupe "+e.tp+" trades gagnants sur 100. Résultat moyen inchangé quel que soit le niveau."}
+$("p-exlv").value=String(exLevel());exlvView();
+$("p-exlv").addEventListener("change",function(){S.exlv=+this.value;saveSettings();exlvView();if(view==="trades")renderTrades()});
 $("p-tmode").addEventListener("change",function(){S.tmode=this.value;saveSettings();rejudge();if(view==="tmp")renderTmp()});
 $("p-strict").addEventListener("change",function(){S.strict=+this.value;saveSettings();rejudge()});
 [["minrr","p-minrr",1,5],["slk","p-slk",0.1,2],["feecap","p-feecap",1,50]].forEach(function(f){

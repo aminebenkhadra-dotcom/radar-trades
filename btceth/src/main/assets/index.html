@@ -796,8 +796,8 @@ function tradeState(sym,d1,h4,h1,m15,t,now,opt){
   if(now-t.t>48*36e5&&rNow<0.5)sc-=1;
   var r1=rsi(closes(h1)),r15=null;
   if(m15&&m15.length>30){var rs=rsiSeries(closes(m15));r15=rs[rs.length-1]}
-  if(dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55)))sc-=1;
-  return{sc:sc,hard:b4===-dir&&(bd===-dir||opp),r:rNow,known:risk>0}}
+  var wk=dir>0?(r1<40&&(r15===null||r15<45)):(r1>60&&(r15===null||r15>55));if(wk)sc-=1;
+  return{sc:sc,hard:b4===-dir&&(bd===-dir||opp),r:rNow,known:risk>0,b4:b4===dir?1:b4===0?0:-1,bd:bd===dir?1:bd===0?0:-1,weak:!!wk,opp:opp,fl:fl?fl.v:null,left:left}}
 /* room to raise the target of an open trade, from candles alone: the price has covered three quarters of the way to the target, the
    4H and 1J trends both go with the trade, momentum is neither fading nor stretched, and at most one 4H level stands before the target.
    Proposed target: just before the next 4H level beyond the current one, or one risk unit (or one 4H ATR) further when there is none.
@@ -883,6 +883,10 @@ function btStep(S,n){
     /* o.state: every 4 hours of a replayed trade, its state as the app would read it (study of the reliability label) */
     if(o.state&&S.cur&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%16===0){var ts=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t,m[i].t,o);
       S.cur.rec.hs.push([ts.sc,ts.hard?1:0,+ts.r.toFixed(2),stateKey(ts)])}
+    /* o.exits: every hour of a replayed trade, its state with the parts that make it (study of earlier exit advice):
+       [bars since entry, score, hard, progress in R, 4H trend with/flat/against, 1J trend, fading momentum, opposite setup, flow] */
+    if(o.exits&&S.cur&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%4===0){var xs=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t,m[i].t,o);
+      (S.cur.rec.xs=S.cur.rec.xs||[]).push([i-S.cur.i,xs.sc,xs.hard?1:0,+xs.r.toFixed(2),xs.b4,xs.bd,xs.weak?1:0,xs.opp?1:0,xs.fl==="no"?-1:xs.fl==="ok"?1:0])}
     /* o.tpup: the first hour of a replayed trade where the target could be raised, and what the raised target then gave: with the
        stop left where it was (a), with the stop moved to the entry (b), with the stop moved to the old target once it is passed (c) */
     if(o.tpup&&S.cur&&!S.cur.rec.up&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%4===0){var tu=tpUp(F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t);
@@ -930,7 +934,7 @@ function btStep(S,n){
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
     if(o.trail&&res.how!=="open"){var tq={i:i,end:i+960,cr:cost*e/R,far:e,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
       TRAIL_RULES.forEach(function(r){tq.v[r]={sl:p.sl,done:null}});(S.sims=S.sims||[]).push(tq)}
-    if((o.state||o.tpup||o.tpdn)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
+    if((o.state||o.tpup||o.tpdn||o.exits)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
     S.free=j+17}
   if(S.i>=N)S.done=true;
   return S.done}

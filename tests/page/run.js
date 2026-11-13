@@ -410,6 +410,8 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#tu-m3", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p12-tpdn.png") }); }
     if (SHOTS) { await page.$eval("#tu-m2", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p12-tpup.png") }); await page.evaluate(() => scrollTo(0, 0)); }
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p12-fiab.png") });
+    const xl = await page.evaluate(() => { const e = document.getElementById("p-exlv"), t0 = document.getElementById("p-exlv-s").textContent, v0 = e.value; e.value = "0"; e.dispatchEvent(new Event("change")); const r = { v0, t0, t1: document.getElementById("p-exlv-s").textContent, saved: JSON.parse(localStorage.getItem("radar-settings")).exlv }; e.value = "2"; e.dispatchEvent(new Event("change")); return r; });
+    ok(xl.v0 === "2" && /48 trades perdants sur 100/.test(xl.t0) && /coupe 22 trades gagnants/.test(xl.t0) && xl.saved === 0 && /18 trades perdants sur 100/.test(xl.t1), "réglage « Conseil de sortie » : réactif par défaut (48 stops sur 100 anticipés, 22 gagnants coupés), modifiable et enregistré");
     await page.click('[data-close="m1"]'); await page.click('[data-close="m1"]');
     const st = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem("radar-trades")), a: JSON.parse(localStorage.getItem("radar-after")) }));
     ok(st.t.length === 4 && st.t[0].closed && st.a.length === 3 && st.a[0].sym === "ETH" && st.a[0].exit === st.t[0].exit, "clôture dans Mes trades : le trade arrive dans Après sortie avec son prix de sortie");

@@ -1,0 +1,390 @@
+{
+ "A": {
+  "trades": 2479,
+  "base": -0.081,
+  "baseSl": 67.7,
+  "rules": {
+   "now: score<=0 or hard": {
+    "exits": 14.7,
+    "avg": -0.081,
+    "gain": 0,
+    "exitR": -0.515,
+    "slCaught": 17.5,
+    "slExitR": -0.554,
+    "tpLost": 7,
+    "tpExitR": -0.442,
+    "tpBaseR": 1.953
+   },
+   "score<=1": {
+    "exits": 21.1,
+    "avg": -0.074,
+    "gain": 0.007,
+    "exitR": -0.54,
+    "slCaught": 25.8,
+    "slExitR": -0.597,
+    "tpLost": 9.2,
+    "tpExitR": -0.335,
+    "tpBaseR": 1.957
+   },
+   "score<=2": {
+    "exits": 40.5,
+    "avg": -0.069,
+    "gain": 0.012,
+    "exitR": -0.459,
+    "slCaught": 48.4,
+    "slExitR": -0.516,
+    "tpLost": 22.2,
+    "tpExitR": -0.245,
+    "tpBaseR": 1.95
+   },
+   "score<=3": {
+    "exits": 74.8,
+    "avg": -0.058,
+    "gain": 0.023,
+    "exitR": -0.161,
+    "slCaught": 78.8,
+    "slExitR": -0.234,
+    "tpLost": 65.6,
+    "tpExitR": 0.02,
+    "tpBaseR": 1.958
+   },
+   "4H against": {
+    "exits": 0.7,
+    "avg": -0.08,
+    "gain": 0.001,
+    "exitR": -0.571,
+    "slCaught": 0.8,
+    "slExitR": -0.632,
+    "tpLost": 0,
+    "tpExitR": 0,
+    "tpBaseR": 0
+   },
+   "4H not with": {
+    "exits": 14.1,
+    "avg": -0.081,
+    "gain": 0,
+    "exitR": -0.498,
+    "slCaught": 16.6,
+    "slExitR": -0.537,
+    "tpLost": 6.9,
+    "tpExitR": -0.433,
+    "tpBaseR": 1.953
+   },
+   "4H not with, twice": {
+    "exits": 8.6,
+    "avg": -0.084,
+    "gain": -0.003,
+    "exitR": -0.469,
+    "slCaught": 9.7,
+    "slExitR": -0.509,
+    "tpLost": 4.3,
+    "tpExitR": -0.476,
+    "tpBaseR": 1.973
+   },
+   "4H against or opposite setup": {
+    "exits": 0.7,
+    "avg": -0.08,
+    "gain": 0.001,
+    "exitR": -0.571,
+    "slCaught": 0.8,
+    "slExitR": -0.632,
+    "tpLost": 0,
+    "tpExitR": 0,
+    "tpBaseR": 0
+   },
+   "4H not with + fading": {
+    "exits": 12.1,
+    "avg": -0.084,
+    "gain": -0.003,
+    "exitR": -0.533,
+    "slCaught": 14.2,
+    "slExitR": -0.575,
+    "tpLost": 5.5,
+    "tpExitR": -0.48,
+    "tpBaseR": 2.004
+   },
+   "4H not with + in loss": {
+    "exits": 13.8,
+    "avg": -0.08,
+    "gain": 0.001,
+    "exitR": -0.526,
+    "slCaught": 16.6,
+    "slExitR": -0.547,
+    "tpLost": 6.5,
+    "tpExitR": -0.473,
+    "tpBaseR": 1.958
+   },
+   "4H not with + loss<-0.3": {
+    "exits": 13.1,
+    "avg": -0.085,
+    "gain": -0.004,
+    "exitR": -0.613,
+    "slCaught": 16.2,
+    "slExitR": -0.625,
+    "tpLost": 5.6,
+    "tpExitR": -0.578,
+    "tpBaseR": 1.976
+   },
+   "score<=2 + in loss": {
+    "exits": 39.2,
+    "avg": -0.067,
+    "gain": 0.014,
+    "exitR": -0.52,
+    "slCaught": 48.3,
+    "slExitR": -0.55,
+    "tpLost": 19,
+    "tpExitR": -0.382,
+    "tpBaseR": 1.948
+   },
+   "score<=3 + in loss": {
+    "exits": 66.1,
+    "avg": -0.057,
+    "gain": 0.024,
+    "exitR": -0.351,
+    "slCaught": 75.9,
+    "slExitR": -0.377,
+    "tpLost": 44.6,
+    "tpExitR": -0.263,
+    "tpBaseR": 1.944
+   },
+   "score<=3 + loss<-0.3": {
+    "exits": 55.9,
+    "avg": -0.066,
+    "gain": 0.015,
+    "exitR": -0.553,
+    "slCaught": 69.5,
+    "slExitR": -0.564,
+    "tpLost": 26.3,
+    "tpExitR": -0.5,
+    "tpBaseR": 1.951
+   },
+   "fading + in loss": {
+    "exits": 43.6,
+    "avg": -0.085,
+    "gain": -0.004,
+    "exitR": -0.454,
+    "slCaught": 51.3,
+    "slExitR": -0.48,
+    "tpLost": 26.3,
+    "tpExitR": -0.36,
+    "tpBaseR": 1.948
+   },
+   "opposite setup": {
+    "exits": 0,
+    "avg": -0.081,
+    "gain": 0,
+    "exitR": 0,
+    "slCaught": 0,
+    "slExitR": 0,
+    "tpLost": 0,
+    "tpExitR": 0,
+    "tpBaseR": 0
+   },
+   "loss<-0.5 (any state)": {
+    "exits": 51.4,
+    "avg": -0.073,
+    "gain": 0.008,
+    "exitR": -0.668,
+    "slCaught": 66.7,
+    "slExitR": -0.672,
+    "tpLost": 18.6,
+    "tpExitR": -0.64,
+    "tpBaseR": 1.958
+   }
+  }
+ },
+ "B": {
+  "trades": 1884,
+  "base": 0.017,
+  "baseSl": 64,
+  "rules": {
+   "now: score<=0 or hard": {
+    "exits": 15.8,
+    "avg": 0.028,
+    "gain": 0.011,
+    "exitR": -0.481,
+    "slCaught": 19.7,
+    "slExitR": -0.533,
+    "tpLost": 5.9,
+    "tpExitR": -0.36,
+    "tpBaseR": 1.987
+   },
+   "score<=1": {
+    "exits": 22.2,
+    "avg": 0.028,
+    "gain": 0.011,
+    "exitR": -0.484,
+    "slCaught": 27.9,
+    "slExitR": -0.548,
+    "tpLost": 9.3,
+    "tpExitR": -0.309,
+    "tpBaseR": 1.983
+   },
+   "score<=2": {
+    "exits": 39,
+    "avg": 0.014,
+    "gain": -0.003,
+    "exitR": -0.414,
+    "slCaught": 47.2,
+    "slExitR": -0.473,
+    "tpLost": 22,
+    "tpExitR": -0.243,
+    "tpBaseR": 1.994
+   },
+   "score<=3": {
+    "exits": 69.4,
+    "avg": -0.019,
+    "gain": -0.036,
+    "exitR": -0.159,
+    "slCaught": 73.8,
+    "slExitR": -0.229,
+    "tpLost": 60.4,
+    "tpExitR": -0.011,
+    "tpBaseR": 1.978
+   },
+   "4H against": {
+    "exits": 1.1,
+    "avg": 0.017,
+    "gain": 0,
+    "exitR": -0.539,
+    "slCaught": 0.9,
+    "slExitR": -0.563,
+    "tpLost": 0,
+    "tpExitR": 0,
+    "tpBaseR": 0
+   },
+   "4H not with": {
+    "exits": 15.4,
+    "avg": 0.028,
+    "gain": 0.011,
+    "exitR": -0.47,
+    "slCaught": 19.1,
+    "slExitR": -0.523,
+    "tpLost": 5.9,
+    "tpExitR": -0.356,
+    "tpBaseR": 1.987
+   },
+   "4H not with, twice": {
+    "exits": 10.6,
+    "avg": 0.018,
+    "gain": 0.001,
+    "exitR": -0.42,
+    "slCaught": 12.2,
+    "slExitR": -0.474,
+    "tpLost": 4.7,
+    "tpExitR": -0.349,
+    "tpBaseR": 2.004
+   },
+   "4H against or opposite setup": {
+    "exits": 1.1,
+    "avg": 0.017,
+    "gain": 0,
+    "exitR": -0.539,
+    "slCaught": 0.9,
+    "slExitR": -0.563,
+    "tpLost": 0,
+    "tpExitR": 0,
+    "tpBaseR": 0
+   },
+   "4H not with + fading": {
+    "exits": 13.7,
+    "avg": 0.027,
+    "gain": 0.01,
+    "exitR": -0.474,
+    "slCaught": 16.8,
+    "slExitR": -0.53,
+    "tpLost": 5,
+    "tpExitR": -0.355,
+    "tpBaseR": 1.967
+   },
+   "4H not with + in loss": {
+    "exits": 15.3,
+    "avg": 0.025,
+    "gain": 0.008,
+    "exitR": -0.491,
+    "slCaught": 19.1,
+    "slExitR": -0.531,
+    "tpLost": 5.9,
+    "tpExitR": -0.358,
+    "tpBaseR": 1.987
+   },
+   "4H not with + loss<-0.3": {
+    "exits": 14.4,
+    "avg": 0.022,
+    "gain": 0.005,
+    "exitR": -0.603,
+    "slCaught": 18.6,
+    "slExitR": -0.624,
+    "tpLost": 4.3,
+    "tpExitR": -0.514,
+    "tpBaseR": 1.987
+   },
+   "score<=2 + in loss": {
+    "exits": 37.6,
+    "avg": 0.015,
+    "gain": -0.002,
+    "exitR": -0.485,
+    "slCaught": 46.8,
+    "slExitR": -0.516,
+    "tpLost": 18.8,
+    "tpExitR": -0.383,
+    "tpBaseR": 1.985
+   },
+   "score<=3 + in loss": {
+    "exits": 61.4,
+    "avg": -0.014,
+    "gain": -0.031,
+    "exitR": -0.356,
+    "slCaught": 71.4,
+    "slExitR": -0.385,
+    "tpLost": 41.6,
+    "tpExitR": -0.277,
+    "tpBaseR": 1.979
+   },
+   "score<=3 + loss<-0.3": {
+    "exits": 50.4,
+    "avg": 0.001,
+    "gain": -0.016,
+    "exitR": -0.556,
+    "slCaught": 64.3,
+    "slExitR": -0.568,
+    "tpLost": 23.5,
+    "tpExitR": -0.513,
+    "tpBaseR": 1.984
+   },
+   "fading + in loss": {
+    "exits": 44.4,
+    "avg": 0.003,
+    "gain": -0.014,
+    "exitR": -0.443,
+    "slCaught": 53.9,
+    "slExitR": -0.473,
+    "tpLost": 25.2,
+    "tpExitR": -0.351,
+    "tpBaseR": 1.977
+   },
+   "opposite setup": {
+    "exits": 0.1,
+    "avg": 0.017,
+    "gain": 0,
+    "exitR": -0.558,
+    "slCaught": 0.1,
+    "slExitR": -0.567,
+    "tpLost": 0,
+    "tpExitR": 0,
+    "tpBaseR": 0
+   },
+   "loss<-0.5 (any state)": {
+    "exits": 47.9,
+    "avg": -0.005,
+    "gain": -0.022,
+    "exitR": -0.674,
+    "slCaught": 63.8,
+    "slExitR": -0.678,
+    "tpLost": 17.8,
+    "tpExitR": -0.656,
+    "tpBaseR": 1.978
+   }
+  }
+ }
+}

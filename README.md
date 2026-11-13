@@ -130,6 +130,16 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## Conseil de sortie plus réactif (Mes trades)
+
+Le conseil « Sortir » d'un trade actif dépend d'un niveau réglable (Profil → « Conseil de sortie des trades actifs ») : score
+de l'état du trade à 2 ou moins (réactif, par défaut), 1 ou moins (équilibré), 0 ou moins (tardif, l'ancien réglage). Chaque
+niveau a été rejoué sur deux ans comme une règle, l'état lu toutes les heures (`exit.yml`, `tools/backtest/exit42.js`,
+`results/exit-v42.json`, 4 363 trades) : le conseil arrive avant le stop pour 48 / 27 / 18 trades perdants sur 100, avec une
+sortie vers −0,5 R au lieu de −1 R, et coupe 22 / 9 / 7 trades gagnants sur 100. Résultat moyen par trade inchangé
+(+0,01 R au mieux) : aucune règle de sortie testée, parmi 17, n'améliore nettement la moyenne. L'encadré de vérification
+affiche « Sortie conseillée » quand l'étiquette dit « Sortir », et la notification de sortie suit le même niveau.
+
 ## Pourquoi peu de trades « prêts » : mesure et outils de contrôle
 
 Rejeu de deux ans sans prendre de trade, l'étape de chaque marché notée toutes les 15 minutes (`funnel.yml`,

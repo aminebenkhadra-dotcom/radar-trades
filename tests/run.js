@@ -343,6 +343,14 @@ test("T23", "Stop suiveur après le break-even : jamais avant +1 R, jamais sous 
   ok(E.swing4([{ l: 9, h: 12 }, { l: 5, h: 11 }, { l: 6, h: 13 }, { l: 7, h: 12 }, { l: 8, h: 12 }, { l: 7, h: 14 }, { l: 8, h: 12 }, { l: 1, h: 99 }], 1) === 5, "dernier creux 4H : sur les six bougies closes, sans la bougie en cours");
 });
 
+test("T24", "État d'un trade : les éléments du score sont rendus, pour le conseil de sortie", () => {
+  const SY = require("./synth.js"), now = Date.UTC(2026, 10, 10), m = SY.path(SY.LEVELS, now, 0.003), d1 = SY.agg(m, 864e5, 90), h4 = SY.agg(m, 144e5, 200), h1 = SY.agg(m, 36e5, 200), L = m[m.length - 1].c;
+  const long = E.tradeState("LVL", d1, h4, h1, m.slice(-500), { dir: 1, entry: L * 0.997, sl: L * 0.975, tp: L * 1.07, r0: L * 0.022, t: now - 5 * 36e5 }, now, {});
+  const short = E.tradeState("LVL", d1, h4, h1, m.slice(-500), { dir: -1, entry: L * 1.003, sl: L * 1.025, tp: L * 0.93, r0: L * 0.022, t: now - 5 * 36e5 }, now, {});
+  ok(long.b4 === 1 && long.bd === 1 && long.sc >= 3 && !long.hard, "long dans le sens des deux tendances : score " + long.sc + ", rien à signaler");
+  ok(short.b4 === -1 && short.bd === -1 && short.hard && short.sc <= 0, "short contre les deux tendances : score " + short.sc + ", sortie quel que soit le niveau choisi");
+});
+
 /* ---------- report ---------- */
 (async () => {
   let fail = 0;
