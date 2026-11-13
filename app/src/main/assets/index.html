@@ -115,6 +115,7 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 /* settings */
 details.set{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 14px}
 details.set summary{padding:12px 0;font-weight:600;cursor:pointer}
+.fdr{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px solid var(--line)}.fdr b{flex:none;min-width:34px;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}.fdr span{min-width:0}.fdr small{display:block;color:var(--muted);font-size:12px}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding-bottom:14px}
 @media (max-width:440px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
@@ -448,6 +449,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div class="filters sidef" id="sidef" role="group" aria-label="Sens des trades"><button type="button" data-side="both">Longs et shorts</button><button type="button" data-side="long">Longs seulement</button><button type="button" data-side="short">Shorts seulement</button></div>
   <div id="ready3"></div>
   <div class="funnel" id="funnel" hidden></div>
+  <details class="set" id="fdet" hidden></details>
 
   <h2 id="top-h">Top 3 à surveiller</h2>
   <div class="stack" id="top"></div>
@@ -507,6 +509,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
       <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, viser plus haut que mon TP ou le réduire, déplacer mon stop pour sécuriser mes gains, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
+      <details class="wide set" id="a-log" hidden></details>
       <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
     </div>
   </details>
@@ -1856,7 +1859,7 @@ function scan(m){
     if(!p1.out.length)throw p1.last||{};
     if(p1.stopped)banner("Scan interrompu avant la fin. "+why(p1.last)+" Classement établi sur les marchés déjà lus.",true);
     var next=top?p1.out:p1.out.filter(function(x){return x.bd!==0});
-    f.n=p1.out.length;f.trend=p1.out.filter(function(x){return x.bd!==0}).length;
+    f.n=p1.out.length;f.trend=p1.out.filter(function(x){return x.bd!==0}).length;f.skip=top?0:Math.max(0,next.length-MAXDEEP);f.minv=+S.minvol||0;
     next.sort(function(a,b){return b.vol-a.vol});
     return pool(top?next:next.slice(0,MAXDEEP),6,function(c){
       return Promise.all([klines(c.sym,"4h",200,80),klines(c.sym,"1h",200,80),klines(c.sym,"1d",400,55).catch(function(){return c.d1})]).then(function(k){
@@ -1866,7 +1869,8 @@ function scan(m){
     if(!p2.out.length&&p2.last)throw p2.last;
     var good=p2.out.filter(function(r){return r.plan}).sort(rank);
     if(top){none=p2.out.filter(function(r){return!r.plan});none.forEach(function(r){delete r.h4})}
-    f.setups=good.length;
+    f.setups=good.length;f.deep=p2.out.length;f.near=good.filter(function(r){return r.dist<=0.5}).length;f.why={};
+    p2.out.forEach(function(r){if(!r.plan){var k=r.why&&r.why[0]?r.why[0].t:"Aucune zone d'entrée exploitable";f.why[k]=(f.why[k]||0)+1}});
     /* the 15-minute trigger only matters near the zone: read the closest setups first */
     var pick=good.filter(function(r){return r.dist<=1}).concat(good.filter(function(r){return r.dist>1})).slice(0,20);
     return pool(pick,4,function(r){
@@ -1879,6 +1883,7 @@ function scan(m){
   }).then(function(list){
     f.tiles=top?[[f.n,"analysés"],[f.trend,"en tendance 1J"],[f.setups,"setups"],[list.filter(function(r){return r.st==="ready"}).length,"prêts"]]
       :[[f.total,"marchés scannés"],[f.liquid,"liquides"],[f.trend,"en tendance 1J"],[f.setups,"setups"]];
+    f.shown=list.filter(function(r){return r.plan}).length;
     stores[m]={results:list,funnel:f,stamp:Date.now(),live:true};
     saveStore(m);
     try{paperRecord(list);paperResolve()}catch(e){}
@@ -1948,12 +1953,40 @@ function gatesView(r){
     return'<details class="gt '+g.st+(need.indexOf(g.k)<0?" opt":"")+'"><summary><span class="ic">'+(g.st==="ok"?"✓":g.st==="mid"?"~":"✕")+"</span><b>"+g.label+'</b><span class="hd">'+esc(g.head)+"</span></summary>"
       +'<ul class="why">'+g.items.map(function(w){return'<li class="'+(w.k==="ok"?"":w.k)+'">'+esc(w.t)+"</li>"}).join("")+"</ul></details>"}).join("")+"</div>"
     +'<div class="sub" style="margin-top:6px">Touche un contrôle pour le détail. Ces contrôles décrivent le contexte, ils ne prédisent pas le résultat.</div></div>'}
+/* why the setups of a list are not ready: each reason once per setup, grouped by its first words, most frequent first */
+function whyNot(P){var rs={};
+  P.forEach(function(r){if(!r.plan||r.st==="ready")return;var w=(r.stWhy||[]).slice();
+    if(r.st==="watch")missing(r).forEach(function(x){w.push("contrôle « "+x+" » pas validé")});
+    if(!w.length)w.push(STL[r.st].toLowerCase());
+    var seen={};w.forEach(function(x){var k=/^non lu/.test(x)?x:String(x).split(" (")[0].split(" : ")[0];k=k.charAt(0).toUpperCase()+k.slice(1);if(seen[k])return;seen[k]=1;rs[k]=(rs[k]||0)+1})});
+  return Object.keys(rs).sort(function(a,b){return rs[b]-rs[a]}).map(function(k){return[k,rs[k]]})}
+/* where the markets stop, from the last scan: each step of the funnel with its count, then why the setups shown are not ready */
+function scanDetail(){
+  var el=$("fdet"),f=funnel;if(!el)return;if(!f||f.deep===undefined){el.hidden=true;return}
+  var top=mode!=="all",P=results.filter(function(r){return r.plan}),ready=P.filter(function(r){return r.st==="ready"}).length,L=[];
+  function row(n,t,s){L.push('<div class="fdr"><b>'+fr(n||0,0)+"</b><span>"+t+(s?'<small>'+s+"</small>":"")+"</span></div>")}
+  var wy=Object.keys(f.why||{}).sort(function(a,b){return f.why[b]-f.why[a]}).map(function(k){return f.why[k]+" : "+esc(k.charAt(0).toLowerCase()+k.slice(1))}).join(" · ");
+  if(top){row(f.n,"cryptos du Top "+mode+" analysées",f.by==="vol"?"classées par volume":"classées par capitalisation")}
+  else{row(f.total,"marchés USDT sur Binance Futures");
+    row(f.liquid,"assez liquides","plus de "+fr(f.minv,0)+" M$ échangés par jour · "+fr(Math.max(0,f.total-f.liquid),0)+" écartés");
+    row(f.trend,"en tendance sur 1 jour",fr(Math.max(0,f.n-f.trend),0)+" sans tendance nette");
+    row(f.deep,"analysés en détail",f.skip?"les "+MAXDEEP+" plus gros volumes · "+f.skip+" autres en tendance non analysés":"")}
+  row(f.setups,"avec une zone d'entrée",wy?"les autres : "+wy:"");
+  row(f.near,"près de leur zone","prix à moins d'un demi-ATR de l'entrée");
+  if(!top)row(P.length,"affichés",f.setups>P.length?"les 15 mieux classés · "+(f.setups-P.length)+" autres non affichés":"");
+  row(ready,ready>1?"prêts à saisir":"prêt à saisir","");
+  var why=whyNot(P).slice(0,8);
+  el.hidden=false;
+  el.innerHTML="<summary>Détail du scan : où s'arrêtent les marchés</summary>"+L.join("")
+    +(why.length?'<div class="cap" style="margin-top:10px">Pourquoi les '+(P.length-ready)+" autres ne sont pas prêts</div>"+why.map(function(k){return'<div class="fdr"><b>'+k[1]+"</b><span>"+esc(k[0])+"</span></div>"}).join(""):"")
+    +'<div class="sub" style="padding:8px 0 12px">Un trade ne reste « prêt » que peu de temps : une liste sans aucun « prêt » est le cas le plus fréquent.</div>'}
 function render(){
   var A0=acctState();results.forEach(function(r){finalize(r,A0)});
   var rs=results.slice().sort(rank),fu=$("funnel"),top=mode!=="all";
   fu.hidden=!funnel;
   if(funnel)fu.innerHTML=(funnel.tiles||[[funnel.total,"marchés scannés"],[funnel.liquid,"liquides"],[funnel.trend,"en tendance 1J"],[funnel.setups,"setups"]]).map(function(x){
     return"<div><b>"+fr(x[0]||0,0)+"</b><span>"+x[1]+"</span></div>"}).join("");
+  scanDetail();
   if(funnel&&top&&funnel.tiles&&funnel.tiles[3]){funnel.tiles[3][0]=results.filter(function(r){return r.st==="ready"}).length;fu.lastChild.firstChild.textContent=fr(funnel.tiles[3][0],0)}
   /* longs and shorts apart, the side the whole market leans to first */
   sideChips();var want=S.side==="long"?1:S.side==="short"?-1:0,hid=want?rs.filter(function(r){return r.plan&&r.dir!==want}).length:0;
@@ -4595,7 +4628,12 @@ function alertStatus(){
     t="Surveillance active"+(last?" · dernier contrôle "+last:" · premier contrôle en cours");
     try{if(!Android.canNotify())t+=" · notifications bloquées : autorise-les pour Radar Trades dans les paramètres Android"}catch(e){}
     try{if(!Android.batteryFree())t+=" · appuie sur « Autoriser en veille » pour que les contrôles continuent écran éteint"}catch(e){}}
-  st.textContent=t;$("a-bat").hidden=!NATIVE;$("a-test").hidden=!NATIVE}
+  st.textContent=t;$("a-bat").hidden=!NATIVE;$("a-test").hidden=!NATIVE;bgLogView()}
+/* the last background runs, kept on the device: when, what was checked, how many setups were ready and why the others were not */
+function bgLog(msg,more){try{var L=JSON.parse(localStorage.getItem("radar-bglog")||"[]");if(!Array.isArray(L))L=[];L.unshift({t:Date.now(),m:String(msg||""),x:more||""});L.length=Math.min(L.length,30);localStorage.setItem("radar-bglog",JSON.stringify(L))}catch(e){}}
+function bgLogView(){var el=$("a-log");if(!el)return;var L=[];try{L=JSON.parse(localStorage.getItem("radar-bglog")||"[]")||[]}catch(e){}
+  el.hidden=!L.length;if(!L.length)return;var open=el.open;
+  el.innerHTML="<summary>Derniers contrôles en arrière-plan ("+L.length+")</summary>"+L.map(function(x){return'<div class="fdr"><span><b style="font-family:var(--mono);font-weight:500">'+when(x.t)+"</b> · "+esc(x.m)+(x.x?"<small>"+esc(x.x)+"</small>":"")+"</span></div>"}).join("")+'<div style="height:10px"></div>';el.open=open}
 function applyWatch(){
   if(NATIVE){try{if(S.a10||S.a50||S.atr)Android.startWatch(!!S.a10,!!S.a50,+S.amin||30);else Android.stopWatch()}catch(e){}}
   alertStatus()}
@@ -4670,7 +4708,8 @@ function protect(cb){
 /* called by the watch service inside its hidden copy of this page: positions first (their alerts come first), then the setups */
 window.bgScan=function(t10,t50){
   var m=t50?"50":t10?"10":null;
-  function fin(msg){try{Android.done(msg)}catch(e){}}
+  var bgMore="";
+  function fin(msg){bgLog(msg,bgMore);try{Android.done(msg)}catch(e){}}
   function end(msg){var d=false,go=function(){if(d)return;d=true;fin(msg)};setTimeout(go,20000);sySync().then(go,go)}
   S=loadSettings();T=loadTrades();
   var start0=function(){S=loadSettings();T=loadTrades();bgRun()},st=false,once=function(){if(st)return;st=true;start0()};setTimeout(once,20000);sySync().then(once,once);
@@ -4695,6 +4734,8 @@ window.bgScan=function(t10,t50){
           +"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(z&&z.ok?" · "+fr(z.qty,z.qd)+" à x"+z.lev+" · perte max "+fr(z.loss,2)+" $":"")
           +" · scan de "+new Date(st.stamp).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),id,m+"~"+r.sym)}catch(e){}});
       try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
+      try{var bp=st.results.filter(function(r){return r.plan}),bz=bp.filter(function(r){return r.dist<=0.5}),bw=whyNot(bz).slice(0,3).map(function(k){return k[1]+" × "+k[0].toLowerCase()}).join(" · ");
+        bgMore="Top "+m+" : "+bp.length+" avec une zone, "+bz.length+" à la zone"+(bw?" · pas prêts : "+bw:"")}catch(e){}
       var sw=S.side==="long"?"long":S.side==="short"?"short":"setup";
       end(pmsg+" · "+(n?n+" "+sw+(n>1?"s prêts":" prêt"):"aucun "+sw+" prêt"))};
     scan(m)})}};

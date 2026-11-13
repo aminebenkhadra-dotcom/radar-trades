@@ -1,0 +1,98 @@
+{
+ "A": {
+  "markets": 61,
+  "days": 392,
+  "perMoment": [
+   9.75,
+   17.91,
+   0.68,
+   9.18,
+   5.85,
+   16.65,
+   0.45,
+   0.53
+  ],
+  "share": [
+   15.99,
+   29.35,
+   1.12,
+   15.04,
+   9.6,
+   27.3,
+   0.74,
+   0.86
+  ],
+  "momentsWithReady": 27.4,
+  "momentsWithReadyNoBlocker": 39,
+  "ready": {
+   "perDay": 23.12,
+   "medianMin": 15,
+   "meanMin": 33,
+   "only15": 55,
+   "upTo30": 75,
+   "over60": 11,
+   "alerts15": 12.87,
+   "alerts30": 10.54,
+   "alerts60": 7.9
+  },
+  "noBlocker": {
+   "perDay": 42.35,
+   "medianMin": 15,
+   "meanMin": 33,
+   "only15": 53,
+   "upTo30": 73,
+   "over60": 11,
+   "alerts15": 22.36,
+   "alerts30": 18.69,
+   "alerts60": 14.33
+  }
+ },
+ "B": {
+  "markets": 60,
+  "days": 362,
+  "perMoment": [
+   8,
+   18.6,
+   0,
+   10.07,
+   5.7,
+   16.83,
+   0.35,
+   0.45
+  ],
+  "share": [
+   13.33,
+   31,
+   0,
+   16.78,
+   9.5,
+   28.05,
+   0.58,
+   0.75
+  ],
+  "momentsWithReady": 27.7,
+  "momentsWithReadyNoBlocker": 40.3,
+  "ready": {
+   "perDay": 19.51,
+   "medianMin": 15,
+   "meanMin": 33,
+   "only15": 54,
+   "upTo30": 74,
+   "over60": 11,
+   "alerts15": 11.1,
+   "alerts30": 9.06,
+   "alerts60": 6.78
+  },
+  "noBlocker": {
+   "perDay": 34.4,
+   "medianMin": 15,
+   "meanMin": 33,
+   "only15": 53,
+   "upTo30": 74,
+   "over60": 11,
+   "alerts15": 18.88,
+   "alerts30": 15.64,
+   "alerts60": 11.9
+  }
+ }
+}

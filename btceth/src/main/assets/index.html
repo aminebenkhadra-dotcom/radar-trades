@@ -903,6 +903,16 @@ function btStep(S,n){
         if(!dres){dj=Math.min(dj,N);dres={how:"time",r:dt.dir*(m[dj].c-dt.entry)/dR}}
         dres.r=+(dres.r-S.cur.rec.cr).toFixed(3);
         S.cur.rec.dn={k:i-S.cur.i,kind:td.kind,rev:td.rev?1:0,weak:td.weak?1:0,out:dst.hard||dst.sc<=0?1:0,rr:+(Math.abs(td.px-dt.entry)/dR).toFixed(2),r:+((m[i].c-dt.entry)*dt.dir/dR).toFixed(2),a:dres}}}
+    /* o.funnel: no trade is taken; every 15 minutes the stage the market stops at is noted, as one digit: 0 no 1J trend, 1 no 4H
+       trend or 4H against 1J, 2 no entry zone, 3 zone further than 1 ATR, 4 zone between 0.5 and 1 ATR, 5 at the zone but checks
+       not passed, 6 checks passed but a blocker holds it back, 7 ready (study of how often and how long a setup is ready) */
+    if(o.funnel){if(i<BT_WARM)continue;var fd=F.get("d1",400);if(fd.length<55)continue;
+      if(S.first===null){S.first=m[i].t;S.fn=[]}
+      var fc;if(bias(fd.length>90?fd.slice(-90):fd)===0)fc=0;
+      else{var fr0=analyze(S.sym,fd,F.get("h4",200),F.get("h1",200),o.btc?{btc:o.btc[m[i].t]||null}:null,o);
+        if(!fr0.plan)fc=fr0.st==="none"?1:2;else if(fr0.dist>1)fc=3;else if(fr0.dist>0.5)fc=4;
+        else{enrich(fr0,F.m15(500),null,null,{noHeat:true});judge(fr0,jo);fc=fr0.st==="ready"?7:fr0.st0==="ready"?6:5}}
+      S.fn.push(fc);S.evals++;continue}
     if(i<BT_WARM||i<S.free)continue;
     var d1=F.get("d1",400);if(d1.length<55)continue;
     if(S.first===null)S.first=m[i].t;

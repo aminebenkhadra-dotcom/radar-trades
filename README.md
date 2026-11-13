@@ -130,6 +130,20 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## Pourquoi peu de trades « prêts » : mesure et outils de contrôle
+
+Rejeu de deux ans sans prendre de trade, l'étape de chaque marché notée toutes les 15 minutes (`funnel.yml`,
+`tools/backtest/funnel42.js`, 60 marchés les plus échangés, contrôles sur bougies seulement). À un instant donné, sur 60 :
+9 sans tendance 1J, 18 sans tendance 4H ou 4H contre 1J, 10 avec une zone encore loin, 6 en approche, 17 à la zone sans
+valider les contrôles, 0,4 retenus par l'obstacle 4H avant 1R, 0,5 prêt. Au moins un « prêt » 27 % du temps. Un état
+« prêt » dure 15 minutes dans plus de la moitié des cas (33 minutes en moyenne). Alertes attendues avec un contrôle toutes
+les 15 / 30 / 60 minutes : 12 / 10 / 7 par jour ; sans le blocage « obstacle avant 1R » : 21 / 17 / 13.
+
+Dans l'appli : sous les compteurs du scanner, « Détail du scan : où s'arrêtent les marchés » (chaque étape et son nombre,
+puis les raisons pour lesquelles les setups affichés ne sont pas prêts) ; dans les réglages d'alertes, « Derniers contrôles
+en arrière-plan » (30 derniers passages : heure, résultat, nombre de setups à la zone et raisons principales).
+L'onglet « Tous » analyse en détail les 60 marchés en tendance les plus échangés et affiche 15 setups au plus.
+
 ## Alerte « trade prêt à saisir »
 
 Notification quand un setup du Top 50 (ou du Top 10) passe à « Prêt selon les règles » : toutes les règles au vert, prix dans

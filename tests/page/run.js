@@ -174,6 +174,11 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
   await test("P2", "Détail d'un setup : statut expliqué, prix sur le pas du contrat, taille nette de frais", async ok => {
     const { ctx, page, errors } = await open(browser);
     await waitScan(page);
+    const fd = await page.evaluate(() => { const e = document.getElementById("fdet"); e.open = true; return { hidden: e.hidden, rows: [...e.querySelectorAll(".fdr")].map(r => r.textContent.replace(/\s+/g, " ")), txt: e.textContent }; });
+    const num = k => { const r = fd.rows.find(x => x.includes(k)); return r ? parseInt(r.replace(/\s/g, ""), 10) : NaN; };
+    ok(!fd.hidden && num("marchés USDT") >= num("assez liquides") && num("assez liquides") >= num("en tendance sur 1 jour") && num("analysés en détail") >= num("avec une zone d'entrée") && num("avec une zone d'entrée") >= num("affichés"), "détail du scan : " + fd.rows.slice(0, 8).map(x => x.slice(0, 34)).join(" → "));
+    ok(num("affichés") === await page.$$eval("#view-scan button.row[data-s]", a => a.length) && (num("prêt") === 0 ? /Pourquoi les \d+ autres ne sont pas prêts/.test(fd.txt) : true), "le détail compte les mêmes setups que la liste, et dit pourquoi les autres ne sont pas prêts");
+    if (SHOTS) { await page.$eval("#fdet", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p2-detail-scan.png") }); await page.evaluate(() => { document.getElementById("fdet").open = false; scrollTo(0, 0); }); }
     const btn = await page.$("#view-scan button.row[data-s]");
     ok(!!btn, "un setup à ouvrir");
     if (btn) {
@@ -270,6 +275,9 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(M.notes.length === 0 || M.notes[0].ch === "protect", "la protection passe avant les setups");
     ok(set.every(n => /prêt à saisir · \d\/6 contrôles/.test(n.title) && !/%/.test(n.title) && /Entrée .* Stop .* TP1 /.test(n.text)), "alertes d'entrée : uniquement « prêt à saisir », avec entrée, stop et TP1 (" + set.length + (set[0] ? " · " + set[0].text.slice(0, 70) : "") + ")");
     ok(/contrôle de 1 position Binance et 5 trades suivis/.test(M.done), "résumé du contrôle : " + M.done);
+    await page.reload(); await page.waitForFunction(() => document.getElementById("a-log") && !document.getElementById("a-log").hidden, null, { timeout: 15000 }).catch(() => {});
+    const lg = await page.evaluate(() => ({ L: JSON.parse(localStorage.getItem("radar-bglog") || "[]"), shown: document.getElementById("a-log").hidden ? "" : document.getElementById("a-log").textContent }));
+    ok(lg.L.length === 1 && lg.L[0].m === M.done && /^Top 50 : \d+ avec une zone, \d+ à la zone/.test(lg.L[0].x) && /Derniers contrôles en arrière-plan \(1\)/.test(lg.shown) && lg.shown.includes(lg.L[0].x), "journal des contrôles, visible dans les réglages : « " + lg.L[0].x.slice(0, 110) + " »");
     const o2 = await open(browser, { init: `if(!sessionStorage.getItem("s2")){sessionStorage.setItem("s2","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a10:true,a50:true,profOk:true,account:1000}))}` });
     const s2 = await o2.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
     ok(s2.a10 === true && s2.a50 === true && s2.atr === true && s2.nt44 === 1, "mise à jour : alerte « trade prêt à saisir » activée pour le Top 50, les autres réglages gardés");
