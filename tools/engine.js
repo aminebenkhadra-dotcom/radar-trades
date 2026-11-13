@@ -103,15 +103,25 @@ function mkPlan(r,entry,sl){
   return r.plan}
 /* at the zone the plan is an entry at the current price; further away, a limit order on the edge of the zone */
 function replan(r,opt){
-  var K=+(opt&&opt.slk)||PREC.slk,z=r.z,dir=r.dir,edge=dir>0?Math.min(r.price,z.hi):Math.max(r.price,z.lo);
-  return mkPlan(r,r.dist<=0.5?r.price:edge,dir>0?z.lo-K*r.a:z.hi+K*r.a)}
+  var K=+(opt&&opt.slk)||PREC.slk,z=r.z,dir=r.dir,edge=dir>0?Math.min(r.price,z.hi):Math.max(r.price,z.lo),entry=r.dist<=0.5?r.price:edge,sl=dir>0?z.lo-K*r.a:z.hi+K*r.a;
+  /* stop exposed: the last high (short) or low (long) of the 1H candles of the last hours, on the stop side, sits beyond the stop or
+     less than 0.15 4H ATR inside it: a retest of that swing takes the stop. opt.slsw: hours looked at (0: not checked);
+     opt.slmode "move": the stop goes 0.15 ATR beyond the swing (when it stays within 1.5 ATR of the first stop), "flag": noted only */
+  var nh=opt&&opt.slsw!==undefined?+opt.slsw:PREC.slsw;r.slx=null;
+  if(nh>0&&r.h1t&&r.h1t.length){var k=r.h1t.slice(-nh),ext=dir>0?Infinity:-Infinity;
+    k.forEach(function(c){ext=dir>0?Math.min(ext,c.l):Math.max(ext,c.h)});
+    var gap=(ext-sl)*dir;
+    if(isFinite(ext)&&(entry-ext)*dir>0&&gap<0.15*r.a&&gap>-1.5*r.a){
+      var nsl=ext-dir*0.15*r.a;r.slx={p:ext,sl0:sl,sl:nsl,h:nh};
+      if((opt&&opt.slmode||PREC.slmode)==="move")sl=nsl}}
+  return mkPlan(r,entry,sl)}
 
 /* first pass, on daily, 4H and 1H candles: direction, entry zone, plan, and everything that describes the context */
 function analyze(sym,d1,h4,h1,ctx,opt){
   opt=opt||{};
   var n4=h4.length,n1=h1.length,price=h1[n1-1].c,a=atr(h4),bd=bias(d1.length>90?d1.slice(-90):d1),b4=bias(h4),i,j;
   var c1=closes(h1),c4=closes(h4),r1=rsi(c1),r4=rsi(c4);
-  var r={v:3,sym:sym,price:price,bd:bd,b4:b4,r1:r1,r4:r4,h4:h4.slice(-60),dir:0,score:0,st:"wait",why:[],plan:null,f:{},a:a};
+  var r={v:3,sym:sym,price:price,bd:bd,b4:b4,r1:r1,r4:r4,h4:h4.slice(-60),h1t:h1.slice(-49,-1).concat(h1.slice(-1)),dir:0,score:0,st:"wait",why:[],plan:null,f:{},a:a};
   if(b4===0||bd===-b4){r.st="none";r.why.push({t:b4===0?"4H sans tendance nette":"1J et 4H en sens opposé",k:"no"});return r}
   var dir=b4,f=r.f;r.dir=dir;f.bd=bd===b4?1:0;
   var lv=levels(h4,0.5*a),obs=orderBlocks(h4,a),zs=[];
@@ -329,7 +339,7 @@ function enrich(r,m15,book,sqd,opt){
    Tendance, Zone and Risque must pass for a setup to be "Prêt"; the strictness setting adds Déclencheur, then Marché and Élan.
    Four statuses: "ready" (prêt selon les règles), "watch" (à surveiller), "refused" (refusé), "incomplete" (données incomplètes).
    Missing data never earns points, and a critical blocker (wide spread, obstacle before 1R) takes "ready" away. */
-var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5};
+var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move"};
 function judge(r,opt){
   opt=opt||{};
   if(!r.plan){r.score=r.dir?(r.f.bd?25:12):0;r.blk=[];r.miss=[];return r}
@@ -462,6 +472,7 @@ function judge(r,opt){
     else if(b.spread>PREC.spreadWatch){blk.push({k:"spread",sev:"watch",t:"Écart achat-vente de "+fr(b.spread,2)+" % (au-delà de "+fr(PREC.spreadWatch,2)+" %)"});
       add(g,"no",0,function(){return"Écart achat-vente large ("+fr(b.spread,2)+" %) : pas de « Prêt » tant qu'il dépasse "+fr(PREC.spreadWatch,2)+" %"})}}
   else if(r.dist<=0.5&&!opt.noBook)md.push("carnet d'ordres");
+  if(r.slx&&p.sl===r.slx.sl0&&(opt.slmode||PREC.slmode)==="flag")blk.push({k:"stopx",sev:"watch",t:"Stop exposé : "+(L?"creux":"sommet")+" récent à "+px(r.slx.p)+", juste derrière le stop"});
   if(r.liqOwn)add(g,"no",0,function(){return"Zone de liquidation de "+(L?"longs":"shorts")+" vers "+px(r.liqOwn.p)+", entre l'entrée et le stop : mèche possible"});
   if(r.liqMag)add(g,"mid",0,function(){return"Aimant possible : liquidations de "+(L?"shorts":"longs")+" vers "+px(r.liqMag.p)+" ("+sgn((r.liqMag.p-r.price)/r.price*100,1)+" %)"});
   g.pts=Math.min(15,g.pts);
@@ -750,7 +761,7 @@ function btStep(S,n){
       continue}
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,sx:r.slx?(r.slx.sl===p.sl?2:1):0,rp:+(R/e*100).toFixed(3),score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
     if(o.trail&&res.how!=="open"){var tq={i:i,end:i+960,cr:cost*e/R,far:e,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
       TRAIL_RULES.forEach(function(r){tq.v[r]={sl:p.sl,done:null}});(S.sims=S.sims||[]).push(tq)}
     if((o.state||o.tpup||o.tpdn||o.exits)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;

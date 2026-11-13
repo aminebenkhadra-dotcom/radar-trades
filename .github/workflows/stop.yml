@@ -1,0 +1,41 @@
+name: Stop placement v42
+# Replays version 42 once per stop variant and period on Binance history, and publishes the stats to stop-v42-<variant>-<period>.
+on:
+  push:
+    branches: [stop-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10" }
+          - { id: B, start: "2025-10", end: "2026-10" }
+        v:
+          - { id: base, o: '{"slsw":0}' }
+          - { id: m12, o: '{"slsw":12,"slmode":"move"}' }
+          - { id: m24, o: '{"slsw":24,"slmode":"move"}' }
+          - { id: m48, o: '{"slsw":48,"slmode":"move"}' }
+          - { id: f24, o: '{"slsw":24,"slmode":"flag"}' }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: node tools/backtest/fetch.js klines data 2>&1 | tail -15
+      - name: Replay
+        run: |
+          mkdir -p res
+          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data res 2 $k/4 '${{ matrix.v.o }}' & done; wait
+          node tools/backtest/stop42.js res | tee res/stop.json
+      - name: Publish
+        run: |
+          B=stop-v42-${{ matrix.v.id }}-${{ matrix.period.id }}
+          cd res && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Stop placement ${{ matrix.v.id }} ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B
