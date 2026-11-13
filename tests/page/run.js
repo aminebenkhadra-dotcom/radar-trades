@@ -505,6 +505,25 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await ctx.close();
   });
 
+  await test("P16", "Trade actif : stop exposé juste derrière le dernier creux, avec un stop plus sûr", async ok => {
+    const m = MK("ZIGUSDT").m, L = last("ZIGUSDT"), t0 = Math.floor((NOW - 2 * 36e5) / 36e5) * 36e5;
+    let lo = Infinity; m.forEach(c => { if (c.t >= t0 - 24 * 36e5 && c.t < t0) lo = Math.min(lo, c.l); });
+    const tr = [{ id: "e1", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: L, qty: 10, sl: lo * 1.0005, tp: L * 1.05, t: t0 + 60e3 },
+      { id: "e2", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: L, qty: 10, sl: lo * 0.95, tp: L * 1.05, t: t0 + 60e3 }];
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))})}` });
+    await page.click('.tabs button[data-v="trades"]');
+    await page.waitForFunction(() => ["e1", "e2"].every(id => /vérifié à/.test((document.querySelector("#hl-" + id) || {}).textContent || "")), null, { timeout: 60000 }).catch(() => {});
+    const h = await page.evaluate(() => [document.querySelector("#hl-e1").textContent, document.querySelector("#hl-e2").textContent]);
+    ok(/Stop exposé : creux récent à .*juste derrière ton stop.*Stop plus sûr : .*réduis la position à .* de moins\)/.test(h[0].replace(/\s+/g, " ")), "stop collé au dernier creux : « " + (h[0].match(/Stop exposé[^)]*\)/) || ["rien"])[0] + " »");
+    ok(!/Stop exposé/.test(h[1]), "stop bien en dessous du creux : pas d'avertissement");
+    if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
+    /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
+    const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
+    ok(/var SLSW_H=24;\s*\/\*[\s\S]*?\*\/\s*function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag"\}\}/.test(src) || /var SLSW_H=24;\nfunction opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag"\}\}/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
   await browser.close();
   const fail = results.filter(r => !r.ok).length;
   console.log("\n" + (results.length - fail) + "/" + results.length + " tests de page réussis");

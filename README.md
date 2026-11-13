@@ -130,6 +130,17 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## Stop exposé (scanner et Mes trades)
+
+Le stop d'un setup se place à 0,5 ATR 4H derrière la zone. Quand le dernier sommet (short) ou creux (long) des bougies 1H des
+24 dernières heures est au-delà de ce stop, ou moins de 0,15 ATR devant, un retour sur ce niveau déclenche le stop. Cinq
+variantes rejouées sur deux ans (`stop.yml`, `tools/backtest/stop42.js`, `results/stop-v42.json`) : déplacer le stop derrière
+le sommet (12, 24 ou 48 h) n'améliore pas les deux années ; retenir le setup (« À surveiller », blocage `stopx`) améliore le
+résultat moyen les deux années (−0,081 → −0,064 R, +0,017 → +0,062 R), le total aussi, avec 40 % de setups prêts en moins.
+Retenu dans Radar Trades (`opts()` : `slsw:24, slmode:"flag"`) ; le moteur garde `slsw:0` par défaut, donc Radar BTC·ETH et
+Radar Top 50 ne changent pas. Sur un trade actif, la vérification affiche « Stop exposé » en premier, avec un stop plus sûr
+et la taille qui garde le même risque (sans effet sur le score).
+
 ## Conseil de sortie plus réactif (Mes trades)
 
 Le conseil « Sortir » d'un trade actif dépend d'un niveau réglable (Profil → « Conseil de sortie des trades actifs ») : score

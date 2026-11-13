@@ -1779,7 +1779,10 @@ function klines(sym,interval,limit,min){
     if(!Array.isArray(p)||p.length<min)throw{code:"short"};
     return p.map(function(k){return{t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],q:+k[7],b:+k[10]}})})}
 /* precision settings handed to the engine */
-function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1}}
+/* slsw / slmode: a setup whose stop sits right behind the last 1H swing of the last 24 hours is held back (« À surveiller »):
+   measured on two years (tools/backtest/stop42.js), +0.02 R and +0.05 R a trade, total result better both years, 40 % fewer setups */
+var SLSW_H=24;
+function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag"}}
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */
 var EXI={},exiP=null,btcC=null;
 function readExi(info){((info&&info.symbols)||[]).forEach(function(s){EXI[s.symbol]=contractOf(s)})}
@@ -2427,6 +2430,12 @@ function checkTrade(t){
     var risk=t.r0||Math.abs(t.entry-t.sl),rNow=risk?(price-t.entry)*dir/risk:0,left=risk?(price-t.sl)*dir/risk:1;
     if(rNow>=1)add(1,"ok","Trade à "+sgn(rNow,1)+" R de gain");
     if(left<0.25)add(-1,"no",left<=0?"Prix déjà au-delà de ton stop":"Prix à "+fr(Math.abs(price-t.sl)/price*100,1)+" % de ton stop");
+    /* stop exposed: the last 1H swing on the stop side (last SLSW_H hours, before the entry) is beyond the stop or less than 0.15
+       4H ATR inside it; shown first, with a safer stop and the size that keeps the same risk (no effect on the score) */
+    var slx=null;try{if(t.sl>0&&(t.sl-t.entry)*dir<0){var a4x=atr(h4),kx=h1.filter(function(c){return c.t<t.t&&c.t>=t.t-SLSW_H*36e5}),ex=dir>0?Infinity:-Infinity;
+      kx.forEach(function(c){ex=dir>0?Math.min(ex,c.l):Math.max(ex,c.h)});var gx=(ex-t.sl)*dir;
+      if(isFinite(ex)&&(price-ex)*dir>0&&gx<0.15*a4x&&gx>-1.5*a4x){var nsl=ex-dir*0.15*a4x,q0=+t.qty||0,keep=Math.abs(t.entry-t.sl)/Math.abs(t.entry-nsl);
+        slx={p:ex,sl:nsl,keep:keep};it.unshift({k:"no",t:"Stop exposé : "+(dir>0?"creux":"sommet")+" récent à "+px(ex)+(gx<0?", déjà au-delà de ton stop":", juste derrière ton stop")+". Un retour sur ce niveau le déclenche. Stop plus sûr : "+px(nsl)+(q0?" ; pour garder le même risque, réduis la position à "+fr(q0*keep,q0*keep>=100?0:q0*keep>=1?3:4)+" ("+fr((1-keep)*100,0)+" % de moins)":"")}) }}}catch(e){}
     if(Date.now()-t.t>48*36e5&&rNow<0.5)add(-1,"mid","Ouvert depuis "+Math.round((Date.now()-t.t)/864e5)+" jours sans avancer");
     var r1=rsi(h1.map(function(x){return x.c})),r15=null;
     if(m15&&m15.length>30){var rs=rsiSeries(m15.map(function(x){return x.c}));r15=rs[rs.length-1]}
@@ -2472,7 +2481,7 @@ function checkTrade(t){
       trS.forEach(function(c){if(c.t+trW>t.t)trF=dir>0?Math.max(trF,c.h):Math.min(trF,c.l)});
       var trP=trR>0?trailStop("r1",{dir:dir,entry:t.entry,r0:trR},trF,atr(h4),0):null;
       if(trP!==null&&(price-trP)*dir>0.25*atr(h1))trl={px:trP,far:trF,r0:trR,lock:(trP-t.entry)*dir/trR}}catch(e){}
-    return{v:v,sc:sc,fi:fi,trl:trl,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
+    return{v:v,sc:sc,fi:fi,trl:trl,slx:slx,items:it,at:Date.now(),price:price,atr:atr(h1),tp:tp,flow:fl,fund:a[5]&&isFinite(a[5].fund)?a[5].fund:null}})}
 /* TPUP: two-year replay of version 42, the 880 trades where the raise signal appeared (tools/backtest/tpup42.js): % that reached the
    raised target and % that fell back to the stop when it was left in place, and the average results in R */
 var TPUP={"n":880,"trades":4357,"reach":59,"back":35,"reachBE":50,"base":1.59,"a":1.59,"b":1.61,"c":1.65,"baseTp":87,"newRR":3.28};

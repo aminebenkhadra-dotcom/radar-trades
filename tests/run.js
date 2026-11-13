@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,tpDown,trailStop,swing4,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,tpDown,trailStop,swing4,replan,analyze,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -349,6 +349,20 @@ test("T24", "État d'un trade : les éléments du score sont rendus, pour le con
   const short = E.tradeState("LVL", d1, h4, h1, m.slice(-500), { dir: -1, entry: L * 1.003, sl: L * 1.025, tp: L * 0.93, r0: L * 0.022, t: now - 5 * 36e5 }, now, {});
   ok(long.b4 === 1 && long.bd === 1 && long.sc >= 3 && !long.hard, "long dans le sens des deux tendances : score " + long.sc + ", rien à signaler");
   ok(short.b4 === -1 && short.bd === -1 && short.hard && short.sc <= 0, "short contre les deux tendances : score " + short.sc + ", sortie quel que soit le niveau choisi");
+});
+
+test("T25", "Stop exposé : un setup dont le stop est juste derrière le dernier sommet 1H est retenu", () => {
+  const SY = require("./synth.js"), now = Date.UTC(2026, 10, 10), m = SY.path(SY.LEVELS, now, 0.003), d1 = SY.agg(m, 864e5, 90), h4 = SY.agg(m, 144e5, 200), h1 = SY.agg(m, 36e5, 200);
+  const r = E.analyze("LVL", d1, h4, h1, null, {});
+  ok(r.plan && r.h1t && r.h1t.length === 49 && r.slx === null, "sans le réglage : rien de vérifié (" + (r.plan ? (r.dir > 0 ? "long" : "short") : "pas de plan") + ")");
+  /* a plan whose stop is put just inside the last 24 hours' low */
+  const lo = Math.min(...r.h1t.slice(-24).map(c => c.l)), s = Object.assign({}, r, { dir: 1, dist: 0, price: lo + 2 * r.a, z: { lo: lo + 0.5 * r.a - 0.05 * r.a, hi: lo + 2 * r.a } });
+  E.replan(s, { slsw: 24, slmode: "flag" });
+  ok(s.slx && Math.abs(s.slx.p - lo) < 1e-9 && s.plan.sl === s.slx.sl0, "long, stop 0,05 ATR au-dessus du creux des 24 dernières heures : stop exposé noté, stop d'origine gardé");
+  E.replan(s, { slsw: 24, slmode: "move" });
+  ok(Math.abs(s.plan.sl - (lo - 0.15 * s.a)) < 1e-9, "variante « déplacer » (testée, non retenue) : stop 0,15 ATR sous le creux");
+  const t = Object.assign({}, s, { z: { lo: lo + 3 * r.a, hi: lo + 4 * r.a }, price: lo + 4 * r.a }); E.replan(t, { slsw: 24, slmode: "flag" });
+  ok(t.slx === null, "stop bien au-dessus du creux, ou creux loin derrière : rien");
 });
 
 /* ---------- report ---------- */
