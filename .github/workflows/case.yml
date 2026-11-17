@@ -16,8 +16,8 @@ jobs:
       - name: Replay
         run: |
           mkdir -p res
-          node tools/backtest/case.js XMRUSDT 2026-11-16T06:00Z 2026-11-16T16:00Z > res/case.txt 2>&1 || true
-          tail -50 res/case.txt
+          while read S A B; do [ -n "$S" ] && node tools/backtest/case.js $S $A $B > res/$S.txt 2>&1 || true; done < tools/backtest/cases.txt
+          tail -n 5 res/*.txt
       - name: Publish
         run: |
           cd res && git init -q -b case-out
