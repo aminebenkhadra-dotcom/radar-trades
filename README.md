@@ -148,6 +148,12 @@ de garder la moitié au TP actuel. Une notification à l'apparition du signal.
   sorties par le stop comprises (reclassées TP si l'objectif est atteint ensuite).
 - **Actus** : seulement macro, régulation, sécurité, stress de marché, gros flux, plateformes en difficulté ; un titre par
   histoire ; sans résumé.
+- **Stop exposé = Refusé** (plus « À surveiller »). Cas du short XMR du 16/11 : l'appli plaçait le stop à 516,60, le sommet 1H de
+  10 h était à 518,29 ; le setup était retenu à chaque scan pour « Stop exposé ». Pris quand même, il a été stoppé par un retour au-dessus
+  du sommet (521,99), puis le prix est revenu sous l'entrée (`tools/backtest/case.js`, workflow `case.yml`). Ces setups ne sont plus
+  proposés du tout : mêmes trades écartés que la variante f24 de `stop42.js` (−0,064 R et +0,062 R par trade, contre −0,081 et +0,017).
+- **Notification « stop exposé »** sur un trade ouvert (Binance ou suivi) dont le stop est juste derrière le dernier sommet ou creux
+  1H des 24 h avant l'entrée : stop plus sûr, réduction de taille pour garder le même risque, ou sortie. Une fois par niveau de stop.
 - **Capital** : toutes les lignes, sans regroupement « Autres ».
 
 ## Stop exposé (scanner et Mes trades)

@@ -1,0 +1,25 @@
+name: One trade replayed
+# Replays the engine every 15 minutes around one trade (tools/backtest/case.js) and publishes the log to case-out.
+on:
+  push:
+    branches: [case-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replay
+        run: |
+          mkdir -p res
+          node tools/backtest/case.js XMRUSDT 2026-11-16T06:00Z 2026-11-16T16:00Z > res/case.txt 2>&1 || true
+          tail -50 res/case.txt
+      - name: Publish
+        run: |
+          cd res && git init -q -b case-out
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Case" && git push -q -f "$REMOTE" case-out

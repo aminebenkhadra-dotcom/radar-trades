@@ -363,6 +363,11 @@ test("T25", "Stop exposé : un setup dont le stop est juste derrière le dernier
   ok(Math.abs(s.plan.sl - (lo - 0.15 * s.a)) < 1e-9, "variante « déplacer » (testée, non retenue) : stop 0,15 ATR sous le creux");
   const t = Object.assign({}, s, { z: { lo: lo + 3 * r.a, hi: lo + 4 * r.a }, price: lo + 4 * r.a }); E.replan(t, { slsw: 24, slmode: "flag" });
   ok(t.slx === null, "stop bien au-dessus du creux, ou creux loin derrière : rien");
+  /* 17/11/2026 (XMR short stopped by a retest of the 24 h high, then back to the entry): an exposed stop refuses the setup */
+  const x = E.judge(setup(q => { q.slx = { p: 97.9, sl0: 98, sl: 97.6, h: 24 }; }), { slsw: 24, slmode: "flag" });
+  ok(x.st === "refused" && (x.blk || []).some(b => b.k === "stopx" && b.sev === "refuse"), "stop exposé : Refusé, plus « À surveiller » (" + x.st + ")");
+  const y = E.judge(setup(q => { q.slx = { p: 97.9, sl0: 98, sl: 97.6, h: 24 }; }), { slsw: 0, slmode: "move" });
+  ok(y.st === "ready", "applis sœurs (contrôle désactivé) : inchangé (" + y.st + ")");
 });
 
 test("T26", "Après sortie : classement TP / SL / en cours, sorties par le stop comprises", () => {

@@ -472,7 +472,9 @@ function judge(r,opt){
     else if(b.spread>PREC.spreadWatch){blk.push({k:"spread",sev:"watch",t:"Écart achat-vente de "+fr(b.spread,2)+" % (au-delà de "+fr(PREC.spreadWatch,2)+" %)"});
       add(g,"no",0,function(){return"Écart achat-vente large ("+fr(b.spread,2)+" %) : pas de « Prêt » tant qu'il dépasse "+fr(PREC.spreadWatch,2)+" %"})}}
   else if(r.dist<=0.5&&!opt.noBook)md.push("carnet d'ordres");
-  if(r.slx&&p.sl===r.slx.sl0&&(opt.slmode||PREC.slmode)==="flag")blk.push({k:"stopx",sev:"watch",t:"Stop exposé : "+(L?"creux":"sommet")+" récent à "+px(r.slx.p)+", juste derrière le stop"});
+  /* stop exposed: refused, not just held back (17/11/2026, XMR short taken while « À surveiller », stopped by a retest of the swing
+     then back to the entry). Same trades left out as the f24 test of stop42.js: -0.064 R and +0.062 R a trade, against -0.081 and +0.017 */
+  if(r.slx&&p.sl===r.slx.sl0&&(opt.slmode||PREC.slmode)==="flag")blk.push({k:"stopx",sev:"refuse",t:"Stop exposé : "+(L?"creux":"sommet")+" récent à "+px(r.slx.p)+", juste derrière le stop. Un retour sur ce niveau le déclenche : ne pas prendre"});
   if(r.liqOwn)add(g,"no",0,function(){return"Zone de liquidation de "+(L?"longs":"shorts")+" vers "+px(r.liqOwn.p)+", entre l'entrée et le stop : mèche possible"});
   if(r.liqMag)add(g,"mid",0,function(){return"Aimant possible : liquidations de "+(L?"shorts":"longs")+" vers "+px(r.liqMag.p)+" ("+sgn((r.liqMag.p-r.price)/r.price*100,1)+" %)"});
   g.pts=Math.min(15,g.pts);
