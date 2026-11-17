@@ -4700,8 +4700,8 @@ function spansView(m){
   var sh=m.d1&&m.st?(m.d1.k+m.st.k):0,mix=m.side>0&&sh<0?"Fond haussier mais la journée et la semaine baissent : correction en cours, ou début de cassure. Prudence sur les longs."
     :m.side<0&&sh>0?"Fond baissier mais la journée et la semaine montent : rebond en cours, ou début de retournement. Prudence sur les shorts."
     :m.side&&m.q&&m.q.k===m.side&&m.y&&m.y.k===m.side?"90 jours et l'année vont dans le sens de la tendance de fond.":"";
-  return'<article class="card tr"><div class="cap">Le marché sur chaque période</div><div class="spr hd"><span></span><span>Sens</span><span>Bitcoin</span><span>Ether</span><span>En hausse</span></div>'+rows
-    +(mix?'<div class="side">'+mix+"</div>":"")+'<div class="sub">« En hausse » : nombre des 40 plus grosses cryptos de Binance Futures en hausse sur la période. Le côté favorisé reste celui de la tendance de fond ; ces périodes sont des repères.</div></article>'}
+  return'<article class="card tr"><div class="cap">Le marché sur chaque période</div><div class="spr hd"><span></span><span>Sens</span><span>BTC</span><span>ETH</span><span>Hausse</span></div>'+rows
+    +(mix?'<div class="side">'+mix+"</div>":"")+'<div class="sub">« Hausse » : nombre des 40 plus grosses cryptos de Binance Futures en hausse sur la période. Le côté favorisé reste celui de la tendance de fond ; ces périodes sont des repères.</div></article>'}
 /* the phases of the 4-year cycle with their projected dates, from the last halving and the months of the two last cycles */
 function cycDates(c){
   var H0=HALV[HALV.length-1],at=function(mo){return H0+mo*MONTH},dm=function(t){return new Date(t).toLocaleDateString("fr-FR",{month:"long",year:"numeric"})},now=Date.now();
