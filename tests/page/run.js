@@ -37,7 +37,9 @@ const EXTRA = {};
 /* and one with two 4H levels between the price and a far target: the case where the target of a long should be lowered */
 EXTRA.LVLUSDT = { base: "LVL", tick: 0.001, m: require("../synth.js").path(require("../synth.js").LEVELS, NOW, 0.003) };
 const MK = sym => MARKET[sym] || EXTRA[sym];
-const IV = { "1m": 6e4, "15m": M15, "1h": 36e5, "4h": 144e5, "1d": 864e5 };
+const CAPS = (() => { const L = [], order = ["BTC", "ETH", "USDT", "XRP", "SOL", "DOGE", "USDC", "ADA", "LINK", "AVAX", "SUI", "NEAR"]; order.forEach((s, i) => L.push({ symbol: s.toLowerCase(), name: s, market_cap_rank: i + 1 }));
+  L.push({ symbol: "apt", name: "Aptos", market_cap_rank: 45 }, { symbol: "arb", name: "Arbitrum", market_cap_rank: 52 }); for (let r = 53; r <= 250; r++) L.push({ symbol: "zz" + r, name: "Other " + r, market_cap_rank: r }); return L; })();
+const IV = { "1w": 7 * 864e5, "1m": 6e4, "15m": M15, "1h": 36e5, "4h": 144e5, "1d": 864e5 };
 function klines(sym, iv, limit, start, end) {
   const S = MK(sym); if (!S) return null; const ms = IV[iv], out = [];
   if (iv === "1m") { const lo = start || NOW - limit * 6e4; for (let t = Math.ceil(lo / 6e4) * 6e4; t <= Math.min(end || NOW, NOW) && out.length < limit; t += 6e4) { const c = S.m[S.m.length - 1].c; out.push([t, c, c * 1.0005, c * 0.9995, c, 1, t + 6e4 - 1, c * 100, 1, 0.5, c * 50, 0]); } return out; }
@@ -139,6 +141,8 @@ async function open(browser, o) {
     if (p === "/fapi/v1/depth") return json(book(sym, (o.spread && o.spread[sym]) || 0.02));
     if (p === "/fapi/v1/ticker/price") return json({ symbol: sym, price: String(last(sym)) });
     if (p.startsWith("/futures/data/")) return json([]);
+    /* market capitalisation ranks: the first ten coins and two stablecoins in level 1, APT and ARB in level 2 */
+    if (p === "/cg/coins/markets") { if (o.noCap) return route.fulfill({ status: 503, body: "" }); const pg = +q.get("page") || 1; return json(pg > 1 ? [] : CAPS); }
     if (p.startsWith("/bspot/") || p.startsWith("/mexc/")) return json([]);
     return route.fulfill({ status: 503, body: "" });
   });
@@ -176,8 +180,8 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await waitScan(page);
     const fd = await page.evaluate(() => { const e = document.getElementById("fdet"); e.open = true; return { hidden: e.hidden, rows: [...e.querySelectorAll(".fdr")].map(r => r.textContent.replace(/\s+/g, " ")), txt: e.textContent }; });
     const num = k => { const r = fd.rows.find(x => x.includes(k)); return r ? parseInt(r.replace(/\s/g, ""), 10) : NaN; };
-    ok(!fd.hidden && num("marchés USDT") >= num("assez liquides") && num("assez liquides") >= num("en tendance sur 1 jour") && num("analysés en détail") >= num("avec une zone d'entrée") && num("avec une zone d'entrée") >= num("affichés"), "détail du scan : " + fd.rows.slice(0, 8).map(x => x.slice(0, 34)).join(" → "));
-    ok(num("affichés") === await page.$$eval("#view-scan button.row[data-s]", a => a.length) && (num("prêt") === 0 ? /Pourquoi les \d+ autres ne sont pas prêts/.test(fd.txt) : true), "le détail compte les mêmes setups que la liste, et dit pourquoi les autres ne sont pas prêts");
+    ok(!fd.hidden && num("cryptos du Level 1") >= num("cotées sur Binance Futures") && num("cotées sur Binance Futures") >= num("en tendance sur 1 jour") && num("en tendance sur 1 jour") >= num("avec une zone d'entrée") && num("avec une zone d'entrée") >= num("près de leur zone"), "détail du scan : " + fd.rows.slice(0, 7).map(x => x.slice(0, 34)).join(" → "));
+    ok(num("avec une zone d'entrée") === await page.$$eval("#view-scan button.row[data-s]", a => a.length) && (num("prêt") === 0 ? /Pourquoi les \d+ autres ne sont pas prêts/.test(fd.txt) : true), "le détail compte les mêmes setups que la liste, et dit pourquoi les autres ne sont pas prêts");
     if (SHOTS) { await page.$eval("#fdet", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p2-detail-scan.png") }); await page.evaluate(() => { document.getElementById("fdet").open = false; scrollTo(0, 0); }); }
     const btn = await page.$("#view-scan button.row[data-s]");
     ok(!!btn, "un setup à ouvrir");
@@ -255,7 +259,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
 
   await test("P7", "Alertes en arrière-plan : trades, seulement « sortir » ou liquidation proche ; entrée seulement sur « Prêt »", async ok => {
     const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [] } }, suffix: "?bg=1",
-      init: `localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:true,nt43:1,nt44:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: -1, entry: last("ETHUSDT") * 0.99, qty: 1, sl: last("ETHUSDT") * 1.03, tp: last("ETHUSDT") * 0.9, t: NOW - 5 * 36e5 }, { id: "x2", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.9, qty: 0.1, sl: last("ETHUSDT") * 0.88, tp: last("ETHUSDT") * 1.2, t: NOW - 5 * 36e5 }, { id: "x3", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.88, tp: last("ZIGUSDT") * 1.01, t: NOW - 5 * 36e5 }, { id: "x4", sym: "LVL", full: "LVLUSDT", dir: 1, entry: last("LVLUSDT") * 0.997, qty: 1, sl: last("LVLUSDT") * 0.975, tp: last("LVLUSDT") * 1.07, t: NOW - 5 * 36e5 }, { id: "x5", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.902, r0: last("ZIGUSDT") * 0.02, tp: last("ZIGUSDT") * 1.3, t: NOW - 5 * 36e5 }]))})` });
+      init: `localStorage.setItem("radar-settings",JSON.stringify({atr:true,alv:"12",nt43:1,nt44:1,nt45:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: -1, entry: last("ETHUSDT") * 0.99, qty: 1, sl: last("ETHUSDT") * 1.03, tp: last("ETHUSDT") * 0.9, t: NOW - 5 * 36e5 }, { id: "x2", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.9, qty: 0.1, sl: last("ETHUSDT") * 0.88, tp: last("ETHUSDT") * 1.2, t: NOW - 5 * 36e5 }, { id: "x3", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.88, tp: last("ZIGUSDT") * 1.01, t: NOW - 5 * 36e5 }, { id: "x4", sym: "LVL", full: "LVLUSDT", dir: 1, entry: last("LVLUSDT") * 0.997, qty: 1, sl: last("LVLUSDT") * 0.975, tp: last("LVLUSDT") * 1.07, t: NOW - 5 * 36e5 }, { id: "x5", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.902, r0: last("ZIGUSDT") * 0.02, tp: last("ZIGUSDT") * 1.3, t: NOW - 5 * 36e5 }]))})` });
     await page.evaluate(() => window.bgScan(false, true));
     await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
     const M = await page.evaluate(() => window.__M);
@@ -277,12 +281,13 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(/contrôle de 1 position Binance et 5 trades suivis/.test(M.done), "résumé du contrôle : " + M.done);
     await page.reload(); await page.waitForFunction(() => document.getElementById("a-log") && !document.getElementById("a-log").hidden, null, { timeout: 15000 }).catch(() => {});
     const lg = await page.evaluate(() => ({ L: JSON.parse(localStorage.getItem("radar-bglog") || "[]"), shown: document.getElementById("a-log").hidden ? "" : document.getElementById("a-log").textContent }));
-    ok(lg.L.length === 1 && lg.L[0].m === M.done && /^Top 50 : \d+ avec une zone, \d+ à la zone/.test(lg.L[0].x) && /Derniers contrôles en arrière-plan \(1\)/.test(lg.shown) && lg.shown.includes(lg.L[0].x), "journal des contrôles, visible dans les réglages : « " + lg.L[0].x.slice(0, 110) + " »");
-    const o2 = await open(browser, { init: `if(!sessionStorage.getItem("s2")){sessionStorage.setItem("s2","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a10:true,a50:true,profOk:true,account:1000}))}` });
+    ok(lg.L.length === 1 && lg.L[0].m === M.done && /^Levels 1 et 2 : \d+ avec une zone, \d+ à la zone/.test(lg.L[0].x) && /Derniers contrôles en arrière-plan \(1\)/.test(lg.shown) && lg.shown.includes(lg.L[0].x), "journal des contrôles, visible dans les réglages : « " + lg.L[0].x.slice(0, 110) + " »");
+    const o2 = await open(browser, { init: `if(!sessionStorage.getItem("s2")){sessionStorage.setItem("s2","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a10:false,a50:true,nt43:1,nt44:1,profOk:true,account:1000}))}` });
     const s2 = await o2.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
-    ok(s2.a10 === true && s2.a50 === true && s2.atr === true && s2.nt44 === 1, "mise à jour : alerte « trade prêt à saisir » activée pour le Top 50, les autres réglages gardés");
-    const o3 = await open(browser, { init: `if(!sessionStorage.getItem("s3")){sessionStorage.setItem("s3","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,a50:false,nt43:1,nt44:1,profOk:true,account:1000}))}` });
-    ok((await o3.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")))).a50 === false, "une fois faite, la mise à jour ne recoche plus la case si tu la décoches");
+    const lvb = await o2.page.evaluate(() => [...document.querySelectorAll("[data-alv]")].map(b => b.checked));
+    ok(s2.alv === "12" && s2.a50 === false && s2.atr === true && s2.nt45 === 1 && lvb.join() === "true,true,false,false,false", "mise à jour : l'alerte du Top 50 devient Levels 1 et 2, cases cochées, les autres réglages gardés");
+    const o3 = await open(browser, { init: `if(!sessionStorage.getItem("s3")){sessionStorage.setItem("s3","1");localStorage.setItem("radar-settings",JSON.stringify({atr:true,alv:"",nt43:1,nt44:1,nt45:1,profOk:true,account:1000}))}` });
+    ok((await o3.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")))).alv === "", "une fois faite, la mise à jour ne recoche plus les Levels si tu les décoches");
     await o3.ctx.close();
     await o2.ctx.close();
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors[0] : ""));
@@ -330,7 +335,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     }
     ok(/\d+ %de ces setups ont atteint le TP1/.test(cf.replace(/\s+/g, "")) || /\d+ %\s*de ces setups ont atteint le TP1/.test(cf), tried[tried.length - 1] + " : " + cf.replace(/\s+/g, " ").slice(24, 170) + "…");
     if (SHOTS) { await page.$eval("#one-out .cfg", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p10-config.png") }); }
-    ok(tabs.length === 18, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
+    ok(tabs.length === 20, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -387,7 +392,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const cards = await page.$$eval("#view-aft .af", a => a.map(e => e.textContent.replace(/\s+/g, " ")));
     const want = (last("SOLUSDT") - ex) * d * 10, got = await page.$eval("#view-aft .af .net", e => parseFloat(e.textContent.replace(/[^0-9,+\-−]/g, "").replace("−", "-").replace(",", ".")));
     ok(/Si tu étais resté/.test(cards[0]) && Math.abs(got - want) < 0.02, "trade gardé en cours : " + got + " $ de plus en restant (attendu " + want.toFixed(2) + ")");
-    ok(/Sortie trop tôt/.test(cards[1]) && /objectif à .* a été atteint/.test(cards[1]), "objectif atteint après la sortie : « Sortie trop tôt »");
+    ok(/TP touché\s*sortie trop tôt/.test(cards[1]) && /objectif à .* a été atteint/.test(cards[1]), "objectif atteint après la sortie : « TP touché · sortie trop tôt »");
     await page.click('.tabs button[data-v="trades"]');
     await page.waitForFunction(() => /\$/.test((document.querySelector("#net-m1") || {}).textContent || ""), null, { timeout: 20000 });
     await page.waitForFunction(() => /Fiabilité \d+ % · (Sortir|Attendre)/.test((document.querySelector("#fi-m1") || {}).textContent || ""), null, { timeout: 60000 }).catch(() => {});
@@ -520,6 +525,56 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
     ok(/var SLSW_H=24;\s*\/\*[\s\S]*?\*\/\s*function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag"\}\}/.test(src) || /var SLSW_H=24;\nfunction opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag"\}\}/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P17", "Mise à jour du 17/11 : Levels, heure de la reco, périodes, cycle, temporalité, exposition, après sortie, actus, capital", async ok => {
+    const L = last("ETHUSDT"), A = last("SOLUSDT");
+    const tr = [{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: L, qty: 1, sl: L * 0.98, tp: L * 1.04, t: NOW - 36e5 }, { id: "x2", sym: "SOL", full: "SOLUSDT", dir: -1, entry: A, qty: 10, sl: A * 1.02, tp: A * 0.95, t: NOW - 36e5 }];
+    const m = MARKET.SOLUSDT.m, at = m.length - 96 * 2, ex = m[at].o;
+    const af = [{ id: "s1", sym: "SOL", full: "SOLUSDT", dir: 1, entry: ex * 1.02, qty: 1, sl: ex, tp: ex * 1.5, r0: ex * 0.02, tc: m[at].t, exit: ex, net: -2, src: "main", out: null, at: 0, hi: 0, lo: 0, last: 0 }];
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))});localStorage.setItem("radar-after",${JSON.stringify(JSON.stringify(af))});localStorage.setItem("radar-settings",JSON.stringify({account:1000,fee:0.05,profOk:true,nt45:1}))}` });
+    const tabs = await page.$$eval('.tabs button[data-v^="l"]', a => a.map(b => b.textContent));
+    ok(tabs.join() === "Level 1,Level 2,Level 3,Level 4,Level 5", "onglets du scanner : " + tabs.join(" · "));
+    await waitScan(page);
+    const l1 = await page.evaluate(() => ({ syms: JSON.parse(localStorage.getItem("radar-last-l1")).results.map(r => r.sym), caps: JSON.parse(localStorage.getItem("radar-last-l1")).results.map(r => r.cap), fd: (() => { const e = document.getElementById("fdet"); e.open = true; return e.textContent.replace(/\s+/g, " "); })() }));
+    ok(l1.syms.length === 10 && l1.caps.every(c => c >= 1 && c <= 30) && !l1.syms.includes("APT"), "Level 1 : les 10 cryptos cotées parmi les 30 premières capitalisations (" + l1.syms.join(", ") + ")");
+    ok(/12\s*cryptos du Level 1/.test(l1.fd) && /10\s*cotées sur Binance Futures/.test(l1.fd) && /2 sans contrat USDT perpétuel, ou stablecoins/.test(l1.fd), "détail du scan : 12 dans le Level, 10 cotées, 2 stablecoins écartés");
+    const when = await page.$$eval("#view-scan .tags .when", a => a.map(e => e.textContent));
+    ok(when.length > 0 && when.every(t => /^(reco|prêt) à \d\d:\d\d$/.test(t)), "heure de la reco sur chaque setup : « " + when[0] + " »");
+    await page.click('.tabs button[data-v="l2"]'); await waitScan(page);
+    const l2 = await page.evaluate(() => JSON.parse(localStorage.getItem("radar-last-l2")).results.map(r => r.sym + ":" + r.cap).sort());
+    ok(l2.join() === "APT:45,ARB:52", "Level 2 (31e à 60e) : " + l2.join(", "));
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p17-level2.png") });
+    await page.click('.tabs button[data-v="mkt"]');
+    await page.waitForFunction(() => document.querySelectorAll("#view-mkt .spr:not(.hd)").length >= 4, null, { timeout: 60000 }).catch(() => {});
+    const sp = await page.$$eval("#view-mkt .spr:not(.hd) b", a => a.map(e => e.textContent).filter(t => /^[A-Z]/.test(t)));
+    const bc = await page.$eval("#view-mkt", e => e.textContent);
+    ok(["Aujourd'hui", "Semaine", "Mois", "Trimestre", "Année"].every(x => sp.includes(x)) && /Largeur du marché sur 90 jours/.test(bc), "Tendance : jour, semaine, mois, 90 jours et année ; largeur du marché sur 90 jours");
+    if (SHOTS) { await page.$eval("#view-mkt .spr", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p17-periodes.png") }); }
+    await page.click('.tabs button[data-v="cyc"]');
+    await page.waitForFunction(() => document.querySelectorAll("#view-cyc .cyd").length === 5, null, { timeout: 60000 }).catch(() => {});
+    const cy = await page.$$eval("#view-cyc .cyd", a => a.map(e => e.textContent.replace(/\s+/g, " ")));
+    ok(cy.length === 5 && /Fenêtre des sommets.*avril 2025 → octobre 2025/.test(cy[1]) && /Zone des creux.*octobre 2026 → octobre 2027.*en cours.*fin projetée/.test(cy[3]), "Cycle : dates projetées, phase en cours « " + (cy.find(x => /en cours/.test(x)) || "?") + " »");
+    if (SHOTS) { await page.$eval("#view-cyc .cyd", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p17-cycle.png") }); }
+    await page.click('.tabs button[data-v="tmp"]');
+    await page.waitForFunction(() => /Décision pour un trade maintenant/.test(document.getElementById("view-tmp").textContent), null, { timeout: 30000 }).catch(() => {});
+    const tp = await page.evaluate(() => ({ g: (document.querySelector("#view-tmp .gbig") || {}).textContent, det: !!document.querySelector("#view-tmp details.set:not([open])") }));
+    ok(/^(Feu vert|Prudence : jour faible|Feu vert, marché calme|Pas de nouveau trade aujourd'hui)/.test(tp.g || "") && tp.det, "Temporalité : décision « " + tp.g + " », mesures repliées dessous");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p17-temporalite.png") });
+    await page.click('.tabs button[data-v="trades"]');
+    await page.waitForFunction(() => /risqué si tous les stops/.test((document.getElementById("expo") || {}).textContent || ""), null, { timeout: 20000 }).catch(() => {});
+    const xp = await page.evaluate(() => [document.getElementById("expo").textContent.replace(/\s+/g, " "), [...document.querySelectorAll("#view-trades .lvt")].map(e => e.textContent.replace(/\s+/g, " "))]);
+    const fee = 0.0005, leg = (e, d, p, q) => (p - e) * d * q - (e + p) * q * fee, risk = leg(L, 1, L * 0.98, 1) + leg(A, -1, A * 1.02, 10), gain = leg(L, 1, L * 1.04, 1) + leg(A, -1, A * 0.95, 10);
+    const num = (t, k) => { const m = t.match(new RegExp("([−+-]?[\\d  ]+,\\d\\d) \\$ ?(\\+ \\?)?" + k)); return m ? +m[1].replace(/[  ]/g, "").replace("−", "-").replace(",", ".") : NaN; };
+    ok(Math.abs(num(xp[0], "risqué") - risk) < 0.02 && Math.abs(num(xp[0], "gain si") - gain) < 0.02, "exposition totale : " + risk.toFixed(2) + " $ risqués, +" + gain.toFixed(2) + " $ de gain potentiel, frais compris");
+    ok(xp[1].length === 2 && xp[1].every(t => /Au stop.*Au TP/.test(t)), "chaque trade : perte au stop et gain au TP (« " + xp[1][0].slice(0, 70) + " »)");
+    if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: path.join(SHOTS, "p17-exposition.png") }); }
+    await page.click('.tabs button[data-v="aft"]');
+    await page.waitForFunction(() => document.querySelector("#view-aft .af .afv") && !/lecture…/.test(document.getElementById("view-aft").textContent), null, { timeout: 20000 }).catch(() => {});
+    const av = await page.evaluate(() => [document.querySelector("#view-aft .af .afv").textContent, document.querySelector("#view-aft .funnel").textContent.replace(/\s+/g, " ")]);
+    ok(/^(SL touché sorti par ton stop · TP surveillé|TP touché après ton stop : stop trop serré)$/.test(av[0].trim()) && /TP touché.*SL touché.*en cours/.test(av[1]), "après sortie, trade sorti par son stop : « " + av[0].trim() + " » ; compteurs TP / SL / en cours");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });

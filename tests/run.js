@@ -13,7 +13,7 @@ function load(fromPage) {
     const cut = (a, b) => { const i = html.indexOf(a), j = html.indexOf(b); if (i < 0 || j < i) throw new Error("markers " + a + " missing"); return html.slice(i + a.length, j); };
     src = cut("/*<ENGINE>*/", "/*</ENGINE>*/") + "\n" + cut("/*<CORE>*/", "/*</CORE>*/");
   } else src = fs.readFileSync(path.join(ROOT, "tools/engine.js"), "utf8") + "\n" + fs.readFileSync(path.join(ROOT, "tools/core.js"), "utf8");
-  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,syncMerge,tradeState,stateKey,tpUp,tpDown,trailStop,swing4,replan,analyze,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
+  const names = "analyze,enrich,judge,bookStats,btStart,btStep,btStats,btMarket,stepDec,onGrid,isOnGrid,contractOf,roundPlan,sizePlan,beWin,stopCover,openRiskOf,finalStatus,incomeNet,pagedRows,paperWalk,fillTrades,xlsxBytes,afterWalk,afterVerdict,afterLevels,afterClass,syncMerge,tradeState,stateKey,tpUp,tpDown,trailStop,swing4,replan,analyze,bias,rsi,closes,PREC,STATUS,CORE_VERSION";
   return new Function(src + ";return {" + names + "}")();
 }
 
@@ -363,6 +363,26 @@ test("T25", "Stop exposé : un setup dont le stop est juste derrière le dernier
   ok(Math.abs(s.plan.sl - (lo - 0.15 * s.a)) < 1e-9, "variante « déplacer » (testée, non retenue) : stop 0,15 ATR sous le creux");
   const t = Object.assign({}, s, { z: { lo: lo + 3 * r.a, hi: lo + 4 * r.a }, price: lo + 4 * r.a }); E.replan(t, { slsw: 24, slmode: "flag" });
   ok(t.slx === null, "stop bien au-dessus du creux, ou creux loin derrière : rien");
+});
+
+test("T26", "Après sortie : classement TP / SL / en cours, sorties par le stop comprises", () => {
+  const H = 36e5, t = Date.UTC(2026, 10, 1), k = (i, o, h, l, c) => ({ t: t + i * H, o, h, l, c });
+  const hand = { dir: 1, entry: 100, exit: 104, sl: 98, tp: 110, r0: 2, tc: t };
+  let w = E.afterWalk(hand, [k(0, 104, 105, 103, 104.5)], t + 9 * H);
+  ok(E.afterClass(Object.assign({}, hand, w)).k === "run", "sortie à la main, ni stop ni TP touchés depuis : en cours");
+  w = E.afterWalk(hand, [k(0, 104, 111, 103, 110.5)], t + 9 * H);
+  let c = E.afterClass(Object.assign({}, hand, w));
+  ok(c.k === "tp" && c.how === "hand" && c.final, "TP atteint après la sortie à la main : classé TP (sortie trop tôt)");
+  w = E.afterWalk(hand, [k(0, 104, 105, 97, 99)], t + 9 * H);
+  ok(E.afterClass(Object.assign({}, hand, w)).k === "sl", "stop touché après la sortie à la main : classé SL (bonne sortie)");
+  const st = { dir: 1, entry: 100, exit: 98, sl: 98, tp: 110, r0: 2, tc: t };
+  w = E.afterWalk(st, [k(0, 98, 99, 96, 97)], t + 9 * H); c = E.afterClass(Object.assign({}, st, w));
+  ok(c.k === "sl" && c.how === "stop" && c.watch && !c.final, "sorti par son stop : classé SL, objectif encore surveillé");
+  w = E.afterWalk(st, [k(0, 98, 99, 96, 97), k(1, 97, 111, 97, 110)], t + 9 * H); c = E.afterClass(Object.assign({}, st, w));
+  ok(c.k === "tp" && c.how === "stop" && c.final, "sorti par son stop puis objectif atteint : reclassé TP (stop trop serré)");
+  const tp = { dir: -1, entry: 100, exit: 94, sl: 102, tp: 94, r0: 2, tc: t };
+  c = E.afterClass(Object.assign({}, tp, E.afterWalk(tp, [k(0, 94, 103, 93, 101)], t + 9 * H)));
+  ok(c.k === "tp" && c.how === "tp", "sorti à son objectif : classé TP, même si le prix remonte ensuite");
 });
 
 /* ---------- report ---------- */

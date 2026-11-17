@@ -130,6 +130,26 @@ d'étiquette si le conseil est « Sortir ». Mesuré sur deux ans (`tpup.yml`, `
 place, résultat moyen égal à celui du TP d'origine (+1,59 R). Le texte le dit et conseille de monter le stop au break-even ou
 de garder la moitié au TP actuel. Une notification à l'apparition du signal.
 
+## Mise à jour du 17/11/2026
+
+- **Scanner par Levels** de capitalisation (CoinGecko, classement gardé 6 h) : Level 1 (1er au 30e), 2 (31e-60e), 3 (61e-200e),
+  4 (201e-400e), 5 (401e-1000e), à la place de Tous / Top 10 / Top 50. Levels 1 et 2 : toutes les cryptos cotées sur Binance
+  Futures (contrat USDT perpétuel) sont analysées ; Levels 3 à 5 : celles qui ont une tendance 1 jour. Alertes « prêt à saisir »
+  par Level (réglages ; Top 50 → Levels 1 et 2 à la mise à jour, drapeau `nt45`).
+- **Heure de la reco** : première apparition d'un setup (même crypto, même sens, retrouvé à moins de 2 h d'écart) et passage à
+  « Prêt » (`radar-seen`) ; affichée sur la carte, dans le détail (avec l'âge du scan) et dans la notification.
+- **Tendance** : jour, semaine, mois, 90 jours et année dans un même tableau ; largeur du marché sur 90 jours.
+- **Cycle** : dates projetées de chaque phase depuis le halving d'avril 2024 (calendrier des cycles 2016 et 2020).
+- **Temporalité** : une décision en tête (feu vert, prudence jour faible, marché calme, ou pas de trade si le réglage écarte
+  lundi et mardi), le détail des mesures replié.
+- **Mes trades** : exposition totale (perte si tous les stops sont touchés, gain si tous les TP sont atteints, frais compris,
+  stops et TP réels pour Binance) ; « Au stop » et « Au TP » sur chaque trade.
+- **Après sortie** : classement TP touché / SL touché / en cours d'après le stop et l'objectif du trade fermé (`afterClass`),
+  sorties par le stop comprises (reclassées TP si l'objectif est atteint ensuite).
+- **Actus** : seulement macro, régulation, sécurité, stress de marché, gros flux, plateformes en difficulté ; un titre par
+  histoire ; sans résumé.
+- **Capital** : toutes les lignes, sans regroupement « Autres ».
+
 ## Stop exposé (scanner et Mes trades)
 
 Le stop d'un setup se place à 0,5 ATR 4H derrière la zone. Quand le dernier sommet (short) ou creux (long) des bougies 1H des

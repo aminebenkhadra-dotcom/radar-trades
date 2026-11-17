@@ -376,3 +376,10 @@ function syncMerge(L,R,B,join){
   var out={},ks={};[L,R,B].forEach(function(x){Object.keys(x||{}).forEach(function(k){ks[k]=1})});
   Object.keys(ks).forEach(function(k){var v=m3((L||{})[k],(R||{})[k],(B||{})[k]);if(v!==undefined)out[k]=v});
   return out}
+/* class of an exit, from the plan of the closed trade: "tp" when its target was reached (at the exit, or after it), "sl" when its
+   stop was hit (at the exit, or after it), "run" while neither has been touched since the exit. A trade that left through its
+   stop stays "sl" unless the target is reached afterwards (the stop was too tight). how: "stop" | "tp" | "hand" (the user's exit) */
+function afterClass(a){
+  var L=afterLevels(a),o=a.out,how=L.byTp?"tp":L.byStop?"stop":"hand";
+  var k=L.byTp?"tp":L.byStop?(o&&o.why==="tp"?"tp":"sl"):o?o.why:"run";
+  return{k:k,how:how,final:L.byTp||!!o,watch:how==="stop"&&!(o&&o.why==="tp")&&L.tp>0}}
