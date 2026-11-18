@@ -368,6 +368,11 @@ test("T25", "Stop exposé : un setup dont le stop est juste derrière le dernier
   ok(x.st === "refused" && (x.blk || []).some(b => b.k === "stopx" && b.sev === "refuse"), "stop exposé : Refusé, plus « À surveiller » (" + x.st + ")");
   const y = E.judge(setup(q => { q.slx = { p: 97.9, sl0: 98, sl: 97.6, h: 24 }; }), { slsw: 0, slmode: "move" });
   ok(y.st === "ready", "applis sœurs (contrôle désactivé) : inchangé (" + y.st + ")");
+  /* 18/11/2026: the app rounds the plan to the tick before judging; the rounded stop must still be flagged */
+  const z = E.judge(setup(q => { q.plan.sl = 98.01; q.slx = { p: 97.9, sl0: 98.0037, sl: 97.6, h: 24, moved: false }; }), { slsw: 24, slmode: "flag" });
+  ok(z.st === "refused", "stop arrondi au pas du contrat : toujours Refusé (" + z.st + ")");
+  const mv = E.judge(setup(q => { q.slx = { p: 97.9, sl0: 98.2, sl: 98, h: 24, moved: true }; }), { slsw: 24, slmode: "flag" });
+  ok(mv.st === "ready", "stop déjà déplacé derrière le sommet : pas de refus (" + mv.st + ")");
 });
 
 test("T26", "Après sortie : classement TP / SL / en cours, sorties par le stop comprises", () => {

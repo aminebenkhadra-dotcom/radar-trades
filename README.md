@@ -154,6 +154,10 @@ de garder la moitié au TP actuel. Une notification à l'apparition du signal.
   proposés du tout : mêmes trades écartés que la variante f24 de `stop42.js` (−0,064 R et +0,062 R par trade, contre −0,081 et +0,017).
 - **Notification « stop exposé »** sur un trade ouvert (Binance ou suivi) dont le stop est juste derrière le dernier sommet ou creux
   1H des 24 h avant l'entrée : stop plus sûr, réduction de taille pour garder le même risque, ou sortie. Une fois par niveau de stop.
+- **Correctif du 18/11 : le contrôle « stop exposé » ne marchait pas dans l'appli.** Le plan était arrondi au pas de prix du
+  contrat avant le contrôle, et le contrôle comparait le stop arrondi au stop d'origine : ils ne correspondaient jamais, donc aucun
+  setup n'était retenu en scan réel (cas BTW short « Prêt » du 18/11, plus haut 24 h à 0,5367 au-dessus du stop à 0,5144). Les tests
+  de rejeu, eux, n'arrondissent pas : leurs résultats restent valables. Le contrôle s'appuie maintenant sur « stop non déplacé ».
 - **Capital** : toutes les lignes, sans regroupement « Autres ».
 
 ## Stop exposé (scanner et Mes trades)
