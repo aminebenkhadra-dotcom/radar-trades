@@ -1,0 +1,38 @@
+name: Recent days check
+# Replays version 42 (app options) on the last weeks for three universes: the old Top 50 by volume, the Levels 1-2 and the Level 3
+# of the market-cap scanner, and publishes per-day ready setups and alerts to the branch live-check.
+on:
+  push:
+    branches: [live-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+      START: "2026-09"
+      END: "2026-11"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Universes
+        run: node tools/backtest/caps.js > caps.env && cat caps.env | cut -c1-300
+      - name: Fetch and replay
+        run: |
+          mkdir -p out
+          . ./caps.env
+          run() { n=$1; mkdir -p d-$n r-$n
+            if [ "$2" = vol ]; then TOP=50 RANK=2026-10 node tools/backtest/fetch.js klines d-$n | tail -3
+            else SYMS=$2 node tools/backtest/fetch.js klines d-$n | tail -3; fi
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js d-$n r-$n 2 $k/4 '{"funnel":true,"slsw":24,"slmode":"flag"}' & done; wait
+            node tools/backtest/live42.js r-$n 2026-11-01 > out/$n.json; head -c 1500 out/$n.json; echo; }
+          run vol50 vol
+          run lvl12 "$CAP12"
+          run lvl3 "BTCUSDT,$CAP3"
+          cp caps.env out/
+      - name: Publish
+        run: |
+          cd out && git init -q -b live-check
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Recent days check" && git push -q -f "$REMOTE" live-check
