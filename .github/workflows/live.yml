@@ -26,7 +26,9 @@ jobs:
             if [ "$2" = vol ]; then TOP=50 RANK=2026-10 node tools/backtest/fetch.js klines d-$n | tail -3
             else SYMS=$2 node tools/backtest/fetch.js klines d-$n | tail -3; fi
             for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js d-$n r-$n 2 $k/4 '{"funnel":true,"slsw":24,"slmode":"flag"}' & done; wait
-            node tools/backtest/live42.js r-$n 2026-11-01 > out/$n.json; head -c 1500 out/$n.json; echo; }
+            node tools/backtest/live42.js r-$n 2026-11-01 > out/$n.json; head -c 1500 out/$n.json; echo
+            mkdir -p q-$n; for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js d-$n q-$n 2 $k/4 '{"funnel":true,"slsw":0}' & done; wait
+            node tools/backtest/live42.js q-$n 2026-11-01 > out/$n-nostopx.json; head -c 600 out/$n-nostopx.json; echo; }
           run vol50 vol
           run lvl12 "$CAP12"
           run lvl3 "BTCUSDT,$CAP3"
