@@ -84,6 +84,7 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .stbox.watch{border-color:var(--accent);background:var(--accent-soft)} .stbox.watch>b{color:var(--accent)}
 .stbox.refused{border-color:var(--bad);background:var(--bad-soft)} .stbox.refused>b{color:var(--bad)}
 .stbox.incomplete>b{color:var(--muted)}
+.blkbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:6px} .blkbox>b{font-family:var(--display);font-size:16px;color:var(--bad)} .blkbox[hidden]{display:none}
 .sim3{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 10px;font-size:12.5px;align-items:baseline}
 .sim3 b{font-family:var(--mono);font-weight:600;text-align:right} .sim3 .hi{color:var(--accent)} .sim3 span.h{color:var(--muted);font-size:11px;text-align:right}
 .prof-alert{border:1px dashed var(--accent);background:var(--accent-soft);border-radius:10px;padding:9px 12px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -455,6 +456,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div class="filters sidef" id="sidef" role="group" aria-label="Sens des trades"><button type="button" data-side="both">Longs et shorts</button><button type="button" data-side="long">Longs seulement</button><button type="button" data-side="short">Shorts seulement</button></div>
   <div id="ready3"></div>
   <div class="funnel" id="funnel" hidden></div>
+  <div class="blkbox" id="acctblk" hidden></div>
   <details class="set" id="fdet" hidden></details>
 
   <h2 id="top-h">Top 3 à surveiller</h2>
@@ -2047,13 +2049,23 @@ function scanDetail(){
   el.innerHTML="<summary>Détail du scan : où s'arrêtent les marchés</summary>"+L.join("")
     +(why.length?'<div class="cap" style="margin-top:10px">Pourquoi les '+(P.length-ready)+" autres ne sont pas prêts</div>"+why.map(function(k){return'<div class="fdr"><b>'+k[1]+"</b><span>"+esc(k[0])+"</span></div>"}).join(""):"")
     +'<div class="sub" style="padding:8px 0 12px">Un trade ne reste « prêt » que peu de temps : une liste sans aucun « prêt » est le cas le plus fréquent.</div>'}
+/* setups stopped by the account, not by the market (19/11/2026: no trade for a day while the replay saw about ten a day):
+   total risk at its cap, a position without a full stop, or the day's loss limit refuse every new entry, so it is said once, on top */
+function acctBlock(){var el=$("acctblk");if(!el)return;
+  var B=results.filter(function(r){return r.plan&&r.sz&&r.sz.limit}),W={};
+  B.forEach(function(r){(r.sz.why||[]).forEach(function(w){W[w]=1})});
+  var rdy=B.filter(function(r){return r.ste==="ready"}).length;
+  el.hidden=!B.length;if(!B.length){el.innerHTML="";return}
+  el.innerHTML="<b>Ton compte bloque les nouveaux trades</b><ul class=\"why\">"+Object.keys(W).map(function(w){return'<li class="no">'+esc(w.charAt(0).toUpperCase()+w.slice(1))+"</li>"}).join("")+"</ul>"
+    +'<div class="sub">'+B.length+" setup"+(B.length>1?"s":"")+" refusé"+(B.length>1?"s":"")+" pour cette raison"+(rdy?", dont "+rdy+" prêt"+(rdy>1?"s":"")+" côté marché":"")
+    +". Mets à jour Mes trades (trade clôturé, stop manquant) ou les limites dans Réglages et sauvegarde.</div>"}
 function render(){
   var A0=acctState();results.forEach(function(r){finalize(r,A0)});
   var rs=results.slice().sort(rank),fu=$("funnel"),top=mode!=="all";
   fu.hidden=!funnel;
   if(funnel)fu.innerHTML=(funnel.tiles||[[funnel.total,"marchés scannés"],[funnel.liquid,"liquides"],[funnel.trend,"en tendance 1J"],[funnel.setups,"setups"]]).map(function(x){
     return"<div><b>"+fr(x[0]||0,0)+"</b><span>"+x[1]+"</span></div>"}).join("");
-  scanDetail();
+  scanDetail();acctBlock();
   if(funnel&&top&&funnel.tiles&&funnel.tiles[3]){funnel.tiles[3][0]=results.filter(function(r){return r.st==="ready"}).length;fu.lastChild.firstChild.textContent=fr(funnel.tiles[3][0],0)}
   /* longs and shorts apart, the side the whole market leans to first */
   sideChips();var want=S.side==="long"?1:S.side==="short"?-1:0,hid=want?rs.filter(function(r){return r.plan&&r.dir!==want}).length:0;
@@ -4912,6 +4924,10 @@ window.bgScan=function(t10,t50){
           +"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(z&&z.ok?" · "+fr(z.qty,z.qd)+" à x"+z.lev+" · perte max "+fr(z.loss,2)+" $":"")
           +" · repéré à "+new Date(r.seen||st.stamp).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),id,(r.cap?lvAt(r.cap)||m:m)+"~"+r.sym)}catch(e){}});
       try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}
+      /* ready on the market side but refused by the account: said once every 6 hours, otherwise the silence looks like a dead market */
+      try{var bk=st.results.filter(function(r){return r.plan&&r.ste==="ready"&&r.sz&&r.sz.limit}),bt=+localStorage.getItem("radar-blk-at")||0;
+        if(bk.length&&Date.now()-bt>6*36e5){localStorage.setItem("radar-blk-at",String(Date.now()));
+          Android.notify("Trade prêt mais bloqué par ton compte",bk.map(function(r){return r.sym}).slice(0,3).join(", ")+" · "+((bk[0].sz.why||[])[0]||"limite du compte")+". Ouvre l'appli pour débloquer.","blk",m)}}catch(e){}
       try{var bp=st.results.filter(function(r){return r.plan}),bz=bp.filter(function(r){return r.dist<=0.5}),bw=whyNot(bz).slice(0,3).map(function(k){return k[1]+" × "+k[0].toLowerCase()}).join(" · ");
         bgMore=lvName(m)+" : "+bp.length+" avec une zone, "+bz.length+" à la zone"+(bw?" · pas prêts : "+bw:"")}catch(e){}
       var sw=S.side==="long"?"long":S.side==="short"?"short":"setup";

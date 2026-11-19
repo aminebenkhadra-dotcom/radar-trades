@@ -529,6 +529,17 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await ctx.close();
   });
 
+  await test("P18", "Compte qui bloque : un trade sans stop dans Mes trades, le scan le dit en haut", async ok => {
+    const L = last("ETHUSDT"), tr = [{ id: "b1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: L, qty: 1, sl: 0, tp: L * 1.04, t: NOW - 36e5 }];
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))})}` });
+    await waitScan(page);
+    const b = await page.evaluate(() => { const e = document.getElementById("acctblk"); return { hid: e.hidden, t: e.textContent, n: JSON.parse(localStorage.getItem("radar-last-l1")).results.filter(r => r.plan).length }; });
+    ok(b.n > 0 && !b.hid && /Ton compte bloque les nouveaux trades/.test(b.t) && /sans stop complet/.test(b.t), "bandeau : « " + b.t.slice(0, 160) + " »");
+    if (SHOTS) { await page.$eval("#acctblk", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p18-compte-bloque.png") }); }
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
   await test("P17", "Mise à jour du 17/11 : Levels, heure de la reco, périodes, cycle, temporalité, exposition, après sortie, actus, capital", async ok => {
     const L = last("ETHUSDT"), A = last("SOLUSDT");
     const tr = [{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: L, qty: 1, sl: L * 0.98, tp: L * 1.04, t: NOW - 36e5 }, { id: "x2", sym: "SOL", full: "SOLUSDT", dir: -1, entry: A, qty: 10, sl: A * 1.02, tp: A * 0.95, t: NOW - 36e5 }];

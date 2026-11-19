@@ -286,3 +286,13 @@ Chaque modification poussée sur `main` lance les tests puis recompile et signe 
 release). Scanner, setups, analyse, heatmaps, tendance, cycle et alertes tant que l'onglet est ouvert. Pas de clé API ni de
 portefeuille : ils restent dans l'appli Android. Installation : décompresser, `chrome://extensions`, « Mode développeur »,
 « Charger l'extension non empaquetée », choisir le dossier `RadarTrades-Chrome`.
+
+## Correctif du 19/11/2026 : plus aucun trade proposé
+
+- Rejeu de la version 42 sur les 18 premiers jours de novembre (workflow `live.yml`, branche `live-check`). Le moteur voit des
+  setups prêts chaque jour : le 18/11, 18 épisodes « prêt » sur les Levels 1–2 (10 alertes avec un contrôle toutes les 30 min),
+  19 sur le Level 3, 14 sur l'ancien Top 50 en volume. Le refus du « stop exposé » enlève environ un tiers de ces setups.
+- Ce qui peut encore tout bloquer, c'est le compte : risque total au plafond, position sans stop complet (Mes trades ou Binance),
+  perte du jour atteinte. Un setup prêt côté marché passait alors en « Refusé », sans rien qui le signale en haut du scan.
+- Ajouté : un bandeau rouge « Ton compte bloque les nouveaux trades » avec la raison, et en tâche de fond une notification
+  « Trade prêt mais bloqué par ton compte », au plus une toutes les 6 heures. Test de page P18.
