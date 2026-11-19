@@ -87,7 +87,8 @@ const BRIDGE = `(() => {
     hasKeys(ex) { return !!M.keys[ex]; }, saveKeys() { return true; }, clearKeys() {},
     notify(title, text, tag, tab) { M.notes.push({ ch: "setups", title, text, tag, tab }); },
     protect(title, text, tag, tab) { M.notes.push({ ch: "protect", title, text, tag, tab }); },
-    startWatch() {}, stopWatch() {}, canNotify() { return true; }, batteryFree() { return true; }, askBattery() {}, test() {}, lastCheck() { return ""; },
+    startWatch(a, b, m) { M.watch = { on: b, min: m }; }, stopWatch() { M.watch = null; }, canNotify() { return true; }, batteryFree() { return true; }, askBattery() {}, test() {}, lastCheck() { return ""; },
+    nextCheck() { return M.next || 0; }, exactOk() { return M.exact !== false; }, askExact() { M.askedExact = 1; },
     done(msg) { M.done = msg; },
     saveBytes(name, b64) { M.xlsx = { name, b64 }; setTimeout(() => window.onExport && window.onExport(true, name), 5); },
     saveFile(name, data) { M.saved = data; setTimeout(() => window.onBackup && window.onBackup(true, ""), 5); },
@@ -538,6 +539,46 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#acctblk", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p18-compte-bloque.png") }); }
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
+  });
+
+  await test("P19", "Trade prêt sans notification : les deux sens notifiés, une alerte par setup, et sur la carte la raison", async ok => {
+    /* background, with the list filter left on « Shorts »: the longs ready are notified too */
+    const { ctx, page, errors } = await open(browser, { suffix: "?bg=1",
+      init: `localStorage.setItem("radar-settings",JSON.stringify({alv:"12",side:"short",amin:30,strict:0,nt43:1,nt44:1,nt45:1,profOk:true,account:1000}))` });
+    await page.evaluate(() => window.bgScan(false, true));
+    await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
+    const r1 = await page.evaluate(() => ({ notes: window.__M.notes.filter(n => n.ch === "setups" && /prêt à saisir/.test(n.title)).map(n => n.title.replace(/^(\S+) · (Long|Short) .*$/, "$1:$2")),
+      ready: JSON.parse(localStorage.getItem("radar-last-l12")).results.filter(r => r.st === "ready").map(r => r.sym + ":" + (r.dir > 0 ? "Long" : "Short")),
+      al: JSON.parse(localStorage.getItem("radar-alerted") || "{}"), set: JSON.parse(localStorage.getItem("radar-settings")) }));
+    ok(r1.ready.length > 0 && r1.ready.some(x => /Long$/.test(x)) && r1.ready.every(x => r1.notes.includes(x)), "filtre de la liste sur « Shorts » : chaque setup prêt notifié, longs compris (" + r1.ready.join(", ") + " · notifiés " + r1.notes.join(", ") + ")");
+    ok(Object.values(r1.al).every(v => v && v.t > 0 && v.s > 0), "chaque alerte gardée avec l'heure du setup");
+    ok(r1.set.amin === 15 && r1.set.nt46 === 1, "contrôle toutes les 30 min laissé par défaut : passe à 15 min (" + r1.set.amin + ")");
+    await page.evaluate(() => { window.__M.notes = []; window.__M.done = null; window.bgScan(false, true); });
+    await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
+    const n2 = await page.evaluate(() => window.__M.notes.filter(n => n.ch === "setups" && /prêt à saisir/.test(n.title)).length);
+    ok(n2 === 0, "contrôle suivant, mêmes setups : aucune nouvelle notification (" + n2 + ")");
+    /* a setup gone more than 2 hours and back is a new one: notified again */
+    await page.evaluate(() => { const M = JSON.parse(localStorage.getItem("radar-seen")); for (const k in M) { M[k].t -= 5 * 36e5; M[k].l -= 3 * 36e5; } localStorage.setItem("radar-seen", JSON.stringify(M)); window.__M.notes = []; window.__M.done = null; window.bgScan(false, true); });
+    await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
+    const n3 = await page.evaluate(() => window.__M.notes.filter(n => n.ch === "setups" && /prêt à saisir/.test(n.title)).length);
+    ok(n3 === r1.ready.length, "setup revenu après plus de 2 heures : notifié de nouveau (" + n3 + ")");
+    await ctx.close();
+    /* in the app: the ready card says whether it was notified, or why not */
+    const o2 = await open(browser, { session: { next: NOW + 9 * 60e3 }, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"2",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(o2.page);
+    const c1 = await o2.page.$$eval("#view-scan .alinfo", a => a.map(e => e.textContent));
+    ok(c1.length > 0 && c1.every(t => /Pas de notification : le Level 1 n'est pas surveillé en arrière-plan\s*Surveiller le Level 1/.test(t)), "Level 1 non surveillé : « " + (c1[0] || "rien") + " »");
+    if (SHOTS) { await o2.page.$eval("#view-scan .alinfo", e => e.closest(".stbox").scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p19-pas-surveille.png") }); }
+    await o2.page.click("#view-scan .alinfo [data-watchlv]");
+    const c2 = await o2.page.evaluate(() => ({ alv: JSON.parse(localStorage.getItem("radar-settings")).alv, w: window.__M.watch, t: [...document.querySelectorAll("#view-scan .alinfo")].map(e => e.textContent) }));
+    ok(c2.alv === "12" && c2.w && c2.w.on === true && c2.t.every(x => /Pas encore vu par la surveillance en arrière-plan : prochain contrôle à \d\d:\d\d/.test(x)), "un appui : Level 1 surveillé, carte « " + (c2.t[0] || "") + " »");
+    await o2.page.evaluate(() => { const al = {}; JSON.parse(localStorage.getItem("radar-last-l1")).results.filter(r => r.st === "ready").forEach(r => { al[r.sym + (r.dir > 0 ? "L" : "S") + "r"] = { t: Date.now() - 600e3, s: r.seen }; }); localStorage.setItem("radar-alerted", JSON.stringify(al)); });
+    await o2.page.reload(); await waitScan(o2.page);
+    const c3 = await o2.page.$$eval("#view-scan .alinfo", a => a.map(e => e.textContent));
+    ok(c3.length > 0 && c3.every(t => /^Notification envoyée à \d\d:\d\d$/.test(t)), "setup déjà notifié : « " + (c3[0] || "rien") + " »");
+    if (SHOTS) { await o2.page.$eval("#view-scan .alinfo", e => e.closest(".stbox").scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p19-notifie.png") }); }
+    ok(errors.length === 0 && o2.errors.length === 0, "aucune erreur JavaScript" + (errors.concat(o2.errors).length ? " : " + errors.concat(o2.errors).slice(0, 3).join(" / ") : ""));
+    await o2.ctx.close();
   });
 
   await test("P17", "Mise à jour du 17/11 : Levels, heure de la reco, périodes, cycle, temporalité, exposition, après sortie, actus, capital", async ok => {

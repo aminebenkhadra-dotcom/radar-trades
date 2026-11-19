@@ -161,12 +161,37 @@ public class WatchService extends Service {
         return PendingIntent.getForegroundService(this, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    /**
+     * The next check falls 75 seconds after the close of a candle of the chosen length (15, 30 or 60 minutes, on Binance's UTC
+     * grid), so each check reads a candle that has just closed: a setup ready for a single 15-minute candle is still caught.
+     * Exact alarm when allowed (USE_EXACT_ALARM, or SCHEDULE_EXACT_ALARM up to Android 12L): an inexact one may come up to
+     * 75 % of the wait late, a 30-minute check then running every 30 to 52 minutes (19/11/2026, ready setups never notified).
+     */
+    static long nextCheck(long now, int minutes) {
+        long p = Math.max(15, minutes) * 60000L;
+        return (now / p + 1) * p + 75000L;
+    }
+
+    static boolean exactOk(Context ctx) {
+        if (Build.VERSION.SDK_INT < 31) return true;
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        return am != null && am.canScheduleExactAlarms();
+    }
+
     private void scheduleNext() {
         AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
-        int minutes = Math.max(15, getSharedPreferences(MainActivity.PREFS, MODE_PRIVATE).getInt("minutes", 30));
-        am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + minutes * 60000L, tick());
+        SharedPreferences p = getSharedPreferences(MainActivity.PREFS, MODE_PRIVATE);
+        long at = nextCheck(System.currentTimeMillis(), p.getInt("minutes", 15));
+        boolean exact = exactOk(this);
+        try {
+            if (exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, tick());
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, tick());
+        } catch (SecurityException e) {
+            exact = false;
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, tick());
+        }
+        p.edit().putLong("next", at).putBoolean("exact", exact).apply();
     }
 
     private void scan() {

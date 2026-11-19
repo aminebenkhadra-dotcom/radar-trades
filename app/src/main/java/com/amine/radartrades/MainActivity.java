@@ -261,6 +261,31 @@ public class MainActivity extends Activity {
             return getSharedPreferences(PREFS, MODE_PRIVATE).getString("last", "");
         }
 
+        /** Time of the next background check (ms since 1970), 0 when none is planned. */
+        @JavascriptInterface
+        public double nextCheck() {
+            SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+            return p.getBoolean("on", false) ? (double) p.getLong("next", 0L) : 0d;
+        }
+
+        /** Checks on time (exact alarms allowed), or approximate ones. */
+        @JavascriptInterface
+        public boolean exactOk() {
+            return WatchService.exactOk(getApplicationContext());
+        }
+
+        /** Opens Android's « Alarmes et rappels » switch for the app (Android 12 and later). */
+        @JavascriptInterface
+        public void askExact() {
+            if (Build.VERSION.SDK_INT < 31) return;
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName())));
+                } catch (Exception ignored) {
+                }
+            });
+        }
+
         /** Backup of the page's own data (journal, settings, entries): the user picks where the file goes. API keys are never in it. */
         @JavascriptInterface
         public void saveFile(String name, String content) {

@@ -84,6 +84,7 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .stbox.watch{border-color:var(--accent);background:var(--accent-soft)} .stbox.watch>b{color:var(--accent)}
 .stbox.refused{border-color:var(--bad);background:var(--bad-soft)} .stbox.refused>b{color:var(--bad)}
 .stbox.incomplete>b{color:var(--muted)}
+.alinfo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 4px} .alinfo.ok{color:var(--good)} .alinfo.no{color:var(--bad)} .alinfo button{padding:6px 12px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .blkbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:6px} .blkbox>b{font-family:var(--display);font-size:16px;color:var(--bad)} .blkbox[hidden]{display:none}
 .sim3{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 10px;font-size:12.5px;align-items:baseline}
 .sim3 b{font-family:var(--mono);font-weight:600;text-align:right} .sim3 .hi{color:var(--accent)} .sim3 span.h{color:var(--muted);font-size:11px;text-align:right}
@@ -516,10 +517,10 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
         <div class="filters" id="a-lv"><label class="chk"><input type="checkbox" data-alv="1"> Level 1</label><label class="chk"><input type="checkbox" data-alv="2"> Level 2</label><label class="chk"><input type="checkbox" data-alv="3"> Level 3</label><label class="chk"><input type="checkbox" data-alv="4"> Level 4</label><label class="chk"><input type="checkbox" data-alv="5"> Level 5</label></div>
         <div class="sub">Level 1 : 30 premières capitalisations · Level 2 : 31 à 60 · Level 3 : 61 à 200 · Level 4 : 201 à 400 · Level 5 : 401 à 1000. Plus il y a de Levels cochés, plus chaque contrôle est long.</div></div>
       <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, viser plus haut que mon TP ou le réduire, déplacer mon stop pour sécuriser mes gains, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
-      <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
+      <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes (conseillé)</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <details class="wide set" id="a-log" hidden></details>
-      <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button></div>
+      <div class="wide acts"><button class="ghost" type="button" id="a-test">Tester la notification</button><button class="ghost" type="button" id="a-bat">Autoriser en veille</button><button class="ghost" type="button" id="a-exact" hidden>Contrôles à l'heure</button></div>
     </div>
   </details>
 
@@ -585,7 +586,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={nt43:0,nt44:0,nt45:0,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:30,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={nt43:0,nt44:0,nt45:0,nt46:0,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
 var MAXDEEP=60;
 /* scanner levels, by market capitalisation rank (CoinGecko). A background run may watch several: "l12" is levels 1 and 2 */
 var LEVELS={1:[1,30],2:[31,60],3:[61,200],4:[201,400],5:[401,1000]};
@@ -613,7 +614,7 @@ function useStore(m){var st=stores[m]||{};results=st.results||[];funnel=st.funne
 /* ---------- settings ---------- */
 function loadSettings(){
   var s={}; try{ s=JSON.parse(localStorage.getItem("radar-settings")||"{}")||{} }catch(e){}
-  var o={}; for(var k in DEF) o[k]=(s[k]!==undefined&&s[k]!==null&&(k==="exclude"||s[k]!==""))?s[k]:DEF[k];
+  var o={}; for(var k in DEF) o[k]=(s[k]!==undefined&&s[k]!==null&&(k==="exclude"||k==="alv"||s[k]!==""))?s[k]:DEF[k];
   return o;
 }
 function saveSettings(){ try{ localStorage.setItem("radar-settings",JSON.stringify(S)) }catch(e){} }
@@ -2002,12 +2003,26 @@ function sizeView(r){
     +(z.ok?"":'<div class="warn">'+esc(z.why.map(function(w){return w.charAt(0).toUpperCase()+w.slice(1)}).join(". "))+".</div>")+"</div>"
     +'<div class="size"><span>Gain net à TP1 <b class="pos">+'+fr(Math.max(0,g1),2)+" $</b></span>"+(g2!==null?'<span>Gain net à TP2 <b class="pos">+'+fr(Math.max(0,g2),2)+" $</b></span>":"")+(r.costPct?"<span>Frais et glissement ≈ <b>"+fr(r.costPct,0)+" %</b> du risque</span>":"")+"</div>"}
 /* the status and its reasons, in plain words */
+/* on a setup « Prêt »: was it notified, and if not why (19/11/2026, ready setups seen in a manual scan, never notified):
+   sent at HH:MM, its Level not watched (one tap to watch it), alerts off or blocked, or not seen yet by the background check */
+function alertInfo(r){
+  if(!NATIVE||r.st!=="ready")return"";
+  var lv=r.cap?lvAt(r.cap):"",d=lv?lv.slice(1):"",A={},nx=0,ok=true;
+  try{A=JSON.parse(localStorage.getItem("radar-alerted")||"{}")||{}}catch(e){}
+  var a=A[r.sym+(r.dir>0?"L":"S")+"r"],at=a&&typeof a==="object"?+a.t||0:+a||0;
+  function out(c,t,b){return'<div class="alinfo '+c+'"><span>'+t+"</span>"+(b||"")+"</div>"}
+  if(at&&Date.now()-at<4*36e5&&(!a.s||!r.seen||a.s===r.seen))return out("ok","Notification envoyée à <b>"+hmd(at)+"</b>");
+  try{ok=Android.canNotify()}catch(e){}
+  if(!ok)return out("no","Pas de notification : elles sont bloquées pour Radar Trades dans les paramètres Android");
+  if(d&&String(S.alv||"").indexOf(d)<0)return out("no","Pas de notification : le "+lvName(lv)+" n'est pas surveillé en arrière-plan",'<button class="ghost" type="button" data-watchlv="'+d+'">Surveiller le '+lvName(lv)+"</button>");
+  try{nx=+Android.nextCheck()||0}catch(e){}
+  return out("mid","Pas encore vu par la surveillance en arrière-plan"+(nx>Date.now()?" : prochain contrôle à <b>"+hm(nx)+"</b>":""))}
 function statusBox(r){
   var w=(r.stWhy||[]).slice(),mi=r.st!=="ready"?missing(r):[];
   if(r.st==="watch"&&mi.length)w.unshift("Contrôles à valider : "+mi.join(", "));
   /* the hour of the recommendation, and how old the price is: a setup ready an hour ago may already be past its entry */
   var age=stamp?Math.round((Date.now()-stamp)/60e3):0,tm=r.seen?'<div class="sub" style="margin:2px 0 6px">'+(r.st==="ready"&&r.rdy?"Prêt selon les règles depuis <b>"+hmd(r.rdy)+"</b>":"Repéré à <b>"+hmd(r.seen)+"</b>")+" · prix du scan de "+hm(stamp||Date.now())+(age>=20?' · <span class="dn">scan d\'il y a '+(age>=90?Math.round(age/60)+" h":age+" min")+" : relance-le avant d'entrer</span>":"")+"</div>":"";
-  return'<div class="stbox '+r.st+'"><b>'+STL[r.st]+"</b>"+tm+(w.length?'<ul class="why">'+w.map(function(x){return'<li class="'+(r.st==="ready"?"":r.st==="refused"?"no":"mid")+'">'+esc(x.charAt(0).toUpperCase()+x.slice(1))+"</li>"}).join("")+"</ul>":"")
+  return'<div class="stbox '+r.st+'"><b>'+STL[r.st]+"</b>"+tm+alertInfo(r)+(w.length?'<ul class="why">'+w.map(function(x){return'<li class="'+(r.st==="ready"?"":r.st==="refused"?"no":"mid")+'">'+esc(x.charAt(0).toUpperCase()+x.slice(1))+"</li>"}).join("")+"</ul>":"")
     +'<div class="sub">'+(r.st==="ready"?"Le plan passe les contrôles techniques et tient dans ton profil de risque. Ce n'est pas une promesse de gain.":r.st==="incomplete"?"Une donnée indispensable manque : aucun point n'est accordé par défaut, relance le scan.":r.st==="refused"?"Une règle s'y oppose pour l'instant : pas d'entrée.":"Pas encore toutes les conditions : pas d'entrée pour l'instant.")+"</div></div>"}
 /* break-even share of winners at this reward-to-risk, and the usual time to TP1 */
 function beView(r){
@@ -4522,7 +4537,7 @@ function firstSetup(){var want=S.side==="long"?1:S.side==="short"?-1:0,rs=result
 function smaS(v,n){var o=[],s=0;for(var i=0;i<v.length;i++){s+=v[i];if(i>=n)s-=v[i-n];o.push(i>=n-1?s/n:null)}return o}
 function mktLabel(sc){return sc>=40?"Haussière":sc>=15?"Plutôt haussière":sc>-15?"Neutre":sc>-40?"Plutôt baissière":"Baissière"}
 function marketState(force){
-  if(!force&&MKT&&MKT.v===3&&Date.now()-MKT.at<15*60e3)return Promise.resolve(MKT);
+  if(!force&&MKT&&MKT.v===3&&Date.now()-MKT.at<(BG?60:15)*60e3)return Promise.resolve(MKT);
   if(mktP)return mktP;
   var nul=function(){return null};
   mktP=Promise.all([klines("BTCUSDT","1d",400,200),klines("BTCUSDT","1w",400,60),klines("ETHUSDT","1d",400,60).catch(nul),
@@ -4811,7 +4826,10 @@ function alertStatus(){
   if(!NATIVE)t="Les alertes demandent la dernière version de l'application : réinstalle l'APK.";
   else if(!on)t="Coche une liste pour lancer la surveillance. Android affichera une notification permanente tant qu'elle tourne.";
   else{var last="";try{last=Android.lastCheck()}catch(e){}
-    t="Surveillance active"+(last?" · dernier contrôle "+last:" · premier contrôle en cours");
+    var nx=0,ex=true;try{nx=+Android.nextCheck()||0;ex=Android.exactOk()}catch(e){}
+    t="Surveillance active"+(last?" · dernier contrôle "+last:" · premier contrôle en cours")+(nx>Date.now()?" · prochain à "+hm(nx):"")
+      +" · contrôles calés juste après la clôture des bougies de "+(+S.amin||15)+" min"+(ex?"":" · heure approximative : appuie sur « Contrôles à l'heure »");
+    try{$("a-exact").hidden=ex}catch(e){}
     try{if(!Android.canNotify())t+=" · notifications bloquées : autorise-les pour Radar Trades dans les paramètres Android"}catch(e){}
     try{if(!Android.batteryFree())t+=" · appuie sur « Autoriser en veille » pour que les contrôles continuent écran éteint"}catch(e){}}
   st.textContent=t;$("a-bat").hidden=!NATIVE;$("a-test").hidden=!NATIVE;bgLogView()}
@@ -4821,18 +4839,26 @@ function bgLogView(){var el=$("a-log");if(!el)return;var L=[];try{L=JSON.parse(l
   el.hidden=!L.length;if(!L.length)return;var open=el.open;
   el.innerHTML="<summary>Derniers contrôles en arrière-plan ("+L.length+")</summary>"+L.map(function(x){return'<div class="fdr"><span><b style="font-family:var(--mono);font-weight:500">'+when(x.t)+"</b> · "+esc(x.m)+(x.x?"<small>"+esc(x.x)+"</small>":"")+"</span></div>"}).join("")+'<div style="height:10px"></div>';el.open=open}
 function applyWatch(){
-  if(NATIVE){try{if(S.alv||S.atr)Android.startWatch(false,!!S.alv,+S.amin||30);else Android.stopWatch()}catch(e){}}
+  if(NATIVE){try{if(S.alv||S.atr)Android.startWatch(false,!!S.alv,+S.amin||15);else Android.stopWatch()}catch(e){}}
   alertStatus()}
 /* setup alerts: the Top 10 / Top 50 boxes become levels once (nt45): Top 50 on gives levels 1 and 2, Top 10 alone level 1 */
 if(!S.nt45){S.alv=S.a50||!S.nt44?"12":S.a10?"1":"";S.nt43=1;S.nt44=1;S.nt45=1;S.a10=false;S.a50=false;saveSettings();if(!BG)applyWatch()}
+/* checks every 15 minutes, right after each candle close (nt46, 19/11/2026): a setup is ready for 15 minutes half of the time,
+   so a check every 30 minutes, often late, missed about one ready setup in three. A 30-minute setting left as it was by default becomes 15 */
+if(!S.nt46){if(+S.amin===30)S.amin=15;S.nt46=1;saveSettings();if(!BG)applyWatch()}
 function alvView(){[].forEach.call(document.querySelectorAll("[data-alv]"),function(b){b.checked=String(S.alv||"").indexOf(b.dataset.alv)>=0})}
-alvView();$("a-min").value=String(S.amin||30);
+alvView();$("a-min").value=String(S.amin||15);
 $("a-lv").addEventListener("change",function(){var v="";[].forEach.call(document.querySelectorAll("[data-alv]"),function(b){if(b.checked)v+=b.dataset.alv});S.alv=v;saveSettings();applyWatch()});
 $("a-tr").checked=!!S.atr;
 $("a-tr").addEventListener("change",function(){S.atr=this.checked;saveSettings();applyWatch()});
-$("a-min").addEventListener("change",function(){S.amin=+this.value||30;saveSettings();applyWatch()});
+$("a-min").addEventListener("change",function(){S.amin=+this.value||15;saveSettings();applyWatch()});
 $("a-test").addEventListener("click",function(){try{Android.test()}catch(e){}});
 $("a-bat").addEventListener("click",function(){try{Android.askBattery()}catch(e){}});
+$("a-exact").addEventListener("click",function(){try{Android.askExact()}catch(e){}});
+/* « Surveiller le Level N » on a ready setup: adds that Level to the background alerts */
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-watchlv]");if(!b)return;
+  var d=b.dataset.watchlv;if(!LEVELS[d])return;S.alv=(String(S.alv||"")+d).split("").filter(function(x,i,a){return a.indexOf(x)===i}).sort().join("");
+  saveSettings();alvView();applyWatch();render()});
 $("alerts").addEventListener("toggle",alertStatus);
 /* positions and journal trades: protection, liquidation, health. One notification per event, in the protection channel.
    The positions are also read when the alerts are off, because the size of a new setup depends on the risk already engaged. */
@@ -4912,12 +4938,13 @@ window.bgScan=function(t10,t50){
       var st=stores[m];if(!st||st.stamp<start)return end(pmsg+" · setups non contrôlés (réseau ou Binance)");
       var seen={},now=Date.now(),n=0,k,ms=MKT;
       try{seen=JSON.parse(localStorage.getItem("radar-alerted")||"{}")||{}}catch(e){}
-      for(k in seen)if(now-seen[k]>4*36e5)delete seen[k];
+      for(k in seen){if(typeof seen[k]==="number")seen[k]={t:seen[k],s:0};if(!seen[k]||now-seen[k].t>4*36e5)delete seen[k]}
       st.results.forEach(function(r){
-        /* entry alerts only for setups ready by the rules: never an incomplete, refused, blocked or stale one */
+        /* entry alerts only for setups ready by the rules: never an incomplete, refused, blocked or stale one.
+           Longs and shorts alike: the Longs / Shorts chips of the list only filter what is shown (19/11/2026, a chip left on
+           « Shorts » silenced every long). One alert per setup and 4 hours at most: a setup gone more than 2 hours and back is a new one */
         if(!r.plan||r.st!=="ready")return;
-        if((S.side==="long"&&r.dir<0)||(S.side==="short"&&r.dir>0))return;
-        n++;var id=r.sym+(r.dir>0?"L":"S")+"r",z=r.sz;if(seen[id])return;seen[id]=now;
+        n++;var id=r.sym+(r.dir>0?"L":"S")+"r",z=r.sz,o=seen[id];if(o&&(!o.s||!r.seen||o.s===r.seen))return;seen[id]={t:now,s:r.seen||0};
         var cm=null;try{var cf=cfgOf(r);cm=cf?cfgMix(cf.key,"cfg"):null}catch(e){}
         try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt à saisir · "+passed(r)+"/6 contrôles",
           (cm?"Ce type de setup a atteint son TP1 "+fr(cm.win,0)+" fois sur 100 en 2 ans · ":"")+(ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")
@@ -4930,15 +4957,14 @@ window.bgScan=function(t10,t50){
           Android.notify("Trade prêt mais bloqué par ton compte",bk.map(function(r){return r.sym}).slice(0,3).join(", ")+" · "+((bk[0].sz.why||[])[0]||"limite du compte")+". Ouvre l'appli pour débloquer.","blk",m)}}catch(e){}
       try{var bp=st.results.filter(function(r){return r.plan}),bz=bp.filter(function(r){return r.dist<=0.5}),bw=whyNot(bz).slice(0,3).map(function(k){return k[1]+" × "+k[0].toLowerCase()}).join(" · ");
         bgMore=lvName(m)+" : "+bp.length+" avec une zone, "+bz.length+" à la zone"+(bw?" · pas prêts : "+bw:"")}catch(e){}
-      var sw=S.side==="long"?"long":S.side==="short"?"short":"setup";
-      end(pmsg+" · "+(n?n+" "+sw+(n>1?"s prêts":" prêt"):"aucun "+sw+" prêt"))};
+      end(pmsg+" · "+(n?n+" setup"+(n>1?"s prêts":" prêt"):"aucun setup prêt"))};
     scan(m)})}};
 
 /* ---------- synchronisation between the phone and Chrome, through one file in a private GitHub repository of the user ----------
    The file holds the settings, the trades followed by hand, Après sortie, the portfolio entries, the paper tracking and a copy of the
    Binance positions as the phone last read them. Never the API keys, nor the access code itself. Alert switches stay per device.
    Each sync is a three-way merge (syncMerge) between this device, the file and the state of the last sync of this device. */
-var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","alv","atr","amin","nt43","nt44","nt45"];
+var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","alv","atr","amin","nt43","nt44","nt45","nt46"];
 var SY={cfg:null,busy:false,dirty:false,at:0,err:"",etag:"",sha:"",last:null,apply:false,reload:false,timer:0,again:false};
 function syCfg(){try{var c=JSON.parse(localStorage.getItem("radar-sync")||"null");return c&&c.repo&&c.token?c:null}catch(e){return null}}
 SY.cfg=syCfg();

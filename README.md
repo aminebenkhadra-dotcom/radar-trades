@@ -296,3 +296,20 @@ portefeuille : ils restent dans l'appli Android. Installation : décompresser, `
   perte du jour atteinte. Un setup prêt côté marché passait alors en « Refusé », sans rien qui le signale en haut du scan.
 - Ajouté : un bandeau rouge « Ton compte bloque les nouveaux trades » avec la raison, et en tâche de fond une notification
   « Trade prêt mais bloqué par ton compte », au plus une toutes les 6 heures. Test de page P18.
+
+## Correctif du 19/11/2026 (2) : trade « Prêt » vu au scan, jamais notifié
+
+Causes trouvées :
+- Le contrôle de fond tournait toutes les 30 minutes avec une alarme approximative : Android peut la retarder de 75 % du délai,
+  soit un contrôle toutes les 30 à 52 minutes. Un état « prêt » dure 15 minutes dans plus de la moitié des cas : il passait entre deux contrôles.
+- Les puces Longs / Shorts de la liste servaient aussi de filtre aux alertes : laissées sur « Shorts », aucun long n'était notifié.
+- Seuls les Levels cochés dans les alertes (1 et 2 par défaut) sont contrôlés en fond : un « Prêt » du Level 3 n'est jamais notifié.
+- Décocher tous les Levels ne coupait pas les alertes de trades prêts (valeur vide remplacée par « 12 »).
+
+Corrigé :
+- Contrôle calé 75 secondes après la clôture de chaque bougie de 15 minutes, avec une alarme exacte (USE_EXACT_ALARM ;
+  SCHEDULE_EXACT_ALARM jusqu'à Android 12L). 15 minutes par défaut ; un réglage resté à 30 par défaut passe à 15 (nt46).
+- Alertes sur les deux sens, quel que soit le filtre de la liste.
+- Une alerte par setup (heure de repérage du setup), 4 heures au plus : un setup disparu plus de 2 heures puis revenu est notifié.
+- Sur chaque carte « Prêt » : « Notification envoyée à HH:MM », ou la raison (Level non surveillé, avec un bouton pour le surveiller ;
+  notifications bloquées ; pas encore vu, prochain contrôle à HH:MM). Test de page P19.
