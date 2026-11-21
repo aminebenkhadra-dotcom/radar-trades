@@ -313,3 +313,14 @@ Corrigé :
 - Une alerte par setup (heure de repérage du setup), 4 heures au plus : un setup disparu plus de 2 heures puis revenu est notifié.
 - Sur chaque carte « Prêt » : « Notification envoyée à HH:MM », ou la raison (Level non surveillé, avec un bouton pour le surveiller ;
   notifications bloquées ; pas encore vu, prochain contrôle à HH:MM). Test de page P19.
+
+## Correctif du 21/11/2026 : « jamais de trade des Levels 1 et 2 »
+
+- Chaque notification de trade prêt donne le Level et le rang par capitalisation (« SUI · Long prêt à saisir · Level 1 »,
+  puis « Level 1, n°11 par capitalisation · … »). Chaque carte de setup a la même étiquette (« Level 1 · n°11 »).
+- Étape 3 du scan (déclencheur 15 min, carnet, squeeze) : les setups proches de leur zone d'abord, les plus grosses capitalisations
+  d'abord parmi eux. Avant, les 20 places allaient aux meilleurs scores : avec les Levels 3 à 5 cochés, un setup du Level 1 ou 2
+  près de sa zone pouvait ne jamais être lu, donc jamais « Prêt » ni notifié. Un scan de plusieurs Levels en lit 30.
+- Verrou de réveil du contrôle de fond porté à 8 minutes (relâché à la fin du contrôle) : un contrôle de plusieurs Levels peut dépasser 4 minutes.
+- Tests de page : l'horloge est fixée au jeudi 19/11/2026 16:50 UTC (`TEST_NOW` pour une autre heure). Le marché simulé dépendait de
+  l'heure du lancement et P19 échouait le matin.

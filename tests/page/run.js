@@ -11,7 +11,10 @@ const EXE = process.env.CHROMIUM || "/opt/pw-browsers/chromium-1243/chrome-linux
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 
 /* ---------- a simulated market: 15-minute candles of a dozen contracts, trends and pullbacks ---------- */
-const NOW = Math.floor(Date.now() / 6e4) * 6e4, M15 = 9e5;
+/* the suite runs at a fixed instant, Thursday 19/11/2026 16:50 UTC (17:50 in Casablanca): the simulated market and every page share it, so the states of
+   the setups no longer depend on the hour of the run (21/11/2026: at 08:40 the simulated market had no ready setup and P19 failed).
+   Each page's clock starts there and runs normally. TEST_NOW=<ms> picks another instant */
+const T0 = Date.now(), NOW = Math.floor((+process.env.TEST_NOW || Date.UTC(2026, 10, 19, 16, 50)) / 6e4) * 6e4, M15 = 9e5;
 let seed = 2026; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 const SYMS = [["BTC", 67000, 0.1, 0.0003], ["ETH", 3400, 0.01, 0.0004], ["SOL", 160, 0.01, 0.0005], ["XRP", 0.6, 0.0001, -0.0004], ["DOGE", 0.15, 0.00001, 0.0005],
   ["LINK", 15, 0.001, -0.0005], ["AVAX", 30, 0.001, 0.0004], ["SUI", 1.8, 0.0001, 0.0006], ["ADA", 0.45, 0.0001, -0.0003], ["NEAR", 5, 0.001, 0.0005],
@@ -122,6 +125,7 @@ function github(route, u, G) {
 async function open(browser, o) {
   o = o || {};
   const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, colorScheme: "dark", timezoneId: "Africa/Casablanca" });
+  await ctx.clock.setSystemTime(NOW + (Date.now() - T0));
   const page = await ctx.newPage(), errors = [];
   page.on("pageerror", e => errors.push(String(e && e.stack || e)));
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|net::ERR|fonts\.g/.test(m.text())) errors.push("console: " + m.text()); });
@@ -278,7 +282,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const sl = prot.filter(n => /ZIG · long · stop à remonter/.test(n.title));
     ok(sl.length === 1 && sl[0].tag === "slx5" && /pour verrouiller \+\d/.test(sl[0].text), "long sécurisé au break-even et monté de 5 R : une alerte « stop à remonter » (" + (sl[0] ? sl[0].text : "aucune") + ")");
     ok(M.notes.length === 0 || M.notes[0].ch === "protect", "la protection passe avant les setups");
-    ok(set.every(n => /prêt à saisir · \d\/6 contrôles/.test(n.title) && !/%/.test(n.title) && /Entrée .* Stop .* TP1 /.test(n.text)), "alertes d'entrée : uniquement « prêt à saisir », avec entrée, stop et TP1 (" + set.length + (set[0] ? " · " + set[0].text.slice(0, 70) : "") + ")");
+    ok(set.every(n => /prêt à saisir · Level [12]$/.test(n.title) && !/%/.test(n.title) && /^Level [12], n°\d+ par capitalisation · \d\/6 contrôles · /.test(n.text) && /Entrée .* Stop .* TP1 /.test(n.text)), "alertes d'entrée : uniquement « prêt à saisir », avec entrée, stop et TP1 (" + set.length + (set[0] ? " · " + set[0].text.slice(0, 70) : "") + ")");
     ok(/contrôle de 1 position Binance et 5 trades suivis/.test(M.done), "résumé du contrôle : " + M.done);
     await page.reload(); await page.waitForFunction(() => document.getElementById("a-log") && !document.getElementById("a-log").hidden, null, { timeout: 15000 }).catch(() => {});
     const lg = await page.evaluate(() => ({ L: JSON.parse(localStorage.getItem("radar-bglog") || "[]"), shown: document.getElementById("a-log").hidden ? "" : document.getElementById("a-log").textContent }));
@@ -343,7 +347,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
 
   await test("P11", "Export Excel de l'historique Binance Futures", async ok => {
     /* 24 trades on 3 contracts over 30 days, one with a second entry, the last one still open; income rows built from the same fills */
-    const now = Date.now(), fills = [], inc = { REALIZED_PNL: [], COMMISSION: [], FUNDING_FEE: [] }, syms = ["SOLUSDT", "ETHUSDT", "BTCUSDT"], base = { SOLUSDT: 150, ETHUSDT: 3000, BTCUSDT: 60000 };
+    const now = NOW + (Date.now() - T0), fills = [], inc = { REALIZED_PNL: [], COMMISSION: [], FUNDING_FEE: [] }, syms = ["SOLUSDT", "ETHUSDT", "BTCUSDT"], base = { SOLUSDT: 150, ETHUSDT: 3000, BTCUSDT: 60000 };
     let id = 1, want = 0, nWant = 0;
     const fill = (sym, t, side, qty, price, rp) => { const fee = qty * price * 0.0005, f = { symbol: sym, id: id++, orderId: id * 7, time: t, side, qty: String(qty), price: String(price), quoteQty: String(qty * price), realizedPnl: String(rp), commission: String(fee), commissionAsset: "USDT", positionSide: "BOTH", maker: false };
       fills.push(f); inc.COMMISSION.push({ symbol: sym, time: t, income: String(-fee), asset: "USDT", tradeId: String(f.id) }); if (rp) inc.REALIZED_PNL.push({ symbol: sym, time: t, income: String(rp), asset: "USDT", tradeId: String(f.id) }); return -fee; };
@@ -552,6 +556,8 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
       al: JSON.parse(localStorage.getItem("radar-alerted") || "{}"), set: JSON.parse(localStorage.getItem("radar-settings")) }));
     ok(r1.ready.length > 0 && r1.ready.some(x => /Long$/.test(x)) && r1.ready.every(x => r1.notes.includes(x)), "filtre de la liste sur « Shorts » : chaque setup prêt notifié, longs compris (" + r1.ready.join(", ") + " · notifiés " + r1.notes.join(", ") + ")");
     ok(Object.values(r1.al).every(v => v && v.t > 0 && v.s > 0), "chaque alerte gardée avec l'heure du setup");
+    const raw = await page.evaluate(() => window.__M.notes.filter(n => n.ch === "setups" && /prêt à saisir/.test(n.title)).map(n => n.title + " | " + n.text.slice(0, 60)));
+    ok(raw.length > 0 && raw.every(t => /prêt à saisir · Level [1-5] \| Level [1-5], n°\d+ par capitalisation · /.test(t)), "notification avec le Level et le rang : « " + (raw[0] || "") + " »");
     ok(r1.set.amin === 15 && r1.set.nt46 === 1, "contrôle toutes les 30 min laissé par défaut : passe à 15 min (" + r1.set.amin + ")");
     await page.evaluate(() => { window.__M.notes = []; window.__M.done = null; window.bgScan(false, true); });
     await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
@@ -566,6 +572,8 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     /* in the app: the ready card says whether it was notified, or why not */
     const o2 = await open(browser, { session: { next: NOW + 9 * 60e3 }, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"2",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(o2.page);
+    const lc = await o2.page.$$eval("#view-scan .card .lvc", a => a.map(e => e.textContent));
+    ok(lc.length > 0 && lc.every(t => /^Level 1 · n°\d+$/.test(t)), "cartes du Level 1 : « " + lc.slice(0, 3).join(" », « ") + " »");
     const c1 = await o2.page.$$eval("#view-scan .alinfo", a => a.map(e => e.textContent));
     ok(c1.length > 0 && c1.every(t => /Pas de notification : le Level 1 n'est pas surveillé en arrière-plan\s*Surveiller le Level 1/.test(t)), "Level 1 non surveillé : « " + (c1[0] || "rien") + " »");
     if (SHOTS) { await o2.page.$eval("#view-scan .alinfo", e => e.closest(".stbox").scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p19-pas-surveille.png") }); }

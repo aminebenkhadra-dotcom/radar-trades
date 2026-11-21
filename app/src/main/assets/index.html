@@ -84,6 +84,7 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .stbox.watch{border-color:var(--accent);background:var(--accent-soft)} .stbox.watch>b{color:var(--accent)}
 .stbox.refused{border-color:var(--bad);background:var(--bad-soft)} .stbox.refused>b{color:var(--bad)}
 .stbox.incomplete>b{color:var(--muted)}
+.chips .lvc{color:var(--accent);font-weight:600}
 .alinfo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 4px} .alinfo.ok{color:var(--good)} .alinfo.no{color:var(--bad)} .alinfo button{padding:6px 12px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .blkbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:6px} .blkbox>b{font-family:var(--display);font-size:16px;color:var(--bad)} .blkbox[hidden]{display:none}
 .sim3{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 10px;font-size:12.5px;align-items:baseline}
@@ -1930,8 +1931,11 @@ function scan(m){
     if(top){none=p2.out.filter(function(r){return!r.plan});none.forEach(function(r){delete r.h4})}
     f.setups=good.length;f.deep=p2.out.length;f.near=good.filter(function(r){return r.dist<=0.5}).length;f.why={};
     p2.out.forEach(function(r){if(!r.plan){var k=r.why&&r.why[0]?r.why[0].t:"Aucune zone d'entrée exploitable";f.why[k]=(f.why[k]||0)+1}});
-    /* the 15-minute trigger only matters near the zone: read the closest setups first */
-    var pick=good.filter(function(r){return r.dist<=1}).concat(good.filter(function(r){return r.dist>1})).slice(0,20);
+    /* the 15-minute trigger only matters near the zone: read the setups near their zone first, the largest caps first among them.
+       21/11/2026: with Levels 3 to 5 ticked, the 20 places went to small caps by score and a Level 1-2 setup near its zone was
+       never read, so never « Prêt » nor notified. Scans of several levels read up to 30 */
+    var byCap=function(a,b){return(a.cap||9999)-(b.cap||9999)||rank(a,b)},multi=lvl.length>1&&hi>60;
+    var pick=good.filter(function(r){return r.dist<=1}).sort(byCap).concat(good.filter(function(r){return r.dist>1})).slice(0,multi?30:20);
     return pool(pick,4,function(r){
       return Promise.all([klines(r.full,"15m",500,60).catch(nul),
         get("depth?symbol="+encodeURIComponent(r.full)+"&limit=1000").catch(nul),
@@ -2130,7 +2134,7 @@ function card(r,n,force){
    +'<span class="ring" data-st="'+r.st+'" style="--v:'+(r.gates?passed(r)/6*100:r.score)+'"><b>'+(r.gates?passed(r)+"/6":r.score)+"</b></span>"
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span>"+(r.seen?'<span class="when">'+(r.st==="ready"&&r.rdy?"prêt à "+hmd(r.rdy):"reco à "+hmd(r.seen))+"</span>":"")+"</span>"
-   +'<span class="chips"><span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
+   +'<span class="chips">'+(r.cap&&lvAt(r.cap)?'<span class="lvc">'+lvName(lvAt(r.cap))+" · n°"+r.cap+"</span>":"")+'<span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
    +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan;finalize(r);
@@ -4946,8 +4950,9 @@ window.bgScan=function(t10,t50){
         if(!r.plan||r.st!=="ready")return;
         n++;var id=r.sym+(r.dir>0?"L":"S")+"r",z=r.sz,o=seen[id];if(o&&(!o.s||!r.seen||o.s===r.seen))return;seen[id]={t:now,s:r.seen||0};
         var cm=null;try{var cf=cfgOf(r);cm=cf?cfgMix(cf.key,"cfg"):null}catch(e){}
-        try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt à saisir · "+passed(r)+"/6 contrôles",
-          (cm?"Ce type de setup a atteint son TP1 "+fr(cm.win,0)+" fois sur 100 en 2 ans · ":"")+(ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")
+        var lvn=r.cap?lvAt(r.cap):"";
+        try{Android.notify(r.sym+" · "+(r.dir>0?"Long":"Short")+" prêt à saisir"+(lvn?" · "+lvName(lvn):""),
+          (r.cap?lvName(lvn)+", n°"+r.cap+" par capitalisation · ":"")+passed(r)+"/6 contrôles · "+(cm?"Ce type de setup a atteint son TP1 "+fr(cm.win,0)+" fois sur 100 en 2 ans · ":"")+(ms&&ms.side?(r.dir===ms.side?"Dans le sens du marché · ":"Contre la tendance du marché · "):"")+(r.tm&&S.tmode==="signal"?"Lundi ou mardi : jour historiquement faible · ":"")
           +"Entrée "+pp(r,r.plan.entry)+" · Stop "+pp(r,r.plan.sl)+" · TP1 "+pp(r,r.plan.tp1)+(z&&z.ok?" · "+fr(z.qty,z.qd)+" à x"+z.lev+" · perte max "+fr(z.loss,2)+" $":"")
           +" · repéré à "+new Date(r.seen||st.stamp).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),id,(r.cap?lvAt(r.cap)||m:m)+"~"+r.sym)}catch(e){}});
       try{localStorage.setItem("radar-alerted",JSON.stringify(seen))}catch(e){}

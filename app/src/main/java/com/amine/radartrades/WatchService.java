@@ -200,7 +200,8 @@ public class WatchService extends Service {
             return;
         }
         scanPending = false;
-        if (lock != null) lock.acquire(4 * 60 * 1000L);
+        /* released by done(); a scan of several Levels (up to 1000 cryptos) can take more than 4 minutes */
+        if (lock != null) lock.acquire(8 * 60 * 1000L);
         SharedPreferences p = getSharedPreferences(MainActivity.PREFS, MODE_PRIVATE);
         web.evaluateJavascript("window.bgScan&&window.bgScan(" + p.getBoolean("top10", false) + ","
                 + p.getBoolean("top50", false) + ")", null);
