@@ -1,0 +1,37 @@
+name: Longs and shorts check
+# Replays version 42 (app options) on the last weeks for the Levels 1-2, 3 and 4-5 and counts, per day, the ready setups of each side
+# and the checks that held the longs and the shorts back at their zone. Publishes to the branch side-check.
+on:
+  push:
+    branches: [side-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+      START: "2026-09"
+      END: "2026-11"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Universes
+        run: node tools/backtest/caps.js > caps.env && cut -c1-200 caps.env
+      - name: Fetch and replay
+        run: |
+          mkdir -p out
+          . ./caps.env
+          run() { n=$1; mkdir -p d-$n r-$n
+            SYMS=$2 node tools/backtest/fetch.js klines d-$n | tail -2
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js d-$n r-$n 2 $k/4 '{"funnel":true,"funnelWhy":true,"slsw":24,"slmode":"flag"}' & done; wait
+            node tools/backtest/side42.js r-$n 2026-11-08 > out/$n.json; head -c 1200 out/$n.json; echo; }
+          run lvl12 "$CAP12"
+          run lvl3 "BTCUSDT,$CAP3"
+          run lvl45 "BTCUSDT,$CAP45"
+          cp caps.env ranks.json out/
+      - name: Publish
+        run: |
+          cd out && git init -q -b side-check
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Longs and shorts check" && git push -q -f "$REMOTE" side-check

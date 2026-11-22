@@ -749,7 +749,10 @@ function btStep(S,n){
       var fc;if(bias(fd.length>90?fd.slice(-90):fd)===0)fc=0;
       else{var fr0=analyze(S.sym,fd,F.get("h4",200),F.get("h1",200),o.btc?{btc:o.btc[m[i].t]||null}:null,o);
         if(!fr0.plan)fc=fr0.st==="none"?1:2;else if(fr0.dist>1)fc=3;else if(fr0.dist>0.5)fc=4;
-        else{enrich(fr0,F.m15(500),null,null,{noHeat:true});judge(fr0,jo);fc=fr0.st==="ready"?7:fr0.st0==="ready"?6:5}}
+        else{enrich(fr0,F.m15(500),null,null,{noHeat:true});judge(fr0,o.funnelWhy?{noBook:true}:jo);fc=fr0.st==="ready"?7:fr0.st0==="ready"?6:5}}
+      /* o.funnelWhy (study only): the side of each step (L long, S short, - none) and, at the zone, the checks that fail or the blockers */
+      if(o.funnelWhy){S.fd=S.fd||[];S.fw=S.fw||{};S.fd.push(fr0&&fr0.dir?(fr0.dir>0?"L":"S"):"-");
+        if(fc>=5)S.fw[S.fn.length]=fc===6?"blk:"+(fr0.blk||[]).map(function(b){return b.k}).join("+"):(fr0.gates||[]).filter(function(g){return!g.ok}).map(function(g){return g.k}).join("+")}
       S.fn.push(fc);S.evals++;continue}
     if(i<BT_WARM||i<S.free)continue;
     var d1=F.get("d1",400);if(d1.length<55)continue;

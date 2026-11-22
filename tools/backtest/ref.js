@@ -14,7 +14,7 @@ syms.filter(s => !SKIP[s]).forEach((sym, idx) => {
   while (!E.btStep(S, 5000)) { }
   evals += S.evals; S.trades.forEach(t => trades.push(Object.assign({ sym: S.sym }, t)));
   (S.shadow || []).forEach(t => shadow.push(Object.assign({ sym: S.sym }, t)));
-  if (S.fn) fn[S.sym] = { t0: S.first, s: S.fn.join("") };
+  if (S.fn) fn[S.sym] = Object.assign({ t0: S.first, s: S.fn.join("") }, S.fd ? { d: S.fd.join(""), w: S.fw } : {});
 });
 const tag = process.env.TAG || ("ref-" + STRICT + (process.argv[6] ? "x" : ""));
 fs.writeFileSync(path.join(OUT, tag + "-" + PART[0] + ".json"), JSON.stringify(EXTRA.funnel ? { evals, fn } : { trades, evals, shadow }));
