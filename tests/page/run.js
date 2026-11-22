@@ -124,6 +124,11 @@ function github(route, u, G) {
   }
   return send(405, {});
 }
+/* goes to a page the way a user does: back to the home page, then its tile */
+async function nav(page, v) {
+  if (!(await page.isVisible("#view-home"))) { await page.click("#back"); await page.waitForSelector("#view-home:not([hidden])", { timeout: 10000 }); }
+  await page.click('#view-home [data-go="' + v + '"]');
+}
 async function open(browser, o) {
   o = o || {};
   const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, colorScheme: "dark", timezoneId: "Africa/Casablanca" });
@@ -153,7 +158,8 @@ async function open(browser, o) {
     if (p.startsWith("/bspot/") || p.startsWith("/mexc/")) return json([]);
     return route.fulfill({ status: 503, body: "" });
   });
-  await page.goto("https://radar.local/" + (o.suffix || ""));
+  if (!o.simple) await page.addInitScript(`try{localStorage.setItem("radar-vue","detail")}catch(e){}`);
+  await page.goto("https://radar.local/" + (o.suffix || "") + (o.suffix || o.home ? "" : "#" + (o.at || "l1")));
   return { ctx, page, errors };
 }
 const results = [];
@@ -209,6 +215,9 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
 
   await test("P3", "Profil : rien n'est changé en silence, la confirmation est explicite", async ok => {
     const { ctx, page, errors } = await open(browser, { init: `if(!localStorage.getItem("radar-settings"))localStorage.setItem("radar-settings",JSON.stringify({risk:2,lev:7,margin:20,account:1500,acsync:false}))` });
+    /* « Vérifier » on the banner of the level leads to the risk profile, now on the settings page */
+    await page.waitForSelector("#prof-go", { timeout: 20000 }); await page.click("#prof-go"); await page.waitForSelector("#view-set:not([hidden])", { timeout: 10000 });
+    ok(await page.isVisible("#prof-ok"), "« Vérifier » ouvre la page Réglages sur le profil de risque");
     const v = await page.evaluate(() => ({ lev: document.getElementById("f-lev").value, risk: document.getElementById("f-risk").value, margin: document.getElementById("f-margin").value, open: document.getElementById("prof").open, sim: document.getElementById("prof-sim").textContent }));
     ok(v.lev === "7" && v.risk === "2" && v.margin === "20", "réglages existants conservés (levier x7, 2 %, marge 20 %)");
     ok(v.open && /à confirmer/.test(await page.textContent("#prof-badge")), "profil ouvert et marqué « à confirmer »");
@@ -327,9 +336,10 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
   await test("P10", "Tous les onglets s'ouvrent sans erreur", async ok => {
     const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [] } } });
     await waitScan(page);
-    const tabs = await page.$$eval(".tabs button", a => a.map(b => b.dataset.v));
-    for (const v of tabs) { await page.click('.tabs button[data-v="' + v + '"]'); await page.waitForTimeout(700); }
-    await page.click('.tabs button[data-v="one"]'); await page.fill("#one-sym", "SOL"); await page.click("#one-form button");
+    await page.click("#back"); await page.waitForSelector("#view-home:not([hidden])");
+    const tabs = await page.$$eval("#view-home .hm-l, #view-home .hm-t", a => a.map(b => b.dataset.go));
+    for (const v of tabs) { await nav(page, v); await page.waitForTimeout(700); }
+    await nav(page, "one"); await page.fill("#one-sym", "SOL"); await page.click("#one-form button");
     await page.waitForFunction(() => /Setup|Pas de trade/.test(document.getElementById("one-out").textContent), null, { timeout: 30000 });
     const v = await page.textContent("#one-out .verdict");
     ok(/prêt selon les règles|à surveiller|refusé|données incomplètes|Pas de trade/i.test(v), "Analyser SOL : « " + v.trim() + " »");
@@ -342,7 +352,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     }
     ok(/\d+ %de ces setups ont atteint le TP1/.test(cf.replace(/\s+/g, "")) || /\d+ %\s*de ces setups ont atteint le TP1/.test(cf), tried[tried.length - 1] + " : " + cf.replace(/\s+/g, " ").slice(24, 170) + "…");
     if (SHOTS) { await page.$eval("#one-out .cfg", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p10-config.png") }); }
-    ok(tabs.length === 20, tabs.length + " onglets parcourus, plus l'analyse d'une crypto");
+    ok(tabs.length === 21, tabs.length + " pages ouvertes depuis l'accueil, plus l'analyse d'une crypto");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -363,7 +373,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
       inc.FUNDING_FEE.push({ symbol: sym, time: t0 + 2 * 36e5, income: "-0.05", asset: "USDT" }); net -= 0.05; if (t0 + 5 * 36e5 >= now - 30 * 864e5 + 6e4) { want += net; nWant++; }
     }
     const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, fills, inc }, suffix: "#res" });
-    await page.click('.tabs button[data-v="res"]').catch(() => {});
+    await nav(page, "res").catch(() => {});
     await page.waitForSelector('[data-xp="30"]', { timeout: 20000 });
     ok(true, "bouton « Exporter en Excel · 30 jours » dans Résultats");
     await page.click('[data-xp="30"]');
@@ -394,13 +404,13 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const hit = Object.assign({}, old, { id: "a1", sl: 0, tp: ex + (far - ex) * 0.5 });
     const live = { id: "m1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: last("ETHUSDT") * 0.99, qty: 0.5, sl: last("ETHUSDT") * 0.95, tp: last("ETHUSDT") * 1.08, t: NOW - 36e5 };
     const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("seeded")){sessionStorage.setItem("seeded","1");localStorage.setItem("radar-after",${JSON.stringify(JSON.stringify([old, hit]))});localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([live, { id: "m2", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 1, sl: last("ZIGUSDT") * 0.88, tp: last("ZIGUSDT") * 1.01, t: NOW - 5 * 36e5 }, { id: "m3", sym: "LVL", full: "LVLUSDT", dir: 1, entry: last("LVLUSDT") * 0.997, qty: 1, sl: last("LVLUSDT") * 0.975, tp: last("LVLUSDT") * 1.07, t: NOW - 5 * 36e5 }, { id: "m4", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: last("ZIGUSDT") * 0.9, qty: 2, sl: last("ZIGUSDT") * 0.902, r0: last("ZIGUSDT") * 0.02, tp: last("ZIGUSDT") * 1.3, t: NOW - 5 * 36e5 }]))})}` });
-    await page.click('.tabs button[data-v="aft"]');
+    await nav(page, "aft");
     await page.waitForFunction(() => document.querySelectorAll("#view-aft .af").length === 2 && !/lecture…/.test(document.querySelector("#view-aft").textContent), null, { timeout: 20000 });
     const cards = await page.$$eval("#view-aft .af", a => a.map(e => e.textContent.replace(/\s+/g, " ")));
     const want = (last("SOLUSDT") - ex) * d * 10, got = await page.$eval("#view-aft .af .net", e => parseFloat(e.textContent.replace(/[^0-9,+\-−]/g, "").replace("−", "-").replace(",", ".")));
     ok(/Si tu étais resté/.test(cards[0]) && Math.abs(got - want) < 0.02, "trade gardé en cours : " + got + " $ de plus en restant (attendu " + want.toFixed(2) + ")");
     ok(/TP touché\s*sortie trop tôt/.test(cards[1]) && /objectif à .* a été atteint/.test(cards[1]), "objectif atteint après la sortie : « TP touché · sortie trop tôt »");
-    await page.click('.tabs button[data-v="trades"]');
+    await nav(page, "trades");
     await page.waitForFunction(() => /\$/.test((document.querySelector("#net-m1") || {}).textContent || ""), null, { timeout: 20000 });
     await page.waitForFunction(() => /Fiabilité \d+ % · (Sortir|Attendre)/.test((document.querySelector("#fi-m1") || {}).textContent || ""), null, { timeout: 60000 }).catch(() => {});
     const fi = await page.evaluate(() => [document.querySelector("#fi-m1").textContent, document.querySelector("#fx-m1").textContent]);
@@ -427,7 +437,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await page.click('[data-close="m1"]'); await page.click('[data-close="m1"]');
     const st = await page.evaluate(() => ({ t: JSON.parse(localStorage.getItem("radar-trades")), a: JSON.parse(localStorage.getItem("radar-after")) }));
     ok(st.t.length === 4 && st.t[0].closed && st.a.length === 3 && st.a[0].sym === "ETH" && st.a[0].exit === st.t[0].exit, "clôture dans Mes trades : le trade arrive dans Après sortie avec son prix de sortie");
-    await page.click('.tabs button[data-v="aft"]');
+    await nav(page, "aft");
     await page.waitForFunction(() => document.querySelectorAll("#view-aft .af").length === 3, null, { timeout: 20000 });
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p12-apres.png"), fullPage: true });
     await page.click('[data-adel="a1"]'); await page.click('[data-adel="a1"]');
@@ -439,14 +449,14 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
 
   await test("P13", "Après sortie : une position Binance fermée y arrive avec son vrai prix de sortie", async ok => {
     const { ctx, page, errors } = await open(browser, { session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [{ symbol: "SOLUSDT", side: "SELL", positionSide: "BOTH", type: "STOP_MARKET", stopPrice: "140", origQty: "0", closePosition: "true" }] } }, suffix: "#trades" });
-    await page.click('.tabs button[data-v="trades"]').catch(() => {});
+    await nav(page, "trades").catch(() => {});
     await page.waitForSelector("#view-trades .lv", { timeout: 30000 });
     const p0 = { dir: 1, qty: 10 }, exit = +(last("SOLUSDT") * 1.004).toFixed(3);
     await page.evaluate(x => { window.__M.pos = []; window.__M.fills = [{ symbol: "SOLUSDT", id: 9, orderId: 9, time: Date.now() - 2000, side: "SELL", qty: String(x.qty), price: String(x.exit), quoteQty: "0", realizedPnl: "3.2", commission: "0.1", commissionAsset: "USDT", positionSide: "BOTH" }]; }, { qty: p0.qty, exit });
     await page.waitForFunction(() => JSON.parse(localStorage.getItem("radar-after") || "[]").length === 1, null, { timeout: 45000 });
     let a = await page.evaluate(() => JSON.parse(localStorage.getItem("radar-after") || "[]"));
     ok(a.length === 1 && a[0].sym === "SOL" && a[0].approx && a[0].src === "binance" && a[0].sl === 140 && a[0].qty === p0.qty, "position disparue : ajoutée à Après sortie avec son stop et sa taille");
-    await page.click('.tabs button[data-v="aft"]');
+    await nav(page, "aft");
     await page.waitForFunction(() => { const x = JSON.parse(localStorage.getItem("radar-after") || "[]")[0]; return x && !x.approx && x.chk; }, null, { timeout: 20000 });
     a = await page.evaluate(() => JSON.parse(localStorage.getItem("radar-after")));
     ok(Math.abs(a[0].exit - exit) < 1e-6, "prix de sortie exact lu dans les exécutions Binance : " + a[0].exit);
@@ -462,7 +472,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     /* 1. the phone: Binance keys, one position with its stop, one trade followed by hand, risk set to 1.5 % */
     const ph = await open(browser, { gh: G, session: { keys: { binance: true }, pos: POS, ord: { SOLUSDT: [{ symbol: "SOLUSDT", side: "SELL", positionSide: "BOTH", type: "STOP_MARKET", stopPrice: "140", origQty: "0", closePosition: "true" }] } }, suffix: "#trades",
       init: `if(!sessionStorage.getItem("i")){sessionStorage.setItem("i","1");localStorage.setItem("radar-sync",${JSON.stringify(cfg)});localStorage.setItem("radar-settings",JSON.stringify({risk:1.5,atr:true,nt43:1,nt44:1,profOk:true,account:1000}));localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify([tr]))})}` });
-    await ph.page.click('.tabs button[data-v="trades"]').catch(() => {});
+    await nav(ph.page, "trades").catch(() => {});
     ok(await wait(d => d["radar-live-view"] && d["radar-live-view"].list.length === 1 && d["radar-trades"].length === 1), "téléphone : réglages, trade suivi et copie de la position envoyés dans le dépôt");
     const d1 = data();
     ok(d1["radar-settings"].risk === 1.5 && d1["radar-settings"].atr === undefined && d1["radar-live-view"].list[0].sl === 140, "réglages envoyés sans les interrupteurs d'alerte ; stop de la position dans la copie");
@@ -474,7 +484,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const ws = await web.page.evaluate(() => JSON.parse(localStorage.getItem("radar-settings")));
     ok(ws.risk === 1.5 && ws.account === 1000 && ws.atr === false, "Chrome : reçoit le trade et les réglages du téléphone, garde son propre interrupteur d'alerte");
     await web.page.waitForFunction(() => document.querySelector('.tabs button[data-v="trades"]'), null, { timeout: 20000 });
-    await web.page.click('.tabs button[data-v="trades"]');
+    await nav(web.page, "trades");
     await web.page.waitForFunction(() => /copie de ton téléphone/.test(document.querySelector("#view-trades").textContent) && document.querySelector("#net-cpbnSOLUSDTL") && /\$/.test(document.querySelector("#net-cpbnSOLUSDTL").textContent), null, { timeout: 40000 });
     ok(true, "Chrome : position Binance affichée en copie, avec son gain en direct");
     await web.page.waitForFunction(() => /Fiabilité/.test((document.querySelector("#fi-cpbnSOLUSDTL") || {}).textContent || ""), null, { timeout: 60000 }).catch(() => {});
@@ -502,7 +512,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const opened = () => page.evaluate(x => { const b = document.querySelector('#view-scan button.row[data-s="' + x[0] + '"]'), a = b && b.closest("article"); return { sel: document.querySelector('.tabs button[data-v="' + x[1] + '"]').getAttribute("aria-selected"), vis: !document.querySelector("#view-scan").hidden, flash: !!a && a.classList.contains("flash"), exp: b ? b.getAttribute("aria-expanded") : null, box: !!a && !!a.querySelector(".stbox") }; }, [s, mode]);
     const before = await opened();
     /* 1. the app is already open on another tab: Android calls window.openTab with the notification's target */
-    await page.click('.tabs button[data-v="trades"]');
+    await nav(page, "trades");
     await page.evaluate(x => { window.__scans = 0; window.openTab(x[1] + "~" + x[0]); }, [s, mode]);
     await page.waitForFunction(x => { const b = document.querySelector('#view-scan button.row[data-s="' + x + '"]'); return b && b.closest("article").classList.contains("flash"); }, s, { timeout: 15000 }).catch(() => {});
     const a1 = await opened();
@@ -523,7 +533,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const tr = [{ id: "e1", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: L, qty: 10, sl: lo * 1.0005, tp: L * 1.05, t: t0 + 60e3 },
       { id: "e2", sym: "ZIG", full: "ZIGUSDT", dir: 1, entry: L, qty: 10, sl: lo * 0.95, tp: L * 1.05, t: t0 + 60e3 }];
     const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))})}` });
-    await page.click('.tabs button[data-v="trades"]');
+    await nav(page, "trades");
     await page.waitForFunction(() => ["e1", "e2"].every(id => /vérifié à/.test((document.querySelector("#hl-" + id) || {}).textContent || "")), null, { timeout: 60000 }).catch(() => {});
     const h = await page.evaluate(() => [document.querySelector("#hl-e1").textContent, document.querySelector("#hl-e2").textContent]);
     ok(/Stop exposé : creux récent à .*juste derrière ton stop.*Stop plus sûr : .*réduis la position à .* de moins\)/.test(h[0].replace(/\s+/g, " ")), "stop collé au dernier creux : « " + (h[0].match(/Stop exposé[^)]*\)/) || ["rien"])[0] + " »");
@@ -613,13 +623,78 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await o2.ctx.close();
   });
 
+  await test("P21", "Accueil et vue simple : pages en un appui, cryptos en vert, orange ou rouge, détail à la demande", async ok => {
+    const set = `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}`;
+    const { ctx, page, errors } = await open(browser, { home: true, simple: true, init: set });
+    await page.waitForSelector("#view-home:not([hidden])", { timeout: 15000 });
+    const h = await page.evaluate(() => ({ title: document.getElementById("title").textContent, back: document.getElementById("back").hidden, scanHidden: document.getElementById("view-scan").hidden,
+      lv: [...document.querySelectorAll("#hm-lv .hm-l")].map(b => b.dataset.go + ":" + b.querySelector("b").textContent), tiles: [...document.querySelectorAll("#view-home .hm-t")].map(b => b.dataset.go), tabsShown: !document.querySelector(".tabs").hidden }));
+    ok(h.title === "Radar Trades" && h.back && h.scanHidden && !h.tabsShown, "l'appli s'ouvre sur l'accueil, sans la barre d'onglets");
+    ok(h.lv.join() === "l1:Level 1,l2:Level 2,l3:Level 3,l4:Level 4,l5:Level 5" && h.tiles.length === 16, "accueil : 5 Levels et " + h.tiles.length + " pages (" + h.tiles.join(", ") + ")");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p21-accueil.png") });
+    /* a level: the cryptos in colour */
+    await page.click('#hm-lv [data-go="l1"]'); await waitScan(page);
+    await page.waitForFunction(() => document.querySelectorAll("#sgrid .sg").length > 0, null, { timeout: 30000 });
+    const g = await page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, col = r => r.plan && r.st === "ready" ? "g" : r.plan && (r.st === "watch" || r.st === "incomplete") ? "o" : "r";
+      const tiles = [...document.querySelectorAll("#sgrid .sg")].map(b => ({ s: b.dataset.sg, c: ["g", "o", "r"].find(c => b.classList.contains("k" + c)) }));
+      return { title: document.getElementById("title").textContent, back: !document.getElementById("back").hidden, detHidden: document.getElementById("vdet").hidden, tiles, want: Object.fromEntries(R.map(r => [r.sym, col(r)])), leg: document.getElementById("sleg").textContent }; });
+    const okCol = g.tiles.length === Object.keys(g.want).length && g.tiles.every(x => g.want[x.s] === x.c), cnt = c => g.tiles.filter(x => x.c === c).length;
+    ok(g.title === "Level 1" && g.back && g.detHidden, "Level 1 : titre, retour vers l'accueil, listes détaillées masquées");
+    ok(okCol && cnt("g") > 0, "chaque crypto dans sa couleur : " + cnt("g") + " vert, " + cnt("o") + " orange, " + cnt("r") + " rouge (" + g.tiles.map(x => x.s + ":" + x.c).join(" ") + ")");
+    ok(g.tiles.map(x => x.c).join("") === g.tiles.map(x => x.c).sort((a, b) => "gor".indexOf(a) - "gor".indexOf(b)).join(""), "verts d'abord, puis orange, puis rouge");
+    ok(new RegExp("^" + cnt("g") + "Prêts?" + cnt("o") + "En cours" + cnt("r") + "Pas de trade$").test(g.leg), "légende : « " + g.leg + " »");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p21-level.png") });
+    /* one crypto: a few words, then the detail on demand */
+    const green = g.tiles.find(x => x.c === "g").s;
+    await page.click('#sgrid [data-sg="' + green + '"]');
+    const b = await page.evaluate(() => { const e = document.querySelector("#spick .brief"); return e && { cls: e.className, t: e.textContent, card: !!document.querySelector("#spick article.card") }; });
+    ok(b && /brief kg/.test(b.cls) && new RegExp("^" + green).test(b.t) && /Prêt/.test(b.t) && /Entrée .*Stop .*TP1 /.test(b.t) && !b.card, green + " : « " + (b ? b.t.replace(/\s+/g, " ").slice(0, 110) : "rien") + " »");
+    if (SHOTS) { await page.$eval("#spick", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p21-resume.png") }); }
+    await page.click('#spick [data-det="scan"]');
+    const d = await page.evaluate(() => ({ card: !!document.querySelector("#spick article.card .detail"), cv: !!document.querySelector("#spick canvas#cv") }));
+    ok(d.card && d.cv, "« Voir le détail » : la carte complète, graphique compris");
+    const red = g.tiles.find(x => x.c === "r");
+    if (red) { await page.click('#sgrid [data-sg="' + red.s + '"]'); const t = await page.textContent("#spick .brief");
+      ok(/Pas de trade/.test(t) && !/Entrée /.test(t), red.s + " en rouge : « " + t.replace(/\s+/g, " ").slice(0, 100) + " »"); }
+    /* back: the header button, and Android's back key (history) */
+    await page.click("#back"); await page.waitForSelector("#view-home:not([hidden])");
+    const c1 = await page.$eval('#hm-lv [data-go="l1"] .hm-c', e => [...e.querySelectorAll("i")].map(i => i.className + i.textContent).join(" "));
+    ok(c1 === "kg" + cnt("g") + " ko" + cnt("o") + " kr" + cnt("r"), "accueil : le Level 1 affiche ses comptes (" + c1 + ")");
+    await nav(page, "trades"); await page.goBack(); await page.waitForSelector("#view-home:not([hidden])", { timeout: 5000 }).catch(() => {});
+    ok(await page.isVisible("#view-home"), "touche retour d'Android (historique) : retour à l'accueil");
+    /* the Analyser from the home page: the short answer, the detail on demand */
+    await page.fill("#hm-sym", "SUI"); await page.click("#hm-one button");
+    await page.waitForFunction(() => document.querySelector("#one-out .brief"), null, { timeout: 30000 });
+    const o = await page.evaluate(() => ({ title: document.getElementById("title").textContent, t: document.querySelector("#one-out .brief").textContent, verdict: !!document.querySelector("#one-out .verdict") }));
+    ok(o.title === "Analyser" && /^SUI/.test(o.t) && /Prêt|En cours|Pas de trade/.test(o.t) && !o.verdict, "Analyser depuis l'accueil : « " + o.t.replace(/\s+/g, " ").slice(0, 90) + " »");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p21-analyser.png") });
+    await page.click('#one-out [data-det="one"]');
+    ok(await page.isVisible("#one-out .verdict"), "« Voir le détail » : l'analyse complète");
+    /* « Vue détaillée » brings the old lists back */
+    await nav(page, "l1"); await page.click("#vtog");
+    ok(await page.isVisible("#top article.card") && !(await page.isVisible("#sgrid")), "« Vue détaillée » : les listes complètes reviennent");
+    await page.click("#vtog");
+    ok(await page.isVisible("#sgrid .sg"), "« Vue simple » : retour à la grille");
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+    /* a notification in the simple view: its crypto opens below the grid, the home page one step back */
+    const n = await open(browser, { simple: true, at: "l1~" + green, init: set });
+    await n.page.waitForFunction(() => document.querySelector("#spick .brief"), null, { timeout: 40000 });
+    const nb = await n.page.evaluate(() => ({ t: document.querySelector("#spick .brief b").textContent, pressed: (document.querySelector('#sgrid [aria-pressed="true"]') || {}).dataset }));
+    ok(nb.t === green, "notification sur " + green + " : son résumé s'ouvre sous la grille");
+    await n.page.goBack(); await n.page.waitForSelector("#view-home:not([hidden])", { timeout: 5000 }).catch(() => {});
+    ok(await n.page.isVisible("#view-home"), "retour depuis la notification : l'accueil");
+    ok(n.errors.length === 0, "aucune erreur JavaScript" + (n.errors.length ? " : " + n.errors.slice(0, 3).join(" / ") : ""));
+    await n.ctx.close();
+  });
+
   await test("P17", "Mise à jour du 17/11 : Levels, heure de la reco, périodes, cycle, temporalité, exposition, après sortie, actus, capital", async ok => {
     const L = last("ETHUSDT"), A = last("SOLUSDT");
     const tr = [{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: L, qty: 1, sl: L * 0.98, tp: L * 1.04, t: NOW - 36e5 }, { id: "x2", sym: "SOL", full: "SOLUSDT", dir: -1, entry: A, qty: 10, sl: A * 1.02, tp: A * 0.95, t: NOW - 36e5 }];
     const m = MARKET.SOLUSDT.m, at = m.length - 96 * 2, ex = m[at].o;
     const af = [{ id: "s1", sym: "SOL", full: "SOLUSDT", dir: 1, entry: ex * 1.02, qty: 1, sl: ex, tp: ex * 1.5, r0: ex * 0.02, tc: m[at].t, exit: ex, net: -2, src: "main", out: null, at: 0, hi: 0, lo: 0, last: 0 }];
     const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))});localStorage.setItem("radar-after",${JSON.stringify(JSON.stringify(af))});localStorage.setItem("radar-settings",JSON.stringify({account:1000,fee:0.05,profOk:true,nt45:1}))}` });
-    const tabs = await page.$$eval('.tabs button[data-v^="l"]', a => a.map(b => b.textContent));
+    const tabs = await page.$$eval("#lvseg button", a => a.map(b => b.textContent));
     ok(tabs.join() === "Level 1,Level 2,Level 3,Level 4,Level 5", "onglets du scanner : " + tabs.join(" · "));
     await waitScan(page);
     const l1 = await page.evaluate(() => ({ syms: JSON.parse(localStorage.getItem("radar-last-l1")).results.map(r => r.sym), caps: JSON.parse(localStorage.getItem("radar-last-l1")).results.map(r => r.cap), fd: (() => { const e = document.getElementById("fdet"); e.open = true; return e.textContent.replace(/\s+/g, " "); })() }));
@@ -627,27 +702,27 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(/12\s*cryptos du Level 1/.test(l1.fd) && /10\s*cotées sur Binance Futures/.test(l1.fd) && /2 sans contrat USDT perpétuel, ou stablecoins/.test(l1.fd), "détail du scan : 12 dans le Level, 10 cotées, 2 stablecoins écartés");
     const when = await page.$$eval("#view-scan .tags .when", a => a.map(e => e.textContent));
     ok(when.length > 0 && when.every(t => /^(reco|prêt) à \d\d:\d\d$/.test(t)), "heure de la reco sur chaque setup : « " + when[0] + " »");
-    await page.click('.tabs button[data-v="l2"]'); await waitScan(page);
+    await nav(page, "l2"); await waitScan(page);
     const l2 = await page.evaluate(() => JSON.parse(localStorage.getItem("radar-last-l2")).results.map(r => r.sym + ":" + r.cap).sort());
     ok(l2.join() === "APT:45,ARB:52", "Level 2 (31e à 60e) : " + l2.join(", "));
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p17-level2.png") });
-    await page.click('.tabs button[data-v="mkt"]');
+    await nav(page, "mkt");
     await page.waitForFunction(() => document.querySelectorAll("#view-mkt .spr:not(.hd)").length >= 4, null, { timeout: 60000 }).catch(() => {});
     const sp = await page.$$eval("#view-mkt .spr:not(.hd) b", a => a.map(e => e.textContent).filter(t => /^[A-Z]/.test(t)));
     const bc = await page.$eval("#view-mkt", e => e.textContent);
     ok(["Aujourd'hui", "Semaine", "Mois", "Trimestre", "Année"].every(x => sp.includes(x)) && /Largeur du marché sur 90 jours/.test(bc), "Tendance : jour, semaine, mois, 90 jours et année ; largeur du marché sur 90 jours");
     if (SHOTS) { await page.$eval("#view-mkt .spr", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p17-periodes.png") }); }
-    await page.click('.tabs button[data-v="cyc"]');
+    await nav(page, "cyc");
     await page.waitForFunction(() => document.querySelectorAll("#view-cyc .cyd").length === 5, null, { timeout: 60000 }).catch(() => {});
     const cy = await page.$$eval("#view-cyc .cyd", a => a.map(e => e.textContent.replace(/\s+/g, " ")));
     ok(cy.length === 5 && /Fenêtre des sommets.*avril 2025 → octobre 2025/.test(cy[1]) && /Zone des creux.*octobre 2026 → octobre 2027.*en cours.*fin projetée/.test(cy[3]), "Cycle : dates projetées, phase en cours « " + (cy.find(x => /en cours/.test(x)) || "?") + " »");
     if (SHOTS) { await page.$eval("#view-cyc .cyd", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p17-cycle.png") }); }
-    await page.click('.tabs button[data-v="tmp"]');
+    await nav(page, "tmp");
     await page.waitForFunction(() => /Décision pour un trade maintenant/.test(document.getElementById("view-tmp").textContent), null, { timeout: 30000 }).catch(() => {});
     const tp = await page.evaluate(() => ({ g: (document.querySelector("#view-tmp .gbig") || {}).textContent, det: !!document.querySelector("#view-tmp details.set:not([open])") }));
     ok(/^(Feu vert|Prudence : jour faible|Feu vert, marché calme|Pas de nouveau trade aujourd'hui)/.test(tp.g || "") && tp.det, "Temporalité : décision « " + tp.g + " », mesures repliées dessous");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p17-temporalite.png") });
-    await page.click('.tabs button[data-v="trades"]');
+    await nav(page, "trades");
     await page.waitForFunction(() => /risqué si tous les stops/.test((document.getElementById("expo") || {}).textContent || ""), null, { timeout: 20000 }).catch(() => {});
     const xp = await page.evaluate(() => [document.getElementById("expo").textContent.replace(/\s+/g, " "), [...document.querySelectorAll("#view-trades .lvt")].map(e => e.textContent.replace(/\s+/g, " "))]);
     const fee = 0.0005, leg = (e, d, p, q) => (p - e) * d * q - (e + p) * q * fee, risk = leg(L, 1, L * 0.98, 1) + leg(A, -1, A * 1.02, 10), gain = leg(L, 1, L * 1.04, 1) + leg(A, -1, A * 0.95, 10);
@@ -655,7 +730,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(Math.abs(num(xp[0], "risqué") - risk) < 0.02 && Math.abs(num(xp[0], "gain si") - gain) < 0.02, "exposition totale : " + risk.toFixed(2) + " $ risqués, +" + gain.toFixed(2) + " $ de gain potentiel, frais compris");
     ok(xp[1].length === 2 && xp[1].every(t => /Au stop.*Au TP/.test(t)), "chaque trade : perte au stop et gain au TP (« " + xp[1][0].slice(0, 70) + " »)");
     if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: path.join(SHOTS, "p17-exposition.png") }); }
-    await page.click('.tabs button[data-v="aft"]');
+    await nav(page, "aft");
     await page.waitForFunction(() => document.querySelector("#view-aft .af .afv") && !/lecture…/.test(document.getElementById("view-aft").textContent), null, { timeout: 20000 }).catch(() => {});
     const av = await page.evaluate(() => [document.querySelector("#view-aft .af .afv").textContent, document.querySelector("#view-aft .funnel").textContent.replace(/\s+/g, " ")]);
     ok(/^(SL touché sorti par ton stop · TP surveillé|TP touché après ton stop : stop trop serré)$/.test(av[0].trim()) && /TP touché.*SL touché.*en cours/.test(av[1]), "après sortie, trade sorti par son stop : « " + av[0].trim() + " » ; compteurs TP / SL / en cours");

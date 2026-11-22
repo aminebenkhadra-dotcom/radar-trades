@@ -338,3 +338,17 @@ script `tools/backtest/side42.js`, option d'étude `funnelWhy` du moteur) :
 Ajouté : sur la ligne du marché, « Longs en pause : Bitcoin baisse sur 4H » (ou « Shorts en pause », ou les deux) quand le contrôle
 « Marché » bloque tout un côté. Test de page P20 (marché simulé avec un Bitcoin en baisse). Carte de setup : le rang n'apparaît
 plus deux fois (« Level 1 · n°11 » remplace « Cap. n°11 »).
+
+## Mise à jour du 22/11/2026 : page d'accueil et vue simple
+
+- L'appli s'ouvre sur une page d'accueil : les 5 Levels (avec, pour chacun, le nombre de cryptos prêtes, en cours et sans trade
+  au dernier scan), un champ « Analyser une crypto », puis des tuiles pour Mes trades, Après sortie, Résultats, Tendance, Cycle,
+  Temporalité, Actus, Heatmaps, Analyser, Fondamental, Simulateur, Portefeuille, Capital, Earn et Réglages. La barre d'onglets
+  n'est plus affichée. Chaque page a un bouton retour ; la touche retour d'Android revient à l'accueil (historique du navigateur).
+- Réglages (alertes, précision, profil de risque, sauvegarde) : une page à part. « Vérifier » du bandeau de profil y mène.
+- Vue simple d'un Level : la grille des cryptos, verte si prête, orange si en cours (setup en formation ou données pas toutes
+  lues), rouge sinon (pas de setup, ou setup refusé). Un appui : un résumé (sens, raison en une ligne, entrée, stop, TP1) ;
+  « Voir le détail » : la carte complète. « Vue détaillée » rend les anciennes listes (`radar-vue` dans le stockage local).
+- Analyser : le même résumé d'abord, l'analyse complète derrière « Voir le détail ».
+- Une notification ouvre toujours son trade (résumé sous la grille), avec l'accueil un pas en arrière.
+- Tests : `open()` arrive sur le Level 1 en vue détaillée sauf `home` / `simple` ; navigation par `nav()` via l'accueil ; P21.
