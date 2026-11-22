@@ -84,6 +84,7 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .stbox.watch{border-color:var(--accent);background:var(--accent-soft)} .stbox.watch>b{color:var(--accent)}
 .stbox.refused{border-color:var(--bad);background:var(--bad-soft)} .stbox.refused>b{color:var(--bad)}
 .stbox.incomplete>b{color:var(--muted)}
+.mline .mst.gate{color:var(--accent);font-weight:600}
 .chips .lvc{color:var(--accent);font-weight:600}
 .alinfo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 4px} .alinfo.ok{color:var(--good)} .alinfo.no{color:var(--bad)} .alinfo button{padding:6px 12px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .blkbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:6px} .blkbox>b{font-family:var(--display);font-size:16px;color:var(--bad)} .blkbox[hidden]{display:none}
@@ -2138,7 +2139,7 @@ function card(r,n,force){
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span>"+(r.seen?'<span class="when">'+(r.st==="ready"&&r.rdy?"prêt à "+hmd(r.rdy):"reco à "+hmd(r.seen))+"</span>":"")+"</span>"
    +'<span class="chips">'+(r.cap&&lvAt(r.cap)?'<span class="lvc">'+lvName(lvAt(r.cap))+" · n°"+r.cap+"</span>":"")+'<span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap&&!lvAt(r.cap)?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan;finalize(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'+statusBox(r)
@@ -4817,13 +4818,24 @@ function drawMkt(){
     function ln5(k,col,lw){g5.strokeStyle=col;g5.lineWidth=lw;g5.beginPath();var on=false;es.forEach(function(r,i){if(!r[k]){on=false;return}if(on)g5.lineTo(x5(i),y5(r[k]));else{g5.moveTo(x5(i),y5(r[k]));on=true}});g5.stroke()}
     ln5(2,tk("--accent"),1.4);ln5(1,tk("--ink"),1.8);
     g5.font="500 10.5px "+(tk("--mono")||"monospace");g5.fillStyle=tk("--muted");g5.textBaseline="middle";[lo5+pad5,(lo5+hi5)/2,hi5-pad5].forEach(function(v){g5.fillText(fr(v,4),pw5+6,y5(v))})}}
+/* the side Bitcoin keeps out right now: the « Marché » check fails every long while Bitcoin falls on 4H or has lost 1.5 % in
+   4 hours, and every short in the mirror case (22/11/2026: « only shorts » for a week while Bitcoin fell from 65 000 to 55 000) */
+function btcGate(){
+  var b=null,s=null;
+  if(btcC&&btcC.m){b=btcC.m.b4;s=btcC.m.r4h}
+  else(results||[]).some(function(r){var f=r.f;if(f&&r.dir&&f.btc4!==null&&f.btc4!==undefined){b=f.btc4*r.dir;s=f.btcSh!==null&&f.btcSh!==undefined?f.btcSh*r.dir:null;return true}return false});
+  if(b===null)return null;
+  return{noL:b<0||(s!==null&&s<=-1.5),noS:b>0||(s!==null&&s>=1.5),b:b,s:s}}
+function gateLine(){var g=btcGate();if(!g||!(g.noL||g.noS))return"";
+  var why=function(L){return L?(g.b<0?"Bitcoin baisse sur 4H":"Bitcoin a perdu "+fr(-g.s,1)+" % en 4 h"):(g.b>0?"Bitcoin monte sur 4H":"Bitcoin a pris "+fr(g.s,1)+" % en 4 h")};
+  return'<small class="mst gate">'+(g.noL&&g.noS?"Longs et shorts en pause : "+why(true)+" et "+why(false).replace("Bitcoin ",""):g.noL?"Longs en pause : "+why(true):"Shorts en pause : "+why(false))+"</small>"}
 /* one line on top of the setup lists: where the whole market leans */
 function mktLine(){
   var el=$("mkt-line"),m=MKT;if(!el)return;
   if(!m){el.hidden=true;return}
   el.hidden=false;el.className="mline "+(m.side>0?"up":m.side<0?"dn":"");
   var sl=function(st,lab){return st&&st.b!==undefined?'<small class="mst '+(st.k>0?"pos":st.k<0?"neg":"")+'">'+lab+" : "+(st.k>0?"▲ en hausse":st.k<0?"▼ en baisse":"– à plat")+(st.b!==null?" · BTC "+sgn(st.b,1)+" %":"")+"</small>":""},sh=sl(m.mo,"30 jours")+sl(m.st,"7 jours");
-  el.innerHTML="<span>Fond <b>"+m.label.toLowerCase()+"</b> "+sgn(m.score,0)+'<small class="mst">tendance sur 1 à 5 mois</small>'+sh+'</span><span class="sub">'+(m.side>0?"longs d'abord":m.side<0?"shorts d'abord":"aucun côté")+" ›</span>"}
+  el.innerHTML="<span>Fond <b>"+m.label.toLowerCase()+"</b> "+sgn(m.score,0)+'<small class="mst">tendance sur 1 à 5 mois</small>'+sh+gateLine()+'</span><span class="sub">'+(m.side>0?"longs d'abord":m.side<0?"shorts d'abord":"aucun côté")+" ›</span>"}
 $("mkt-line").addEventListener("click",function(){setView("mkt")});
 
 /* ---------- background alerts ---------- */

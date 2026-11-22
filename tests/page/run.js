@@ -43,8 +43,10 @@ const MK = sym => MARKET[sym] || EXTRA[sym];
 const CAPS = (() => { const L = [], order = ["BTC", "ETH", "USDT", "XRP", "SOL", "DOGE", "USDC", "ADA", "LINK", "AVAX", "SUI", "NEAR"]; order.forEach((s, i) => L.push({ symbol: s.toLowerCase(), name: s, market_cap_rank: i + 1 }));
   L.push({ symbol: "apt", name: "Aptos", market_cap_rank: 45 }, { symbol: "arb", name: "Arbitrum", market_cap_rank: 52 }); for (let r = 53; r <= 250; r++) L.push({ symbol: "zz" + r, name: "Other " + r, market_cap_rank: r }); return L; })();
 const IV = { "1w": 7 * 864e5, "1m": 6e4, "15m": M15, "1h": 36e5, "4h": 144e5, "1d": 864e5 };
-function klines(sym, iv, limit, start, end) {
-  const S = MK(sym); if (!S) return null; const ms = IV[iv], out = [];
+/* Bitcoin falling for the last four days (−21 %): the « Marché » check then fails every long (P20) */
+const BTCDOWN = (() => { const m = MARKET.BTCUSDT.m, n = m.length; return { base: "BTC", tick: MARKET.BTCUSDT.tick, m: m.map((k, i) => { const f = Math.exp(-0.0006 * Math.max(0, i - (n - 400))); return { t: k.t, o: k.o * f, h: k.h * f, l: k.l * f, c: k.c * f, q: k.q, b: k.b }; }) }; })();
+function klines(sym, iv, limit, start, end, S0) {
+  const S = S0 || MK(sym); if (!S) return null; const ms = IV[iv], out = [];
   if (iv === "1m") { const lo = start || NOW - limit * 6e4; for (let t = Math.ceil(lo / 6e4) * 6e4; t <= Math.min(end || NOW, NOW) && out.length < limit; t += 6e4) { const c = S.m[S.m.length - 1].c; out.push([t, c, c * 1.0005, c * 0.9995, c, 1, t + 6e4 - 1, c * 100, 1, 0.5, c * 50, 0]); } return out; }
   const groups = new Map();
   for (const k of S.m) { if (k.t > NOW) break; const key = Math.floor(k.t / ms) * ms; let g = groups.get(key);
@@ -142,7 +144,7 @@ async function open(browser, o) {
     if (p === "/fapi/v1/exchangeInfo") return json(EXINFO);
     if (p === "/fapi/v1/ticker/24hr") return json(sym ? { symbol: sym, quoteVolume: "5e8" } : Object.keys(MARKET).map((s, i) => ({ symbol: s, quoteVolume: String(1e9 / (i + 1)) })));
     if (p === "/fapi/v1/premiumIndex") return json(sym ? { symbol: sym, lastFundingRate: "0.0001", markPrice: String(last(sym)) } : Object.keys(MARKET).map(s => ({ symbol: s, lastFundingRate: "0.0001" })));
-    if (p === "/fapi/v1/klines") { const k = klines(sym, q.get("interval"), +q.get("limit") || 500, +q.get("startTime") || 0, +q.get("endTime") || 0); return k ? json(k) : json({ code: -1121 }, 400); }
+    if (p === "/fapi/v1/klines") { const k = klines(sym, q.get("interval"), +q.get("limit") || 500, +q.get("startTime") || 0, +q.get("endTime") || 0, o.btcDown && sym === "BTCUSDT" ? BTCDOWN : null); return k ? json(k) : json({ code: -1121 }, 400); }
     if (p === "/fapi/v1/depth") return json(book(sym, (o.spread && o.spread[sym]) || 0.02));
     if (p === "/fapi/v1/ticker/price") return json({ symbol: sym, price: String(last(sym)) });
     if (p.startsWith("/futures/data/")) return json([]);
@@ -585,6 +587,28 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const c3 = await o2.page.$$eval("#view-scan .alinfo", a => a.map(e => e.textContent));
     ok(c3.length > 0 && c3.every(t => /^Notification envoyée à \d\d:\d\d$/.test(t)), "setup déjà notifié : « " + (c3[0] || "rien") + " »");
     if (SHOTS) { await o2.page.$eval("#view-scan .alinfo", e => e.closest(".stbox").scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p19-notifie.png") }); }
+    ok(errors.length === 0 && o2.errors.length === 0, "aucune erreur JavaScript" + (errors.concat(o2.errors).length ? " : " + errors.concat(o2.errors).slice(0, 3).join(" / ") : ""));
+    await o2.ctx.close();
+  });
+
+  await test("P20", "Longs ou shorts en pause : la ligne du marché dit quel côté Bitcoin bloque", async ok => {
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(page);
+    const x = await page.evaluate(() => { const r = JSON.parse(localStorage.getItem("radar-last-l1")).results.find(r => r.f && r.dir && r.f.btc4 !== null && r.f.btc4 !== undefined);
+      return { b: r ? r.f.btc4 * r.dir : null, s: r && r.f.btcSh !== null ? r.f.btcSh * r.dir : null, t: document.getElementById("mkt-line").textContent }; });
+    const noL = x.b < 0 || (x.s !== null && x.s <= -1.5), noS = x.b > 0 || (x.s !== null && x.s >= 1.5);
+    const want = noL && noS ? /Longs et shorts en pause/ : noL ? /Longs en pause : Bitcoin (baisse sur 4H|a perdu)/ : noS ? /Shorts en pause : Bitcoin (monte sur 4H|a pris)/ : null;
+    ok(x.b !== null && (want ? want.test(x.t) : !/en pause/.test(x.t)), "Bitcoin 4H " + x.b + ", " + (x.s === null ? "?" : x.s.toFixed(2)) + " % en 4 h : « " + ((x.t.match(/(Longs|Shorts)[^›]*/) || ["rien en pause"])[0]).trim() + " »");
+    await ctx.close();
+    /* Bitcoin falling for four days: the line says the longs are on hold, and no long is ready */
+    const o2 = await open(browser, { btcDown: true, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(o2.page);
+    const y = await o2.page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, r = R.find(r => r.f && r.dir && r.f.btc4 !== null && r.f.btc4 !== undefined);
+      return { b: r ? r.f.btc4 * r.dir : null, t: document.getElementById("mkt-line").textContent, longsReady: R.filter(r => r.dir > 0 && r.st === "ready" && r.sym !== "BTC").length,
+        longsMkt: R.filter(r => r.dir > 0 && r.plan && r.sym !== "BTC").map(r => r.sym + ":" + (r.gates ? (r.gates.find(g => g.k === "mkt") || {}).ok : "?")) }; });
+    ok(y.b === -1 && /Longs en pause : Bitcoin baisse sur 4H/.test(y.t), "Bitcoin en baisse sur 4H : « " + ((y.t.match(/(Longs|Shorts)[^›]*/) || ["rien"])[0]).trim() + " »");
+    ok(y.longsReady === 0 && y.longsMkt.length > 0 && y.longsMkt.every(x => /:false$/.test(x)), "réglage par défaut : aucun long prêt tant que Bitcoin baisse, contrôle « Marché » raté par chaque long (" + y.longsMkt.join(", ") + ")");
+    if (SHOTS) { await o2.page.$eval("#mkt-line", e => e.scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p20-longs-en-pause.png") }); }
     ok(errors.length === 0 && o2.errors.length === 0, "aucune erreur JavaScript" + (errors.concat(o2.errors).length ? " : " + errors.concat(o2.errors).slice(0, 3).join(" / ") : ""));
     await o2.ctx.close();
   });

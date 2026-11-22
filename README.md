@@ -324,3 +324,17 @@ Corrigé :
 - Verrou de réveil du contrôle de fond porté à 8 minutes (relâché à la fin du contrôle) : un contrôle de plusieurs Levels peut dépasser 4 minutes.
 - Tests de page : l'horloge est fixée au jeudi 19/11/2026 16:50 UTC (`TEST_NOW` pour une autre heure). Le marché simulé dépendait de
   l'heure du lancement et P19 échouait le matin.
+
+## Vérification du 22/11/2026 : « que des shorts »
+
+Rejeu des règles de l'appli du 8 au 21/11 sur les 430 contrats des Levels 1 à 5 (workflow `side.yml`, branche `side-check`,
+script `tools/backtest/side42.js`, option d'étude `funnelWhy` du moteur) :
+- Aucun long prêt en 14 jours, sur tous les Levels. Shorts prêts : 403 épisodes sur les Levels 1-2, 617 sur le Level 3, 2 684 sur les Levels 4-5.
+- À un instant donné, sur les 35 contrats des Levels 1-2 : 0 à 2 avec un setup long, 27 à 32 avec un setup short.
+- Longs arrivés à leur zone : retenus d'abord par le contrôle « Marché » (Bitcoin en baisse sur 4H), 28 à 36 % des cas.
+- Bitcoin : 86 483 le 4/10, 55 127 au plus bas le 21/11 (−36 %). Les longs vus par Amine sont des rebonds contre la tendance
+  (21-22/11 : 55 127 → 61 648, +12 %), que les règles ne prennent pas.
+
+Ajouté : sur la ligne du marché, « Longs en pause : Bitcoin baisse sur 4H » (ou « Shorts en pause », ou les deux) quand le contrôle
+« Marché » bloque tout un côté. Test de page P20 (marché simulé avec un Bitcoin en baisse). Carte de setup : le rang n'apparaît
+plus deux fois (« Level 1 · n°11 » remplace « Cap. n°11 »).
