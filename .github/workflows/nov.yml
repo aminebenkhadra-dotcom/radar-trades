@@ -1,0 +1,32 @@
+name: November trades v42
+# The trades version 42 would have proposed in November 2026 on the Levels 1 to 3 (app options), listed one by one, to branch nov-check.
+on:
+  push:
+    branches: [nov-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+      START: "2026-10"
+      END: "2026-11"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Universe
+        run: node tools/backtest/caps.js > caps.env && cut -c1-200 caps.env
+      - name: Fetch and replay
+        run: |
+          . ./caps.env
+          SYMS="$CAP12,$CAP3" node tools/backtest/fetch.js klines data | tail -2
+          mkdir -p res out
+          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data res 2 $k/4 '{"slsw":24,"slmode":"flag"}' & done; wait
+          node tools/backtest/nov42.js res 2026-11-01 > out/nov.json; head -c 1500 out/nov.json; echo
+          cp caps.env ranks.json out/
+      - name: Publish
+        run: |
+          cd out && git init -q -b nov-check
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "November trades" && git push -q -f "$REMOTE" nov-check
