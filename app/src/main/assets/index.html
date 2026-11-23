@@ -593,6 +593,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
         <div class="filters" id="a-lv"><label class="chk"><input type="checkbox" data-alv="1"> Level 1</label><label class="chk"><input type="checkbox" data-alv="2"> Level 2</label><label class="chk"><input type="checkbox" data-alv="3"> Level 3</label><label class="chk"><input type="checkbox" data-alv="4"> Level 4</label><label class="chk"><input type="checkbox" data-alv="5"> Level 5</label></div>
         <div class="sub">Level 1 : 30 premières capitalisations · Level 2 : 31 à 60 · Level 3 : 61 à 200 · Level 4 : 201 à 400 · Level 5 : 401 à 1000. Plus il y a de Levels cochés, plus chaque contrôle est long.</div></div>
       <label class="wide chk"><input type="checkbox" id="a-tr"> M'alerter quand je dois sortir d'un trade, quand je peux passer mon stop au break-even, viser plus haut que mon TP ou le réduire, déplacer mon stop pour sécuriser mes gains, ou quand une liquidation est proche (trades suivis et positions Binance)</label>
+      <label class="wide chk"><input type="checkbox" id="a-br"> M'alerter quand Bitcoin fait un mouvement brutal (2,5 % en 15 minutes avec un gros volume, ou 4 % en 1 heure) : ce n'est pas un trade, juste le moment de regarder le marché</label>
       <label class="wide">Contrôle toutes les<select id="a-min"><option value="15">15 minutes (conseillé)</option><option value="30">30 minutes</option><option value="60">60 minutes</option></select></label>
       <div class="wide sub" id="a-st"></div>
       <details class="wide set" id="a-log" hidden></details>
@@ -663,7 +664,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={nt43:0,nt44:0,nt45:0,nt46:0,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={nt43:0,nt44:0,nt45:0,nt46:0,abrut:true,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
 var MAXDEEP=60;
 /* scanner levels, by market capitalisation rank (CoinGecko). A background run may watch several: "l12" is levels 1 and 2 */
 var LEVELS={1:[1,30],2:[31,60],3:[61,200],4:[201,400],5:[401,1000]};
@@ -788,8 +789,10 @@ function calm(d1,h4,h1){
   for(i=Math.max(0,n4-7);i<n4-1;i++)q6+=h4[i].q;for(i=Math.max(0,n4-181);i<n4-1;i++){q180+=h4[i].q;nq++}
   return{rng24:adr>0?(hi-lo)/adr:null,relVol:q180>0?(q6/6)/(q180/nq):null}}
 /* what Bitcoin is doing while an altcoin sets up */
-function market(d1,h4,h1){var n=h1.length;
-  return{b4:bias(h4),bd:bias(d1.length>90?d1.slice(-90):d1),r4h:(h1[n-1].c/h1[Math.max(0,n-5)].c-1)*100}}
+function market(d1,h4,h1){var n=h1.length,lo=Infinity,hi=-Infinity,i,p=h1[n-1].c;
+  /* up3 / dn3: how far Bitcoin stands from its lowest low / highest high of the last 72 hours, in % (study of 23/11/2026) */
+  for(i=Math.max(0,n-72);i<n;i++){if(h1[i].l<lo)lo=h1[i].l;if(h1[i].h>hi)hi=h1[i].h}
+  return{b4:bias(h4),bd:bias(d1.length>90?d1.slice(-90):d1),r4h:(h1[n-1].c/h1[Math.max(0,n-5)].c-1)*100,up3:(p/lo-1)*100,dn3:(p/hi-1)*100}}
 
 /* ---------- setup engine ---------- */
 function targets(lv,dir,entry,R,k60){
@@ -887,6 +890,8 @@ function analyze(sym,d1,h4,h1,ctx,opt){
 
   /* Bitcoin */
   if(ctx&&ctx.btc&&sym!=="BTC"){f.btc4=ctx.btc.b4*dir;f.btcSh=ctx.btc.r4h*dir}else{f.btc4=null;f.btcSh=null}
+  /* how far Bitcoin has moved against the trade from its 72-hour extreme: its rise from the low for a short, its fall from the high for a long */
+  f.btcReb=ctx&&ctx.btc&&ctx.btc.up3!==undefined?(dir<0?ctx.btc.up3:-ctx.btc.dn3):null;
 
   replan(r,opt);
   r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
@@ -1042,7 +1047,8 @@ function enrich(r,m15,book,sqd,opt){
    Tendance, Zone and Risque must pass for a setup to be "Prêt"; the strictness setting adds Déclencheur, then Marché and Élan.
    Four statuses: "ready" (prêt selon les règles), "watch" (à surveiller), "refused" (refusé), "incomplete" (données incomplètes).
    Missing data never earns points, and a critical blocker (wide spread, obstacle before 1R) takes "ready" away. */
-var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move"};
+/* reb: off by default here (the sister apps keep their rules); Radar Trades passes reb 7, see REB in its page */
+var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move",reb:0};
 function judge(r,opt){
   opt=opt||{};
   if(!r.plan){r.score=r.dir?(r.f.bd?25:12):0;r.blk=[];r.miss=[];return r}
@@ -1081,6 +1087,9 @@ function judge(r,opt){
     else{g.ok=false;add(g,"no",0,function(){return"Bitcoin en tendance inverse sur 4H"})}
     if(f.btcSh<=-1.5){g.ok=false;add(g,"no",0,function(){return"Bitcoin : "+sgn(f.btcSh*dir,1)+" % en 4 h, contre le trade"})}
     else g.pts+=2}
+  /* opt.reb (study of 23/11/2026): no short while Bitcoin stands reb % or more above its 72-hour low, no long reb % under its 72-hour high */
+  var rebT=opt.reb!==undefined?+opt.reb:PREC.reb;
+  if(rebT>0&&f.btcReb!==null&&f.btcReb>=rebT){g.ok=false;add(g,"no",0,function(){return dir<0?"Bitcoin a rebondi de "+fr(f.btcReb,1)+" % depuis son plus bas de 72 h : pas de short pendant un rebond":"Bitcoin a reculé de "+fr(f.btcReb,1)+" % depuis son plus haut de 72 h : pas de long pendant une chute"})}
   if(f.rng24!==null){
     if(agit)add(g,"mid",0,function(){return"Marché agité : amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale"+(f.relVol>1.5?", volume ×"+fr(f.relVol,1):"")});
     else if(quiet)add(g,"ok",3,function(){return"Marché calme : amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale"});
@@ -1499,6 +1508,11 @@ function btStep(S,n){
         S.free=rres.j+17;continue}}
     if(!r.plan||r.dist>0.5)continue;
     enrich(r,F.m15(500),null,null,{noHeat:true});judge(r,jo);
+    /* o.reb (study): no short while Bitcoin stands o.reb % or more above its 72-hour low (a rebound under way), no long while it stands
+       o.reb % or more under its 72-hour high; what those trades would have given is kept apart */
+    var bcx=o.reb&&o.btc?o.btc[m[i].t]:null;
+    if(bcx&&r.st==="ready"&&(r.dir<0?bcx.up3>=+o.reb:bcx.dn3<=-o.reb)){
+      var br=btResolve(m,i,r.plan,r.dir,N,cost);if(br.how!=="open")(S.late=S.late||[]).push({t:m[i].t,dir:r.dir,how:br.how,r:br.r,r4:+r.r4.toFixed(1)});continue}
     /* o.late (study): a ready trend trade in the direction of a stretched move is not taken; what it would have given is kept apart */
     if((o.late||o.lateD)&&r.st==="ready"&&lateHit(r,d1,o)){var lr=btResolve(m,i,r.plan,r.dir,N,cost);
       if(lr.how!=="open")(S.late=S.late||[]).push({t:m[i].t,dir:r.dir,how:lr.how,r:lr.r,r4:+r.r4.toFixed(1)});
@@ -1939,7 +1953,11 @@ function klines(sym,interval,limit,min){
 /* slsw / slmode: a setup whose stop sits right behind the last 1H swing of the last 24 hours is held back (« À surveiller »):
    measured on two years (tools/backtest/stop42.js), +0.02 R and +0.05 R a trade, total result better both years, 40 % fewer setups */
 var SLSW_H=24;
-function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag"}}
+/* REB (23/11/2026): no short while Bitcoin stands 7 % or more above its 72-hour low, no long 7 % or more under its 72-hour high.
+   Replayed on 60 markets (tools/backtest/rev42.js, reb.yml): year 2024-25 −96 R → −49 R, year 2025-26 +71 R → +53 R, November 2026
+   +81 R → +84 R; Levels 1 to 3 in November +169 R → +176 R, the 7 shorts it holds back all lost (the rebound from 55 000 on 21-22/11) */
+var REB=7;
+function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB}}
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */
 var EXI={},exiP=null,btcC=null;
 function readExi(info){((info&&info.symbols)||[]).forEach(function(s){EXI[s.symbol]=contractOf(s)})}
@@ -5015,14 +5033,17 @@ function renderHome(){
 /* the side Bitcoin keeps out right now: the « Marché » check fails every long while Bitcoin falls on 4H or has lost 1.5 % in
    4 hours, and every short in the mirror case (22/11/2026: « only shorts » for a week while Bitcoin fell from 65 000 to 55 000) */
 function btcGate(){
-  var b=null,s=null;
-  if(btcC&&btcC.m){b=btcC.m.b4;s=btcC.m.r4h}
-  else(results||[]).some(function(r){var f=r.f;if(f&&r.dir&&f.btc4!==null&&f.btc4!==undefined){b=f.btc4*r.dir;s=f.btcSh!==null&&f.btcSh!==undefined?f.btcSh*r.dir:null;return true}return false});
+  var b=null,s=null,u=null,d=null,R=REB;
+  if(btcC&&btcC.m){b=btcC.m.b4;s=btcC.m.r4h;u=btcC.m.up3===undefined?null:btcC.m.up3;d=btcC.m.dn3===undefined?null:btcC.m.dn3}
+  else(results||[]).some(function(r){var f=r.f;if(f&&r.dir&&f.btc4!==null&&f.btc4!==undefined){b=f.btc4*r.dir;s=f.btcSh!==null&&f.btcSh!==undefined?f.btcSh*r.dir:null;
+    if(f.btcReb!==null&&f.btcReb!==undefined){if(r.dir<0)u=f.btcReb;else d=-f.btcReb}return true}return false});
   if(b===null)return null;
-  return{noL:b<0||(s!==null&&s<=-1.5),noS:b>0||(s!==null&&s>=1.5),b:b,s:s}}
+  /* a rebound of Bitcoin from its 72-hour low holds the shorts back, a fall from its 72-hour high the longs (study of 23/11/2026) */
+  return{noL:b<0||(s!==null&&s<=-1.5)||(R>0&&d!==null&&d<=-R),noS:b>0||(s!==null&&s>=1.5)||(R>0&&u!==null&&u>=R),b:b,s:s,u:u,d:d,R:R}}
 function gateLine(){var g=btcGate();if(!g||!(g.noL||g.noS))return"";
-  var why=function(L){return L?(g.b<0?"Bitcoin baisse sur 4H":"Bitcoin a perdu "+fr(-g.s,1)+" % en 4 h"):(g.b>0?"Bitcoin monte sur 4H":"Bitcoin a pris "+fr(g.s,1)+" % en 4 h")};
-  return'<small class="mst gate">'+(g.noL&&g.noS?"Longs et shorts en pause : "+why(true)+" et "+why(false).replace("Bitcoin ",""):g.noL?"Longs en pause : "+why(true):"Shorts en pause : "+why(false))+"</small>"}
+  var why=function(L){return L?(g.b<0?"Bitcoin baisse sur 4H":g.s!==null&&g.s<=-1.5?"Bitcoin a perdu "+fr(-g.s,1)+" % en 4 h":"Bitcoin a reculé de "+fr(-g.d,1)+" % depuis son plus haut de 72 h")
+    :(g.b>0?"Bitcoin monte sur 4H":g.s!==null&&g.s>=1.5?"Bitcoin a pris "+fr(g.s,1)+" % en 4 h":"Bitcoin a rebondi de "+fr(g.u,1)+" % depuis son plus bas de 72 h")};
+  return'<small class="mst gate">'+(g.noL&&g.noS?"Longs et shorts en pause : "+why(true)+" ; "+why(false).replace("Bitcoin ",""):g.noL?"Longs en pause : "+why(true):"Shorts en pause : "+why(false))+"</small>"}
 /* one line on top of the setup lists: where the whole market leans */
 function mktLine(){
   var el=$("mkt-line"),m=MKT;if(!el)return;
@@ -5052,7 +5073,7 @@ function bgLogView(){var el=$("a-log");if(!el)return;var L=[];try{L=JSON.parse(l
   el.hidden=!L.length;if(!L.length)return;var open=el.open;
   el.innerHTML="<summary>Derniers contrôles en arrière-plan ("+L.length+")</summary>"+L.map(function(x){return'<div class="fdr"><span><b style="font-family:var(--mono);font-weight:500">'+when(x.t)+"</b> · "+esc(x.m)+(x.x?"<small>"+esc(x.x)+"</small>":"")+"</span></div>"}).join("")+'<div style="height:10px"></div>';el.open=open}
 function applyWatch(){
-  if(NATIVE){try{if(S.alv||S.atr)Android.startWatch(false,!!S.alv,+S.amin||15);else Android.stopWatch()}catch(e){}}
+  if(NATIVE){try{if(S.alv||S.atr||S.abrut!==false)Android.startWatch(false,!!S.alv,+S.amin||15);else Android.stopWatch()}catch(e){}}
   alertStatus()}
 /* setup alerts: the Top 10 / Top 50 boxes become levels once (nt45): Top 50 on gives levels 1 and 2, Top 10 alone level 1 */
 if(!S.nt45){S.alv=S.a50||!S.nt44?"12":S.a10?"1":"";S.nt43=1;S.nt44=1;S.nt45=1;S.a10=false;S.a50=false;saveSettings();if(!BG)applyWatch()}
@@ -5064,6 +5085,8 @@ alvView();$("a-min").value=String(S.amin||15);
 $("a-lv").addEventListener("change",function(){var v="";[].forEach.call(document.querySelectorAll("[data-alv]"),function(b){if(b.checked)v+=b.dataset.alv});S.alv=v;saveSettings();applyWatch()});
 $("a-tr").checked=!!S.atr;
 $("a-tr").addEventListener("change",function(){S.atr=this.checked;saveSettings();applyWatch()});
+$("a-br").checked=S.abrut!==false;
+$("a-br").addEventListener("change",function(){S.abrut=this.checked;saveSettings();applyWatch()});
 $("a-min").addEventListener("change",function(){S.amin=+this.value||15;saveSettings();applyWatch()});
 $("a-test").addEventListener("click",function(){try{Android.test()}catch(e){}});
 $("a-bat").addEventListener("click",function(){try{Android.askBattery()}catch(e){}});
@@ -5135,13 +5158,28 @@ function protect(cb){
         note(nm2+" · feu vert break-even",(t.live?"Monte ton stop sur Binance à ":"Tu peux placer ton stop à ")+px(b.be)+" (break-even net de frais) pour sécuriser le trade.","be"+t.id)}
       next()},function(){next()})}}
 /* called by the watch service inside its hidden copy of this page: positions first (their alerts come first), then the setups */
+/* « Mouvement brutal » (23/11/2026): Bitcoin moving 2.5 % or more in the last closed 15-minute candle on at least 6 times its usual
+   volume, or 4 % over the last hour. One notification, at most every 3 hours in each direction. Not a trade: the moment to look */
+function brutal(note){
+  if(S.abrut===false)return Promise.resolve(null);
+  return klines("BTCUSDT","15m",30,25).then(function(k){
+    var c=k.slice(0,-1),n=c.length,x=c[n-1],prev=c.slice(n-21,n-1),av=prev.reduce(function(a,b){return a+b.q},0)/prev.length,
+      r15=(x.c/x.o-1)*100,r1=(x.c/c[n-4].o-1)*100,vx=av>0?x.q/av:0,dir=0,txt="";
+    if(Math.abs(r15)>=2.5&&vx>=6){dir=r15>0?1:-1;txt=sgn(r15,1)+" % en 15 min"}
+    else if(Math.abs(r1)>=4){dir=r1>0?1:-1;txt=sgn(r1,1)+" % en 1 h"}
+    if(!dir)return null;
+    var key="radar-brutal-"+(dir>0?"up":"dn"),at=0;try{at=+localStorage.getItem(key)||0}catch(e){}
+    if(Date.now()-at<3*36e5)return null;
+    try{localStorage.setItem(key,String(Date.now()))}catch(e){}
+    if(note)try{Android.notify("Bitcoin "+txt+" · mouvement brutal",(vx>=2?"Volume ×"+Math.round(vx)+" la normale. ":"")+"Regarde le marché avant de trader : ce n'est pas un trade proposé.","brutal","mkt")}catch(e){}
+    return"Bitcoin "+txt}).catch(function(){return null})}
 window.bgScan=function(t10,t50){
   var m=null;
   var bgMore="";
   function fin(msg){bgLog(msg,bgMore);try{Android.done(msg)}catch(e){}}
   function end(msg){var d=false,go=function(){if(d)return;d=true;fin(msg)};setTimeout(go,20000);sySync().then(go,go)}
   S=loadSettings();T=loadTrades();
-  var start0=function(){S=loadSettings();T=loadTrades();m=S.alv&&lvOf("l"+S.alv)?"l"+S.alv:null;bgRun()},st=false,once=function(){if(st)return;st=true;start0()};setTimeout(once,20000);sySync().then(once,once);
+  var start0=function(){S=loadSettings();T=loadTrades();m=S.alv&&lvOf("l"+S.alv)?"l"+S.alv:null;var go=function(b){if(b)bgMore+=(bgMore?" · ":"")+b;bgRun()};brutal(true).then(go,function(){go(null)})},st=false,once=function(){if(st)return;st=true;start0()};setTimeout(once,20000);sySync().then(once,once);
   function bgRun(){
   protect(function(pmsg){
     if(!m)return end(pmsg);
@@ -5170,7 +5208,7 @@ window.bgScan=function(t10,t50){
         if(bk.length&&Date.now()-bt>6*36e5){localStorage.setItem("radar-blk-at",String(Date.now()));
           Android.notify("Trade prêt mais bloqué par ton compte",bk.map(function(r){return r.sym}).slice(0,3).join(", ")+" · "+((bk[0].sz.why||[])[0]||"limite du compte")+". Ouvre l'appli pour débloquer.","blk",m)}}catch(e){}
       try{var bp=st.results.filter(function(r){return r.plan}),bz=bp.filter(function(r){return r.dist<=0.5}),bw=whyNot(bz).slice(0,3).map(function(k){return k[1]+" × "+k[0].toLowerCase()}).join(" · ");
-        bgMore=lvName(m)+" : "+bp.length+" avec une zone, "+bz.length+" à la zone"+(bw?" · pas prêts : "+bw:"")}catch(e){}
+        bgMore=(bgMore?bgMore+" · ":"")+lvName(m)+" : "+bp.length+" avec une zone, "+bz.length+" à la zone"+(bw?" · pas prêts : "+bw:"")}catch(e){}
       end(pmsg+" · "+(n?n+" setup"+(n>1?"s prêts":" prêt"):"aucun setup prêt"))};
     scan(m)})}};
 
@@ -5178,7 +5216,7 @@ window.bgScan=function(t10,t50){
    The file holds the settings, the trades followed by hand, Après sortie, the portfolio entries, the paper tracking and a copy of the
    Binance positions as the phone last read them. Never the API keys, nor the access code itself. Alert switches stay per device.
    Each sync is a three-way merge (syncMerge) between this device, the file and the state of the last sync of this device. */
-var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","alv","atr","amin","nt43","nt44","nt45","nt46"];
+var SYK=["radar-settings","radar-trades","radar-after","radar-manual","radar-cost","radar-paper","radar-coins","radar-live-view"],SYLOC=["a10","a50","alv","atr","amin","abrut","nt43","nt44","nt45","nt46"];
 var SY={cfg:null,busy:false,dirty:false,at:0,err:"",etag:"",sha:"",last:null,apply:false,reload:false,timer:0,again:false};
 function syCfg(){try{var c=JSON.parse(localStorage.getItem("radar-sync")||"null");return c&&c.repo&&c.token?c:null}catch(e){return null}}
 SY.cfg=syCfg();

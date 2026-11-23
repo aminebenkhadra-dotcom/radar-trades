@@ -352,3 +352,43 @@ plus deux fois (« Level 1 · n°11 » remplace « Cap. n°11 »).
 - Analyser : le même résumé d'abord, l'analyse complète derrière « Voir le détail ».
 - Une notification ouvre toujours son trade (résumé sous la grille), avec l'accueil un pas en arrière.
 - Tests : `open()` arrive sur le Level 1 en vue détaillée sauf `home` / `simple` ; navigation par `nav()` via l'accueil ; P21.
+
+## Mise à jour du 23/11/2026 : pause pendant les rebonds de Bitcoin, alerte de mouvement brutal
+
+Constat (rejeu des règles de l'appli, novembre 2026, Levels 1 à 3, frais compris) : 203 trades, dont 202 shorts, 62,6 % gagnants,
++169,3 R. Mais les 8 shorts du 20/11 08:00 au 22/11 ont tous perdu (BTW, ZAMA, ETHFI, ETC, SUI, WLD, ENS, STX) : Bitcoin
+rebondissait de 55 127 (plus bas du 21/11) vers 61 648.
+
+Ajouté, contrôle « Marché » : pas de short tant que Bitcoin est 7 % ou plus au-dessus de son plus bas des 72 dernières heures,
+pas de long tant qu'il est 7 % ou plus sous son plus haut des 72 heures (`REB=7` dans la page, option `reb` du moteur, 0 par défaut :
+Radar Top 50 et Radar BTC·ETH gardent leurs règles). La carte le dit (« Bitcoin a rebondi de 9,8 % depuis son plus bas de 72 h :
+pas de short pendant un rebond »), la ligne du marché aussi (« Shorts en pause : … »). `market()` donne `up3` / `dn3`.
+
+Mesure (workflow `reb.yml`, branches `reb-v42-A` à `D`, 60 marchés les plus échangés sauf la dernière ligne) :
+
+| Période | Règles d'avant | Avec la pause à 7 % |
+|---|---|---|
+| sept. 2024 → oct. 2025 | −96 R (1 494 trades) | −49 R (1 381) |
+| oct. 2025 → oct. 2026 | +71,4 R (1 154) | +53,4 R (1 113) |
+| oct. → nov. 2026 | +80,9 R (102) | +84,0 R (99) |
+| novembre 2026, Levels 1 à 3 | +169,3 R (203), pire série 8 pertes | +175,5 R (197), pire série 5 |
+
+La pause coûte 18 R en 2025-26 : les shorts écartés y gagnaient (48,5 %). Seuils testés : 5, 7, 9 et 12 %. 5 et 7 % font à peu
+près pareil, 9 et 12 % n'aident pas. Gain modeste, pas garanti : retenu parce qu'il coupe les séries de pertes pendant les rebonds.
+
+Ajouté : alerte « mouvement brutal » (Réglages, cochée par défaut). À chaque contrôle de fond, la dernière bougie 15 min close de
+Bitcoin : notification si elle fait ±2,5 % avec un volume d'au moins 6 fois la moyenne des 20 précédentes, ou si Bitcoin a fait ±4 %
+en une heure. Une seule par sens toutes les 3 heures. Ce n'est pas un trade proposé. Rejouée sur Bitcoin du 8 au 23/11 : 4 alertes
+(15/11 02:45, 21/11 03:45 et 07:00, 23/11 14:00, la hausse de +4,2 % en 15 min sur un volume ×25).
+
+Étudié, pas retenu (workflow `rev.yml`, branches `rev-v42-A` à `C`, script `tools/backtest/rev42.js`) :
+- Trades de rebond (long après une chute de 3 ATR journaliers et un RSI 4H sous 25, déclencheur 1H ; short à l'inverse).
+  Longs : +0,18 à +0,27 R par trade en 2024-25, −0,06 à +0,01 en 2025-26, −0,42 à −0,66 en octobre-novembre 2026 (variante à
+  objectif EMA20 4H : −0,14, +0,01, +0,04). Shorts : −0,19 à −0,26 R en 2024-25, −0,13 à +0,01 en 2025-26, 1 à 4 trades ensuite.
+- Trade « trop tard » : le filtre sur le RSI 4H n'écarte aucun trade ; celui sur le RSI journalier donne +49 R en 2024-25, +10 R
+  en 2025-26, −24 R en octobre-novembre 2026.
+- Les longs de tendance perdent sur deux ans (−0,12 R par trade en 2024-25, −0,07 en 2025-26) : à traiter à part.
+
+`nov.yml` (branche `nov-check`) liste aussi, trade par trade, ce qu'auraient donné les rebonds en novembre (`nov-revM.json`,
+`nov-revRB.json`). Tests de page : P20 (rebond simulé, aucun short prêt), P22 (bougie de +4,2 % sur un volume ×28 : une
+notification, une seule, et le réglage la coupe).
