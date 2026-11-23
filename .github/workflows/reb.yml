@@ -1,0 +1,47 @@
+name: Bitcoin rebound pause v42
+# Study of 23/11/2026, second round: no short while Bitcoin stands X % above its 72-hour low (and no long X % under its 72-hour high).
+# Three periods on the 60 markets by volume, plus November on the Levels 1 to 3. Publishes each to reb-v42-<period>.
+on:
+  push:
+    branches: [reb-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          if [ -n "${{ matrix.period.caps }}" ]; then node tools/backtest/caps.js > caps.env; . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -3
+      - name: Replay the variants
+        run: |
+          mkdir -p out
+          run() { id=$1; o=$2; mkdir -p r-$id
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $k/4 "$o" & done; wait
+            node tools/backtest/rev42.js r-$id > out/$id.json; echo "== $id"; head -c 600 out/$id.json; echo; }
+          B='"slsw":24,"slmode":"flag"'
+          run base  "{$B}"
+          run reb5  "{$B,\"reb\":5}"
+          run reb7  "{$B,\"reb\":7}"
+          run reb9  "{$B,\"reb\":9}"
+          run reb12 "{$B,\"reb\":12}"
+      - name: Publish
+        run: |
+          B=reb-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Rebound pause ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B

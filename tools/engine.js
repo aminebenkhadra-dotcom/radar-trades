@@ -85,8 +85,10 @@ function calm(d1,h4,h1){
   for(i=Math.max(0,n4-7);i<n4-1;i++)q6+=h4[i].q;for(i=Math.max(0,n4-181);i<n4-1;i++){q180+=h4[i].q;nq++}
   return{rng24:adr>0?(hi-lo)/adr:null,relVol:q180>0?(q6/6)/(q180/nq):null}}
 /* what Bitcoin is doing while an altcoin sets up */
-function market(d1,h4,h1){var n=h1.length;
-  return{b4:bias(h4),bd:bias(d1.length>90?d1.slice(-90):d1),r4h:(h1[n-1].c/h1[Math.max(0,n-5)].c-1)*100}}
+function market(d1,h4,h1){var n=h1.length,lo=Infinity,hi=-Infinity,i,p=h1[n-1].c;
+  /* up3 / dn3: how far Bitcoin stands from its lowest low / highest high of the last 72 hours, in % (study of 23/11/2026) */
+  for(i=Math.max(0,n-72);i<n;i++){if(h1[i].l<lo)lo=h1[i].l;if(h1[i].h>hi)hi=h1[i].h}
+  return{b4:bias(h4),bd:bias(d1.length>90?d1.slice(-90):d1),r4h:(h1[n-1].c/h1[Math.max(0,n-5)].c-1)*100,up3:(p/lo-1)*100,dn3:(p/hi-1)*100}}
 
 /* ---------- setup engine ---------- */
 function targets(lv,dir,entry,R,k60){
@@ -796,6 +798,11 @@ function btStep(S,n){
         S.free=rres.j+17;continue}}
     if(!r.plan||r.dist>0.5)continue;
     enrich(r,F.m15(500),null,null,{noHeat:true});judge(r,jo);
+    /* o.reb (study): no short while Bitcoin stands o.reb % or more above its 72-hour low (a rebound under way), no long while it stands
+       o.reb % or more under its 72-hour high; what those trades would have given is kept apart */
+    var bcx=o.reb&&o.btc?o.btc[m[i].t]:null;
+    if(bcx&&r.st==="ready"&&(r.dir<0?bcx.up3>=+o.reb:bcx.dn3<=-o.reb)){
+      var br=btResolve(m,i,r.plan,r.dir,N,cost);if(br.how!=="open")(S.late=S.late||[]).push({t:m[i].t,dir:r.dir,how:br.how,r:br.r,r4:+r.r4.toFixed(1)});continue}
     /* o.late (study): a ready trend trade in the direction of a stretched move is not taken; what it would have given is kept apart */
     if((o.late||o.lateD)&&r.st==="ready"&&lateHit(r,d1,o)){var lr=btResolve(m,i,r.plan,r.dir,N,cost);
       if(lr.how!=="open")(S.late=S.late||[]).push({t:m[i].t,dir:r.dir,how:lr.how,r:lr.r,r4:+r.r4.toFixed(1)});
