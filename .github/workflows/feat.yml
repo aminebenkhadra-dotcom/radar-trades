@@ -1,0 +1,42 @@
+name: Trade profiles v42
+# Study of 23/11/2026, fourth round: the original rules (both sides, no pause), every trend trade with its profile, to find which longs
+# and which shorts won. Three periods on the 60 markets by volume, plus November on the Levels 1 to 3. Publishes each to feat-v42-<period>.
+on:
+  push:
+    branches: [feat-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          if [ -n "${{ matrix.period.caps }}" ]; then node tools/backtest/caps.js > caps.env; . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -3
+      - name: Replay with profiles
+        run: |
+          mkdir -p out r
+          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r 2 $k/4 '{"slsw":24,"slmode":"flag","feat":1}' & done; wait
+          node tools/backtest/feat42.js r > out/trades.json; node tools/backtest/rev42.js r > out/summary.json
+          head -c 400 out/summary.json; echo; ls -la out
+          if [ -f ranks.json ]; then cp ranks.json out/; fi
+      - name: Publish
+        run: |
+          B=feat-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Trade profiles ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B
