@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,1200}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,side:SIDE\(\)\}\}/.test(src) && /var REB=7;/.test(src) && /function SIDE\(\)\{return S\.longs\?0:-1\}/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,1200}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,prof:S\.prof!==false\?1:0\}\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -614,7 +614,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const x = await page.evaluate(() => { const r = JSON.parse(localStorage.getItem("radar-last-l1")).results.find(r => r.f && r.dir && r.f.btc4 !== null && r.f.btc4 !== undefined);
       const rb = r && r.f.btcReb !== null && r.f.btcReb !== undefined ? r.f.btcReb : null;
       return { b: r ? r.f.btc4 * r.dir : null, s: r && r.f.btcSh !== null ? r.f.btcSh * r.dir : null, u: rb !== null && r.dir < 0 ? rb : null, d: rb !== null && r.dir > 0 ? -rb : null, t: document.getElementById("mkt-line").textContent }; });
-    const noL = x.b < 0 || (x.s !== null && x.s <= -1.5) || (x.d !== null && x.d <= -7), noS = x.b > 0 || (x.s !== null && x.s >= 1.5) || (x.u !== null && x.u >= 7);
+    const noL = x.b < 0 || (x.s !== null && x.s <= -1.5), noS = x.b > 0 || (x.s !== null && x.s >= 1.5);
     const want = noL && noS ? /Longs et shorts en pause/ : noL ? /Longs en pause : Bitcoin (baisse sur 4H|a perdu|a reculé de \d+,\d % depuis son plus haut de 72 h)/ : noS ? /Shorts en pause : Bitcoin (monte sur 4H|a pris|a rebondi de \d+,\d % depuis son plus bas de 72 h)/ : null;
     ok(x.b !== null && (want ? want.test(x.t) : !/en pause/.test(x.t)), "Bitcoin 4H " + x.b + ", " + (x.s === null ? "?" : x.s.toFixed(2)) + " % en 4 h : « " + ((x.t.match(/(Longs|Shorts)[^›]*/) || ["rien en pause"])[0]).trim() + " »");
     await ctx.close();
@@ -627,16 +627,12 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(y.b === -1 && /Longs en pause : Bitcoin baisse sur 4H/.test(y.t), "Bitcoin en baisse sur 4H : « " + ((y.t.match(/(Longs|Shorts)[^›]*/) || ["rien"])[0]).trim() + " »");
     ok(y.longsReady === 0 && y.longsMkt.length > 0 && y.longsMkt.every(x => /:false$/.test(x)), "réglage par défaut : aucun long prêt tant que Bitcoin baisse, contrôle « Marché » raté par chaque long (" + y.longsMkt.join(", ") + ")");
     if (SHOTS) { await o2.page.$eval("#mkt-line", e => e.scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p20-longs-en-pause.png") }); }
-    /* Bitcoin rebounding 15 % in a day: no short is ready, and each short says why */
+    /* Bitcoin rebounding 15 % in a day: no pause any more (« ne bloque rien du tout », 23/11/2026), no short holds the rebound reason */
     const o3 = await open(browser, { btcReb: true, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(o3.page);
     const z = await o3.page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, sh = R.filter(r => r.dir < 0 && r.plan && r.sym !== "BTC");
-      return { up: (R.find(r => r.f && r.f.btcReb !== null && r.f.btcReb !== undefined && r.dir < 0) || {}).f, ready: sh.filter(r => r.st === "ready").length, n: sh.length,
-        why: sh.map(r => (r.gates || []).find(g => g.k === "mkt")).filter(g => g && !g.ok && (g.items || []).some(i => /Bitcoin a rebondi de \d+,\d % depuis son plus bas de 72 h : pas de short pendant un rebond/.test(i.t))).length,
-        t: document.getElementById("mkt-line").textContent }; });
-    ok(z.n > 0 && z.ready === 0 && z.why === z.n, "Bitcoin +15 % en un jour : " + z.n + " short(s), aucun prêt, chacun avec la raison « Bitcoin a rebondi… » (" + z.why + ")");
-    ok(/Shorts en pause : Bitcoin (monte sur 4H|a pris|a rebondi de)/.test(z.t), "ligne du marché : « " + ((z.t.match(/(Longs|Shorts)[^›]*/) || ["rien"])[0]).trim() + " »");
-    if (SHOTS) { await o3.page.$eval("#mkt-line", e => e.scrollIntoView()); await o3.page.screenshot({ path: path.join(SHOTS, "p20-shorts-rebond.png") }); }
+      return { n: sh.length, why: sh.filter(r => (r.gates || []).some(g => (g.items || []).some(i => /a rebondi de/.test(i.t)))).length, t: document.getElementById("mkt-line").textContent }; });
+    ok(z.n > 0 && z.why === 0 && !/a rebondi de/.test(z.t), "Bitcoin +15 % en un jour : " + z.n + " short(s) analysés, aucun mis en pause pour le rebond");
     await o3.ctx.close();
     ok(errors.length === 0 && o2.errors.length === 0, "aucune erreur JavaScript" + (errors.concat(o2.errors).length ? " : " + errors.concat(o2.errors).slice(0, 3).join(" / ") : ""));
     await o2.ctx.close();
@@ -732,25 +728,29 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await o2.ctx.close(); await o3.ctx.close();
   });
 
-  await test("P23", "Shorts seulement par défaut : aucun long prêt, chaque long dit pourquoi, et Réglages les rend", async ok => {
+  await test("P23", "Profils gagnants : « Prêt » seulement pour un long en marché agité ou un short quand Bitcoin baisse de 0 à 1 % sur 4 h, les deux sens analysés", async ok => {
     const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(page);
-    const read = () => page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, L = R.filter(r => r.dir > 0 && r.plan && r.sym !== "BTC");
-      return { n: L.length, ready: L.filter(r => r.st === "ready").length, shortsReady: R.filter(r => r.dir < 0 && r.st === "ready").length,
-        why: L.filter(r => { const g = (r.gates || []).find(g => g.k === "trend"); return g && !g.ok && (g.items || []).some(i => /Longs de tendance pas proposés : ils ont perdu sur deux ans de rejeu/.test(i.t)); }).length,
-        line: document.getElementById("mkt-line").textContent, longs: JSON.parse(localStorage.getItem("radar-settings")).longs }; });
+    const read = () => page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results.filter(r => r.plan && r.st0);
+      const held = R.filter(r => (r.blk || []).some(b => b.k === "prof"));
+      return { n: R.length, longs: R.filter(r => r.dir > 0).length, shorts: R.filter(r => r.dir < 0).length, ready: R.filter(r => r.st === "ready").length,
+        readyOff: R.filter(r => r.st === "ready" && r.prof !== 1).length, held: held.length,
+        heldReady: held.filter(r => r.st === "ready").length, heldWhy: held.filter(r => (r.blk || []).some(b => b.k === "prof" && /^Profil sans avantage : sur deux ans, les (longs n'ont gagné que dans un marché agité|shorts ont gagné quand Bitcoin baissait de 0 à 1 % sur 4 h)/.test(b.t))).length,
+        win: R.filter(r => r.prof === 1 && (r.gates || []).some(g => g.k === "mkt" && (g.items || []).some(i => /^Profil gagnant : /.test(i.t)))).length,
+        prof1: R.filter(r => r.prof === 1).length, set: JSON.parse(localStorage.getItem("radar-settings")).prof }; });
     const a = await read();
-    ok(a.n > 0 && a.ready === 0 && a.why === a.n, "réglage par défaut : " + a.n + " long(s), aucun prêt, chacun avec la raison (" + a.why + ") ; shorts prêts : " + a.shortsReady);
-    ok(!/Longs en pause|Longs et shorts en pause|longs d'abord/.test(a.line), "ligne du marché sans « Longs en pause » ni « longs d'abord » : « " + a.line.replace(/\s+/g, " ").slice(0, 140) + " »");
+    ok(a.longs > 0 && a.shorts > 0, "les deux sens analysés : " + a.longs + " long(s), " + a.shorts + " short(s)");
+    ok(a.readyOff === 0 && a.heldReady === 0 && a.held === a.heldWhy, "aucun « Prêt » hors profil gagnant ; " + a.held + " setup(s) gardés « À surveiller » avec la raison ; " + a.ready + " prêt(s)");
+    ok(a.win === a.prof1, "chaque profil gagnant le dit sur sa carte (" + a.win + "/" + a.prof1 + ")");
     await nav(page, "set");
-    const opt = await page.$eval("#p-longs", e => ({ v: e.value, t: [...e.options].map(o => o.textContent) }));
-    ok(opt.v === "0" && /Shorts seulement/.test(opt.t[0]) && /Longs et shorts/.test(opt.t[1]), "Réglages › Précision : « " + opt.t[opt.v === "0" ? 0 : 1] + " » choisi");
     await page.evaluate(() => { document.getElementById("prec").open = true; });
-    await page.selectOption("#p-longs", "1");
-    await page.waitForFunction(() => JSON.parse(localStorage.getItem("radar-settings")).longs === true, null, { timeout: 10000 });
+    const c = await page.$eval("#p-prof", e => ({ on: e.checked, t: e.closest("label").textContent }));
+    ok(c.on && /profils gagnants sur deux ans/.test(c.t), "Réglages › Précision : « " + c.t.trim().slice(0, 90) + "… » coché par défaut");
+    await page.click("#p-prof");
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("radar-settings")).prof === false, null, { timeout: 10000 });
     const b = await read();
-    ok(b.longs === true && b.why === 0, "« Longs et shorts » : la raison disparaît des longs (" + b.n + " long(s), " + b.ready + " prêt(s))");
-    if (SHOTS) { await page.$eval("#p-longs", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p23-shorts-seulement.png") }); }
+    ok(b.held === 0 && b.ready >= a.ready, "décoché : plus aucun setup retenu pour son profil (" + b.ready + " prêt(s))");
+    if (SHOTS) { await page.$eval("#p-prof", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p23-profils.png") }); }
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });

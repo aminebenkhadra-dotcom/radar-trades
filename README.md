@@ -416,3 +416,35 @@ Réglages › Précision des setups › « Trades proposés » : « Shorts seule
 revenir aux deux sens (`S.longs`, `SIDE()` dans la page, `side: -1` passé au moteur ; 0 par défaut dans le moteur, les apps sœurs
 gardent leurs règles). Un long reste visible, refusé au contrôle « Tendance » avec la raison ; il n'est jamais « Prêt » ni notifié.
 La ligne du marché ne parle plus de longs en pause et dit « longs non proposés » quand le fond est haussier. Test de page P23.
+
+## Mise à jour du 23/11/2026 (3) : les deux sens, « Prêt » pour les profils gagnants
+
+Amine : « ne bloque rien du tout, analyse les deux et donne-moi les trades gagnants ». Les longs reviennent (fin du « shorts seulement »
+du build 82) et la pause rebond du build 81 est coupée (`REB=0`).
+
+Étude : chaque trade rejoué avec son profil (option `feat` du moteur, `feat.yml` et `feat0.yml`, scripts `tools/backtest/feat42.js` et
+`tools/backtest/prof42.js`), 30 critères découpés en quelques classes, longs et shorts à part. Deux profils sont restés gagnants les deux
+années, aussi sur la base la plus large (tous les setups à leur zone, niveau de précision 0) :
+- long dans un marché agité (amplitude 24 h au-dessus de 130 % de la normale) : +0,14 et +0,12 R par trade, contre −0,11 et −0,07 pour
+  tous les longs ; en marché calme, −0,29 et −0,30 ;
+- short quand Bitcoin a baissé de 0 à 1 % sur 4 h : +0,16 et +0,27 R par trade, contre −0,02 et +0,12 pour tous les shorts.
+
+Règle (option `prof` du moteur, `S.prof`, cochée par défaut dans Réglages › Précision) : « Prêt » et alertes seulement pour ces deux
+profils ; les autres setups restent « À surveiller » avec la raison ; chaque profil gagnant le dit sur sa carte (contrôle « Marché »).
+Rejeu de contrôle (`profv.yml`, branches `profv-v42-A` à `D`) :
+
+| Période | Règles d'origine | Profils gagnants |
+|---|---|---|
+| sept. 2024 → oct. 2025 | −96 R (1 494 trades, 33 % gagnants) | +27,7 R (711 trades, 37 %) |
+| oct. 2025 → oct. 2026 | +71,4 R (1 154 trades, 37 %) | +132,6 R (634 trades, 42 %) |
+| oct. → nov. 2026 | +80,9 R (102 trades, 62 %) | +53,7 R (70 trades, 60 %) |
+| novembre 2026, Levels 1 à 3 | +167,3 R (202 trades, 62 %) | +120,6 R (141 trades, 63 %), pire série 4 au lieu de 8 |
+
+- Longs : −75,3 → +26,6 R et −25,8 → +15,0 R. Shorts : −20,7 → +1,0 R et +97,2 → +117,6 R.
+- Baisse maximale 56 R au lieu de 147 en 2024-25, 44 au lieu de 72 en 2025-26 ; 11 mois négatifs sur 25 ; pire série 31 pertes (2024-25).
+- Limite : les profils ont été choisis sur ces deux années ; leur régularité, la base large et les semaines récentes les soutiennent.
+  La condition des shorts suit Bitcoin sur 4 h : elle change d'un quart d'heure à l'autre, le rejeu la mesure telle quelle.
+- Derniers shorts d'Amine (export du 23/11) : la règle aurait proposé STABLE (20/11, gagnant) et BCH (23/11, perdant), pas BTW, ALCH,
+  JELLYJELLY ni XMR (Bitcoin en hausse, ou déjà en baisse de plus de 1 % sur 4 h).
+
+Tests de page : P23 (profils gagnants), P20 sans pause rebond.

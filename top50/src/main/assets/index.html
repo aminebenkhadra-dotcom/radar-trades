@@ -690,6 +690,12 @@ function judge(r,opt){
   g.pts=Math.min(15,g.pts);
   if(!q)g.head="R:R "+fr(rrNet,1)+" net · frais "+fr(fees,0)+"\u00a0%";
 
+  /* opt.prof (study of 23/11/2026, Radar Trades): « Prêt » only for the two profiles that won on both years of replay (60 markets, fees
+     included, feat.yml + prof42.js): a long in an agitated market (24-hour range above 130 % of normal), a short while Bitcoin moved 0
+     to 1 % its way over 4 hours. Any other setup stays « À surveiller » with the reason; both sides are always analysed */
+  if(opt.prof){var pw=L?f.rng24!==null&&f.rng24>1.3:f.btcSh!==null&&f.btcSh>=0&&f.btcSh<1;r.prof=pw?1:0;
+    if(pw)add(G.mkt,"ok",0,function(){return L?"Profil gagnant : marché agité (amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale), le seul où les longs ont gagné sur deux ans":"Profil gagnant : Bitcoin "+sgn(-f.btcSh,1)+" % sur 4 h, le cas où les shorts ont le mieux gagné sur deux ans"});
+    else blk.push({k:"prof",sev:"watch",t:L?"Profil sans avantage : sur deux ans, les longs n'ont gagné que dans un marché agité (amplitude 24 h au-dessus de 130 % de la normale)"+(f.rng24!==null?" ; ici "+fr(f.rng24*100,0)+" %":""):"Profil sans avantage : sur deux ans, les shorts ont gagné quand Bitcoin baissait de 0 à 1 % sur 4 h"+(f.btcSh!==null?" ; ici "+sgn(-f.btcSh,1)+" %":"")})}
   var list=[G.trend,G.mkt,G.zone,G.trig,G.mom,G.risk],sc=0,miss=0;
   list.forEach(function(x){sc+=x.pts});
   if(strict>=1&&!G.trig.ok)miss++;if(strict>=2&&!G.mkt.ok)miss++;if(strict>=2&&!G.mom.ok)miss++;
@@ -829,6 +835,15 @@ function revSetup(d1,h4,h1,o){
    (25: under 25 for a short, over 75 for a long); 0 or absent: not checked */
 function lateHit(r,d1,o){var L4=+o.late||0,LD=+o.lateD||0,rd=LD?rsi(closes(d1)):50;
   return r.dir<0?(L4>0&&r.r4<L4)||(LD>0&&rd<LD):(L4>0&&r.r4>100-L4)||(LD>0&&rd>100-LD)}
+/* o.feat (study of 23/11/2026): the profile of each trend trade taken, to find which profiles won, longs and shorts apart.
+   Side-relative where it matters: b4 / bsh / bbd are Bitcoin's 4H trend, 4-hour move and daily trend counted in the trade's direction,
+   reb how far Bitcoin moved against the trade from its 72-hour extreme, r4 / r1 the 4H / 1H RSI counted in the trade's direction */
+function featOf(r,bc){var f=r.f||{},T=r.trig||{},p=r.plan||{},d=r.dir,R=Math.abs(p.entry-p.sl);
+  function n(x,k){return x===null||x===undefined||!isFinite(x)?null:+(+x).toFixed(k)}
+  return{bd:f.bd?1:0,adx:n(f.adx,0),lt:n(f.lt,0),st:n(f.struct,0),b4:n(f.btc4,0),bsh:n(f.btcSh,2),reb:n(f.btcReb,1),bbd:bc&&isFinite(bc.bd)?bc.bd*d:null,
+    r4:n(f.r4,0),r1:n(f.r1,0),rt:n(f.retr,2),rg:n(f.rng24,2),rv:n(f.relVol,2),kN:n(f.kN,0),fl:f.flip?1:0,cc:f.conf?1:0,zk:f.zkind?1:0,zn:n(f.zn,0),
+    dv:f.div?1:0,d4:n(f.dl4,2),pv:n(f.pbVol,2),tg:(T.bos?1:0)|(T.sweep?2:0)|(T.candle?4:0)|(T.rsiT?8:0)|(T.delta?16:0)|(T.climax?32:0),
+    sc:n(r.score,0),fw:r.flow?n(r.flow.sc,0):null,rr:n(p.rr,2),rp:p.entry?n(R/p.entry*100,2):null}}
 function btFrames(m,d1){
   var first=m.length?m[0].t:0,hist=(d1||[]).filter(function(k){return k.t+864e5<=first});
   var tf={h1:{ms:36e5,full:btAgg(m,36e5),off:0},h4:{ms:144e5,full:btAgg(m,144e5),off:0},d1:{ms:864e5,full:hist.concat(btAgg(m,864e5)),off:hist.length}},at=-1,name;
@@ -1021,6 +1036,7 @@ function btStep(S,n){
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,sx:r.slx?(r.slx.sl===p.sl?2:1):0,rp:+(R/e*100).toFixed(3),score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
+    if(o.feat&&res.how!=="open")S.trades[S.trades.length-1].fx=featOf(r,o.btc?o.btc[m[i].t]:null);
     if(o.trail&&res.how!=="open"){var tq={i:i,end:i+960,cr:cost*e/R,far:e,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
       TRAIL_RULES.forEach(function(r){tq.v[r]={sl:p.sl,done:null}});(S.sims=S.sims||[]).push(tq)}
     if((o.state||o.tpup||o.tpdn||o.exits)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
