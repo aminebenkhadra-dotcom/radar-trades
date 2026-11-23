@@ -1,5 +1,6 @@
 name: November trades v42
 # The trades version 42 would have proposed in November 2026 on the Levels 1 to 3 (app options), listed one by one, to branch nov-check.
+# nov-revM / nov-revRB: the same with rebound trades added (study of 23/11/2026, not in the app).
 on:
   push:
     branches: [nov-run]
@@ -22,8 +23,14 @@ jobs:
           . ./caps.env
           SYMS="$CAP12,$CAP3" node tools/backtest/fetch.js klines data | tail -2
           mkdir -p res out
-          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data res 2 $k/4 '{"slsw":24,"slmode":"flag","reb":7}' & done; wait
-          node tools/backtest/nov42.js res 2026-11-01 > out/nov.json; head -c 1500 out/nov.json; echo
+          run() { id=$1; o=$2; mkdir -p r-$id
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $k/4 "$o" & done; wait
+            node tools/backtest/nov42.js r-$id 2026-11-01 > out/$id.json; echo "== $id"; head -c 1200 out/$id.json; echo; }
+          A='"slsw":24,"slmode":"flag","reb":7'
+          run nov    "{$A}"
+          # study of 23/11: the same, with rebound trades after an excess (the two variants of rev.yml), listed one by one
+          run nov-revM  "{$A,\"rev\":1}"
+          run nov-revRB "{$A,\"rev\":1,\"revTp\":\"r\",\"revR\":1.5,\"revBtc\":1}"
           cp caps.env ranks.json out/
       - name: Publish
         run: |
