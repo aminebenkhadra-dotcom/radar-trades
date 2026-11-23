@@ -186,6 +186,8 @@ function analyze(sym,d1,h4,h1,ctx,opt){
 
   /* Bitcoin */
   if(ctx&&ctx.btc&&sym!=="BTC"){f.btc4=ctx.btc.b4*dir;f.btcSh=ctx.btc.r4h*dir}else{f.btc4=null;f.btcSh=null}
+  /* how far Bitcoin has moved against the trade from its 72-hour extreme: its rise from the low for a short, its fall from the high for a long */
+  f.btcReb=ctx&&ctx.btc&&ctx.btc.up3!==undefined?(dir<0?ctx.btc.up3:-ctx.btc.dn3):null;
 
   replan(r,opt);
   r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
@@ -341,7 +343,10 @@ function enrich(r,m15,book,sqd,opt){
    Tendance, Zone and Risque must pass for a setup to be "Prêt"; the strictness setting adds Déclencheur, then Marché and Élan.
    Four statuses: "ready" (prêt selon les règles), "watch" (à surveiller), "refused" (refusé), "incomplete" (données incomplètes).
    Missing data never earns points, and a critical blocker (wide spread, obstacle before 1R) takes "ready" away. */
-var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move"};
+/* reb 7 (23/11/2026): no short while Bitcoin stands 7 % or more above its 72-hour low, no long 7 % or more under its 72-hour high.
+   Replayed on 60 markets: year 2024-25 −96 R → −49 R, year 2025-26 +71 R → +53 R, November 2026 +81 R → +84 R; Levels 1 to 3 in
+   November +169 R → +176 R, the 7 shorts it holds back all lost (the rebound from 55 000 on 21-22/11) */
+var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move",reb:7};
 function judge(r,opt){
   opt=opt||{};
   if(!r.plan){r.score=r.dir?(r.f.bd?25:12):0;r.blk=[];r.miss=[];return r}
@@ -380,6 +385,9 @@ function judge(r,opt){
     else{g.ok=false;add(g,"no",0,function(){return"Bitcoin en tendance inverse sur 4H"})}
     if(f.btcSh<=-1.5){g.ok=false;add(g,"no",0,function(){return"Bitcoin : "+sgn(f.btcSh*dir,1)+" % en 4 h, contre le trade"})}
     else g.pts+=2}
+  /* opt.reb (study of 23/11/2026): no short while Bitcoin stands reb % or more above its 72-hour low, no long reb % under its 72-hour high */
+  var rebT=opt.reb!==undefined?+opt.reb:PREC.reb;
+  if(rebT>0&&f.btcReb!==null&&f.btcReb>=rebT){g.ok=false;add(g,"no",0,function(){return dir<0?"Bitcoin a rebondi de "+fr(f.btcReb,1)+" % depuis son plus bas de 72 h : pas de short pendant un rebond":"Bitcoin a reculé de "+fr(f.btcReb,1)+" % depuis son plus haut de 72 h : pas de long pendant une chute"})}
   if(f.rng24!==null){
     if(agit)add(g,"mid",0,function(){return"Marché agité : amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale"+(f.relVol>1.5?", volume ×"+fr(f.relVol,1):"")});
     else if(quiet)add(g,"ok",3,function(){return"Marché calme : amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale"});
