@@ -18,6 +18,10 @@ Object.keys(by).sort().forEach(k => out[k] = st(by[k]));
 /* what the late filter held back: kept once per symbol and day, as the replay would have taken only the first */
 const seen = {}, lateOne = late.filter(t => { const k = t.sym + Math.floor(t.t / 864e5) + t.dir; if (seen[k]) return false; seen[k] = 1; return true; });
 out.heldBack = { L: st(lateOne.filter(t => t.dir > 0)), S: st(lateOne.filter(t => t.dir < 0)) };
+/* trend trades by configuration (side + zone kind: c order block and level, o order block, f flipped level, s level) */
+const cf = {}, ck = t => (t.cf && typeof t.cf === "object" ? t.cf.key : String(t.cf));
+trades.filter(t => t.kind !== "rev").forEach(t => (cf[ck(t)] = cf[ck(t)] || []).push(t));
+out.byCf = Object.fromEntries(Object.keys(cf).sort().map(k => [k, st(cf[k])]));
 /* month by month, all trades */
 const mo = {}; trades.forEach(t => { const m = new Date(t.t).toISOString().slice(0, 7); (mo[m] = mo[m] || []).push(t); });
 out.months = Object.fromEntries(Object.keys(mo).sort().map(m => [m, { n: mo[m].length, tot: +mo[m].reduce((a, t) => a + t.r, 0).toFixed(1) }]));
