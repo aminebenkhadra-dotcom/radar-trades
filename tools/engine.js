@@ -795,9 +795,9 @@ function btStep(S,n){
     if(S.first===null)S.first=m[i].t;
     S.evals++;
     var r=analyze(S.sym,d1,F.get("h4",200),F.get("h1",200),o.btc?{btc:o.btc[m[i].t]||null}:null,o);
-    /* o.rev (study): a reversal after an excess, when no trend setup is at its zone; o.revBtc: Bitcoin must have moved the same way over
-       the last 4 hours (altcoins), o.revSide: 1 longs only, -1 shorts only */
-    if(o.rev&&(!r.plan||r.dist>0.5)){var rv=revSetup(d1,F.get("h4",200),F.get("h1",200),o),bc=o.btc?o.btc[m[i].t]:null;
+    /* o.rev (study): a reversal after an excess, when no trend setup is at its zone (o.revFirst: even then, the reversal first);
+       o.revBtc: Bitcoin must have moved the same way over the last 4 hours (altcoins), o.revSide: 1 longs only, -1 shorts only */
+    if(o.rev&&(o.revFirst||!r.plan||r.dist>0.5)){var rv=revSetup(d1,F.get("h4",200),F.get("h1",200),o),bc=o.btc?o.btc[m[i].t]:null;
       if(rv&&(!o.revSide||rv.dir===+o.revSide)&&(!o.revBtc||S.sym==="BTC"||(bc&&bc.r4h*rv.dir>0))){
         var rp=rv.plan,rR=Math.abs(rp.entry-rp.sl),rres=btResolve(m,i,rp,rv.dir,N,cost);
         if(rres.how!=="open")S.trades.push({t:m[i].t,x:m[rres.j].t,dir:rv.dir,entry:rp.entry,sl:rp.sl,tp:rp.tp1,how:rres.how,r:rres.r,rp:+(rR/rp.entry*100).toFixed(3),cf:"rev",kind:"rev",cr:cost*rp.entry/rR,hs:[]});
