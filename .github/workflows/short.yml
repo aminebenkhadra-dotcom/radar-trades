@@ -1,0 +1,45 @@
+name: Shorts only v42
+# Study of 23/11/2026, third round: the app's rules (rebound pause 7 %) with both sides, then with shorts only, then shorts only without
+# the pause. Three periods on the 60 markets by volume, plus November on the Levels 1 to 3. Publishes each to short-v42-<period>.
+on:
+  push:
+    branches: [short-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          if [ -n "${{ matrix.period.caps }}" ]; then node tools/backtest/caps.js > caps.env; . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -3
+      - name: Replay the variants
+        run: |
+          mkdir -p out
+          run() { id=$1; o=$2; mkdir -p r-$id
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $k/4 "$o" & done; wait
+            node tools/backtest/rev42.js r-$id > out/$id.json; echo "== $id"; head -c 600 out/$id.json; echo; }
+          B='"slsw":24,"slmode":"flag"'
+          run both7 "{$B,\"reb\":7}"
+          run s7    "{$B,\"reb\":7,\"side\":-1}"
+          run s0    "{$B,\"side\":-1}"
+      - name: Publish
+        run: |
+          B=short-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Shorts only ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B
