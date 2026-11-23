@@ -605,6 +605,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <summary>Précision des setups</summary>
     <div class="grid">
       <label class="wide">Un setup est « Prêt » quand<select id="p-strict"><option value="2">les 6 contrôles sont validés</option><option value="1">tendance, zone, déclencheur et risque sont validés</option><option value="0">tendance, zone et risque sont validés</option></select></label>
+      <label class="wide">Trades proposés<select id="p-longs"><option value="0">Shorts seulement (conseillé)</option><option value="1">Longs et shorts</option></select></label>
+      <div class="wide sub" id="p-longs-s">Rejeu sur deux ans, 60 cryptos, frais compris : les longs de tendance ont perdu les deux années (−75 R en 2024-25, −25 R en 2025-26), même pendant la hausse ; les shorts ont gagné (+26 R et +78 R avec la pause rebond).</div>
       <label class="wide">Temporalité<select id="p-tmode"><option value="signal">Signaler les setups du lundi et du mardi</option><option value="skip">Pas de « Prêt » ni d'alerte le lundi et le mardi</option><option value="off">Ne pas tenir compte du jour</option></select></label>
       <label class="wide">Conseil de sortie des trades actifs<select id="p-exlv"><option value="2">Réactif : sortir tôt, quitte à couper des trades gagnants</option><option value="1">Équilibré</option><option value="0">Tardif : seulement quand presque tout est contre le trade</option></select></label>
       <div class="wide sub" id="p-exlv-s"></div>
@@ -664,7 +666,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={nt43:0,nt44:0,nt45:0,nt46:0,abrut:true,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={nt43:0,nt44:0,nt45:0,nt46:0,abrut:true,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",longs:false,profOk:false,profAt:0};
 var MAXDEEP=60;
 /* scanner levels, by market capitalisation rank (CoinGecko). A background run may watch several: "l12" is levels 1 and 2 */
 var LEVELS={1:[1,30],2:[31,60],3:[61,200],4:[201,400],5:[401,1000]};
@@ -1074,6 +1076,9 @@ function judge(r,opt){
   else if(f.lt<0)add(g,"no",0,function(){return"Trade contre la tendance de fond (moyenne 200 jours)"});
   else add(g,"mid",1,function(){return"Moins de 200 jours d'historique : tendance de fond inconnue"});
   if(strict>=2&&(!f.bd||f.adx<18))g.ok=false;
+  /* opt.side (study of 23/11/2026): -1 shorts only, 1 longs only, 0 or absent both sides; the other side is shown, never "ready" */
+  var sd=+opt.side||0;
+  if(sd&&dir!==sd){g.ok=false;add(g,"no",0,function(){return L?"Longs de tendance pas proposés : ils ont perdu sur deux ans de rejeu":"Shorts de tendance pas proposés"})}
   if(!q)g.head=(L?"Haussière":"Baissière")+(f.bd?" 1J + 4H":" 4H seule")+" · ADX "+Math.round(f.adx);
 
   /* Marché */
@@ -1957,7 +1962,10 @@ var SLSW_H=24;
    Replayed on 60 markets (tools/backtest/rev42.js, reb.yml): year 2024-25 −96 R → −49 R, year 2025-26 +71 R → +53 R, November 2026
    +81 R → +84 R; Levels 1 to 3 in November +169 R → +176 R, the 7 shorts it holds back all lost (the rebound from 55 000 on 21-22/11) */
 var REB=7;
-function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB}}
+/* SIDE (23/11/2026): shorts only unless S.longs. Replayed on 60 markets (short.yml): trend longs lost both years, −75 R in 2024-25
+   (a rising year) and −25 R in 2025-26; shorts only with the rebound pause: +26 R and +78 R; November 2026, Levels 1 to 3: +175 R */
+function SIDE(){return S.longs?0:-1}
+function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB,side:SIDE()}}
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */
 var EXI={},exiP=null,btcC=null;
 function readExi(info){((info&&info.symbols)||[]).forEach(function(s){EXI[s.symbol]=contractOf(s)})}
@@ -3159,6 +3167,8 @@ function exlvView(){var e=EXITS[exLevel()];$("p-exlv-s").textContent="Dans le te
 $("p-exlv").value=String(exLevel());exlvView();
 $("p-exlv").addEventListener("change",function(){S.exlv=+this.value;saveSettings();exlvView();if(view==="trades")renderTrades()});
 $("p-tmode").addEventListener("change",function(){S.tmode=this.value;saveSettings();rejudge();if(view==="tmp")renderTmp()});
+$("p-longs").value=S.longs?"1":"0";
+$("p-longs").addEventListener("change",function(){S.longs=this.value==="1";saveSettings();rejudge()});
 $("p-strict").addEventListener("change",function(){S.strict=+this.value;saveSettings();rejudge()});
 [["minrr","p-minrr",1,5],["slk","p-slk",0.1,2],["feecap","p-feecap",1,50]].forEach(function(f){
   var el=$(f[1]);el.value=S[f[0]];
@@ -5028,7 +5038,7 @@ function renderHome(){
   $("hm-g2").innerHTML=["mkt","cyc","tmp","news","hbtc","heth"].map(function(v){return hmTile(v)}).join("");
   $("hm-g3").innerHTML=["one","fund","sim","pf","cap","earn"].map(function(v){return hmTile(v)}).join("")+hmTile("set","",true,"alertes, profil, sauvegarde");
   var m=MKT,el=$("hm-mkt");
-  if(m){el.hidden=false;el.innerHTML="<span>Fond <b class=\""+(m.side>0?"up":m.side<0?"dn":"")+"\">"+esc(m.label.toLowerCase())+"</b> · "+(m.side>0?"longs d'abord":m.side<0?"shorts d'abord":"aucun côté")+"</span>"+gateLine()}
+  if(m){el.hidden=false;el.innerHTML="<span>Fond <b class=\""+(m.side>0?"up":m.side<0?"dn":"")+"\">"+esc(m.label.toLowerCase())+"</b> · "+(m.side>0?(SIDE()<0?"longs non proposés":"longs d'abord"):m.side<0?"shorts d'abord":"aucun côté")+"</span>"+gateLine()}
   else el.hidden=true}
 /* the side Bitcoin keeps out right now: the « Marché » check fails every long while Bitcoin falls on 4H or has lost 1.5 % in
    4 hours, and every short in the mirror case (22/11/2026: « only shorts » for a week while Bitcoin fell from 65 000 to 55 000) */
@@ -5040,7 +5050,7 @@ function btcGate(){
   if(b===null)return null;
   /* a rebound of Bitcoin from its 72-hour low holds the shorts back, a fall from its 72-hour high the longs (study of 23/11/2026) */
   return{noL:b<0||(s!==null&&s<=-1.5)||(R>0&&d!==null&&d<=-R),noS:b>0||(s!==null&&s>=1.5)||(R>0&&u!==null&&u>=R),b:b,s:s,u:u,d:d,R:R}}
-function gateLine(){var g=btcGate();if(!g||!(g.noL||g.noS))return"";
+function gateLine(){var g=btcGate();if(g&&SIDE()<0)g.noL=false;if(!g||!(g.noL||g.noS))return"";
   var why=function(L){return L?(g.b<0?"Bitcoin baisse sur 4H":g.s!==null&&g.s<=-1.5?"Bitcoin a perdu "+fr(-g.s,1)+" % en 4 h":"Bitcoin a reculé de "+fr(-g.d,1)+" % depuis son plus haut de 72 h")
     :(g.b>0?"Bitcoin monte sur 4H":g.s!==null&&g.s>=1.5?"Bitcoin a pris "+fr(g.s,1)+" % en 4 h":"Bitcoin a rebondi de "+fr(g.u,1)+" % depuis son plus bas de 72 h")};
   return'<small class="mst gate">'+(g.noL&&g.noS?"Longs et shorts en pause : "+why(true)+" ; "+why(false).replace("Bitcoin ",""):g.noL?"Longs en pause : "+why(true):"Shorts en pause : "+why(false))+"</small>"}
@@ -5050,7 +5060,7 @@ function mktLine(){
   if(!m){el.hidden=true;return}
   el.hidden=false;el.className="mline "+(m.side>0?"up":m.side<0?"dn":"");
   var sl=function(st,lab){return st&&st.b!==undefined?'<small class="mst '+(st.k>0?"pos":st.k<0?"neg":"")+'">'+lab+" : "+(st.k>0?"▲ en hausse":st.k<0?"▼ en baisse":"– à plat")+(st.b!==null?" · BTC "+sgn(st.b,1)+" %":"")+"</small>":""},sh=sl(m.mo,"30 jours")+sl(m.st,"7 jours");
-  el.innerHTML="<span>Fond <b>"+m.label.toLowerCase()+"</b> "+sgn(m.score,0)+'<small class="mst">tendance sur 1 à 5 mois</small>'+sh+gateLine()+'</span><span class="sub">'+(m.side>0?"longs d'abord":m.side<0?"shorts d'abord":"aucun côté")+" ›</span>"}
+  el.innerHTML="<span>Fond <b>"+m.label.toLowerCase()+"</b> "+sgn(m.score,0)+'<small class="mst">tendance sur 1 à 5 mois</small>'+sh+gateLine()+'</span><span class="sub">'+(m.side>0?(SIDE()<0?"longs non proposés":"longs d'abord"):m.side<0?"shorts d'abord":"aucun côté")+" ›</span>"}
 $("mkt-line").addEventListener("click",function(){setView("mkt")});
 
 /* ---------- background alerts ---------- */

@@ -392,3 +392,27 @@ en une heure. Une seule par sens toutes les 3 heures. Ce n'est pas un trade prop
 `nov.yml` (branche `nov-check`) liste aussi, trade par trade, ce qu'auraient donné les rebonds en novembre (`nov-revM.json`,
 `nov-revRB.json`). Tests de page : P20 (rebond simulé, aucun short prêt), P22 (bougie de +4,2 % sur un volume ×28 : une
 notification, une seule, et le réglage la coupe).
+
+## Mise à jour du 23/11/2026 (2) : shorts seulement
+
+Demande d'Amine : peu importe le sens et les règles, des trades qui marchent. Rejeu sur 60 marchés, frais compris (workflow
+`short.yml`, branches `short-v42-A` à `D`, option `side` du moteur, script `tools/backtest/rev42.js` avec le détail par configuration) :
+
+| Période | Règles d'origine | Build 81 (deux sens, pause) | Shorts seulement, pause |
+|---|---|---|---|
+| sept. 2024 → oct. 2025 | −96 R | −49 R | +26,3 R (725 trades, 36,6 % gagnants) |
+| oct. 2025 → oct. 2026 | +71,4 R | +53,4 R | +78,1 R (760 trades, 38,4 %) |
+| oct. → nov. 2026 | +80,9 R | +84,0 R | +86,1 R (97 trades, 64,9 %) |
+
+- Les longs de tendance ont perdu les deux années : −75,3 R (656 trades) en 2024-25, année de hausse, et −24,7 R (353) en 2025-26.
+- Shorts seulement sans la pause : −20,7 R, +97,2 R, +83,0 R. La pause rapporte 47 R en 2024-25 et en coûte 19 en 2025-26 : gardée.
+- Novembre 2026, Levels 1 à 3 : 196 trades et +173,5 R avec le build 81, 195 et +174,6 R en shorts seulement.
+- Ce que ça donne en temps normal : 37 % de trades gagnants, +0,04 à +0,10 R par trade, un mois sur deux négatif, jusqu'à 30 pertes
+  d'affilée dans le rejeu. Novembre 2026 (64 % de gagnants, +0,9 R par trade) est exceptionnel.
+- Par configuration (shorts, pause) : sous résistance 4H, positif sur les quatre périodes (+0,12, +0,13, +0,96, +0,94 R par trade) ;
+  sous order block seul, négatif sur les deux années (−0,38 et −0,14) mais positif en octobre-novembre 2026 : gardé.
+
+Réglages › Précision des setups › « Trades proposés » : « Shorts seulement (conseillé) » par défaut, « Longs et shorts » pour
+revenir aux deux sens (`S.longs`, `SIDE()` dans la page, `side: -1` passé au moteur ; 0 par défaut dans le moteur, les apps sœurs
+gardent leurs règles). Un long reste visible, refusé au contrôle « Tendance » avec la raison ; il n'est jamais « Prêt » ni notifié.
+La ligne du marché ne parle plus de longs en pause et dit « longs non proposés » quand le fond est haussier. Test de page P23.

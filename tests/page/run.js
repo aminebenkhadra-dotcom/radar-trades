@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,1200}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB\}\}/.test(src) && /var REB=7;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,1200}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,side:SIDE\(\)\}\}/.test(src) && /var REB=7;/.test(src) && /function SIDE\(\)\{return S\.longs\?0:-1\}/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -567,7 +567,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
   await test("P19", "Trade prêt sans notification : les deux sens notifiés, une alerte par setup, et sur la carte la raison", async ok => {
     /* background, with the list filter left on « Shorts »: the longs ready are notified too */
     const { ctx, page, errors } = await open(browser, { suffix: "?bg=1",
-      init: `localStorage.setItem("radar-settings",JSON.stringify({alv:"12",side:"short",amin:30,strict:0,nt43:1,nt44:1,nt45:1,profOk:true,account:1000}))` });
+      init: `localStorage.setItem("radar-settings",JSON.stringify({alv:"12",side:"short",longs:true,amin:30,strict:0,nt43:1,nt44:1,nt45:1,profOk:true,account:1000}))` });
     await page.evaluate(() => window.bgScan(false, true));
     await page.waitForFunction(() => window.__M.done, null, { timeout: 150000 });
     const r1 = await page.evaluate(() => ({ notes: window.__M.notes.filter(n => n.ch === "setups" && /prêt à saisir/.test(n.title)).map(n => n.title.replace(/^(\S+) · (Long|Short) .*$/, "$1:$2")),
@@ -589,7 +589,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(n3 === r1.ready.length, "setup revenu après plus de 2 heures : notifié de nouveau (" + n3 + ")");
     await ctx.close();
     /* in the app: the ready card says whether it was notified, or why not */
-    const o2 = await open(browser, { session: { next: NOW + 9 * 60e3 }, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"2",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    const o2 = await open(browser, { session: { next: NOW + 9 * 60e3 }, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"2",strict:0,longs:true,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(o2.page);
     const lc = await o2.page.$$eval("#view-scan .card .lvc", a => a.map(e => e.textContent));
     ok(lc.length > 0 && lc.every(t => /^Level 1 · n°\d+$/.test(t)), "cartes du Level 1 : « " + lc.slice(0, 3).join(" », « ") + " »");
@@ -609,7 +609,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
   });
 
   await test("P20", "Longs ou shorts en pause : la ligne du marché dit quel côté Bitcoin bloque", async ok => {
-    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",longs:true,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(page);
     const x = await page.evaluate(() => { const r = JSON.parse(localStorage.getItem("radar-last-l1")).results.find(r => r.f && r.dir && r.f.btc4 !== null && r.f.btc4 !== undefined);
       const rb = r && r.f.btcReb !== null && r.f.btcReb !== undefined ? r.f.btcReb : null;
@@ -619,7 +619,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(x.b !== null && (want ? want.test(x.t) : !/en pause/.test(x.t)), "Bitcoin 4H " + x.b + ", " + (x.s === null ? "?" : x.s.toFixed(2)) + " % en 4 h : « " + ((x.t.match(/(Longs|Shorts)[^›]*/) || ["rien en pause"])[0]).trim() + " »");
     await ctx.close();
     /* Bitcoin falling for four days: the line says the longs are on hold, and no long is ready */
-    const o2 = await open(browser, { btcDown: true, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    const o2 = await open(browser, { btcDown: true, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",longs:true,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(o2.page);
     const y = await o2.page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, r = R.find(r => r.f && r.dir && r.f.btc4 !== null && r.f.btc4 !== undefined);
       return { b: r ? r.f.btc4 * r.dir : null, t: document.getElementById("mkt-line").textContent, longsReady: R.filter(r => r.dir > 0 && r.st === "ready" && r.sym !== "BTC").length,
@@ -643,7 +643,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
   });
 
   await test("P21", "Accueil et vue simple : pages en un appui, cryptos en vert, orange ou rouge, détail à la demande", async ok => {
-    const set = `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}`;
+    const set = `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,longs:true,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}`;
     const { ctx, page, errors } = await open(browser, { home: true, simple: true, init: set });
     await page.waitForSelector("#view-home:not([hidden])", { timeout: 15000 });
     const h = await page.evaluate(() => ({ title: document.getElementById("title").textContent, back: document.getElementById("back").hidden, scanHidden: document.getElementById("view-scan").hidden,
@@ -730,6 +730,29 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(n4 === 0, "marché normal : aucune notification");
     ok(errors.length + o2.errors.length + o3.errors.length === 0, "aucune erreur JavaScript");
     await o2.ctx.close(); await o3.ctx.close();
+  });
+
+  await test("P23", "Shorts seulement par défaut : aucun long prêt, chaque long dit pourquoi, et Réglages les rend", async ok => {
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(page);
+    const read = () => page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, L = R.filter(r => r.dir > 0 && r.plan && r.sym !== "BTC");
+      return { n: L.length, ready: L.filter(r => r.st === "ready").length, shortsReady: R.filter(r => r.dir < 0 && r.st === "ready").length,
+        why: L.filter(r => { const g = (r.gates || []).find(g => g.k === "trend"); return g && !g.ok && (g.items || []).some(i => /Longs de tendance pas proposés : ils ont perdu sur deux ans de rejeu/.test(i.t)); }).length,
+        line: document.getElementById("mkt-line").textContent, longs: JSON.parse(localStorage.getItem("radar-settings")).longs }; });
+    const a = await read();
+    ok(a.n > 0 && a.ready === 0 && a.why === a.n, "réglage par défaut : " + a.n + " long(s), aucun prêt, chacun avec la raison (" + a.why + ") ; shorts prêts : " + a.shortsReady);
+    ok(!/Longs en pause|Longs et shorts en pause|longs d'abord/.test(a.line), "ligne du marché sans « Longs en pause » ni « longs d'abord » : « " + a.line.replace(/\s+/g, " ").slice(0, 140) + " »");
+    await nav(page, "set");
+    const opt = await page.$eval("#p-longs", e => ({ v: e.value, t: [...e.options].map(o => o.textContent) }));
+    ok(opt.v === "0" && /Shorts seulement/.test(opt.t[0]) && /Longs et shorts/.test(opt.t[1]), "Réglages › Précision : « " + opt.t[opt.v === "0" ? 0 : 1] + " » choisi");
+    await page.evaluate(() => { document.getElementById("prec").open = true; });
+    await page.selectOption("#p-longs", "1");
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("radar-settings")).longs === true, null, { timeout: 10000 });
+    const b = await read();
+    ok(b.longs === true && b.why === 0, "« Longs et shorts » : la raison disparaît des longs (" + b.n + " long(s), " + b.ready + " prêt(s))");
+    if (SHOTS) { await page.$eval("#p-longs", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p23-shorts-seulement.png") }); }
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
   });
 
   await test("P17", "Mise à jour du 17/11 : Levels, heure de la reco, périodes, cycle, temporalité, exposition, après sortie, actus, capital", async ok => {

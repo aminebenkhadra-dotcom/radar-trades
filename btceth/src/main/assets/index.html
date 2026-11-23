@@ -551,6 +551,9 @@ function judge(r,opt){
   else if(f.lt<0)add(g,"no",0,function(){return"Trade contre la tendance de fond (moyenne 200 jours)"});
   else add(g,"mid",1,function(){return"Moins de 200 jours d'historique : tendance de fond inconnue"});
   if(strict>=2&&(!f.bd||f.adx<18))g.ok=false;
+  /* opt.side (study of 23/11/2026): -1 shorts only, 1 longs only, 0 or absent both sides; the other side is shown, never "ready" */
+  var sd=+opt.side||0;
+  if(sd&&dir!==sd){g.ok=false;add(g,"no",0,function(){return L?"Longs de tendance pas proposés : ils ont perdu sur deux ans de rejeu":"Shorts de tendance pas proposés"})}
   if(!q)g.head=(L?"Haussière":"Baissière")+(f.bd?" 1J + 4H":" 4H seule")+" · ADX "+Math.round(f.adx);
 
   /* Marché */
