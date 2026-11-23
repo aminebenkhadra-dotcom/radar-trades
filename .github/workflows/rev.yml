@@ -1,0 +1,47 @@
+name: Reversal and late filter v42
+# Study of 23/11/2026. Replays version 42 with the app's options, then with a filter on trend trades taken too late and with a reversal
+# setup after an excess, on three periods of Binance history (60 markets by volume). Publishes each period to rev-v42-<period>.
+on:
+  push:
+    branches: [rev-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10" }
+          - { id: B, start: "2025-10", end: "2026-10" }
+          - { id: C, start: "2026-10", end: "2026-11" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: node tools/backtest/fetch.js klines data 2>&1 | tail -5
+      - name: Replay the variants
+        run: |
+          mkdir -p out
+          run() { id=$1; o=$2; mkdir -p r-$id
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $k/4 "$o" & done; wait
+            node tools/backtest/rev42.js r-$id > out/$id.json; echo "== $id"; head -c 900 out/$id.json; echo; }
+          B='"slsw":24,"slmode":"flag"'
+          run base   "{$B}"
+          run late25 "{$B,\"late\":25}"
+          run late30 "{$B,\"late\":30}"
+          run lateD  "{$B,\"lateD\":30}"
+          run revM   "{$B,\"rev\":1}"
+          run revR   "{$B,\"rev\":1,\"revTp\":\"r\",\"revR\":1.5}"
+          run revRB  "{$B,\"rev\":1,\"revTp\":\"r\",\"revR\":1.5,\"revBtc\":1}"
+          run revR2  "{$B,\"rev\":1,\"revTp\":\"r\",\"revR\":2,\"revBtc\":1}"
+      - name: Publish
+        run: |
+          B=rev-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Reversal and late filter ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B

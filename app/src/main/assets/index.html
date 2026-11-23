@@ -1296,6 +1296,34 @@ function btAgg(m,ms){var out=[],cur=null,i,k,key;
     else{if(k.h>cur.h)cur.h=k.h;if(k.l<cur.l)cur.l=k.l;cur.c=k.c;cur.q+=k.q;cur.b+=k.b}}
   return out}
 /* at the close of 15m candle i, the candles the live app would be handed: finished ones plus the one in progress */
+/* ---------- study of 23/11/2026: a reversal after an excess, and trend trades taken too late (options off by default) ----------
+   An excess and its turn, long side: the price fell at least revAtr daily ATR (3) from its 10-day high and the closed 4H RSI was under
+   revRsi (25) in the last 2 days; the lowest 1H low of the last 48 hours is at most revAge (24) closed 1H candles old, and the last closed
+   1H candle closes above the high of that low's candle and above the 1H EMA20. Entry at the price, stop 0.3 1H ATR beyond the extreme,
+   TP1 at the 4H EMA20 (the mean the price left, or revR R with revTp "r"), kept when TP1 is at least revMin R (1.2) away.
+   The short side is the mirror after a rise. Returns {dir, plan, ext} or null. */
+function revSetup(d1,h4,h1,o){
+  o=o||{};var n1=h1.length,n4=h4.length,nd=d1.length;if(n1<80||n4<60||nd<20)return null;
+  var c1=h1.slice(0,-1),k=c1.slice(-48),last=c1[c1.length-1],price=h1[n1-1].c,aD=atr(d1.slice(-31,-1)),a1=atr(c1),
+    rs4=rsiSeries(closes(h4.slice(0,-1))).slice(-12),e1=ema(closes(c1),20),m1=e1[e1.length-1],e4=ema(closes(h4),20),mean=e4[e4.length-1],
+    d10=d1.slice(-11),top=-Infinity,bot=Infinity,lo=Infinity,li=-1,hi=-Infinity,hj=-1,X=+o.revAtr||3,RS=+o.revRsi||25,AGE=+o.revAge||24;
+  if(rs4.length<12)return null;
+  d10.forEach(function(x){if(x.h>top)top=x.h;if(x.l<bot)bot=x.l});
+  k.forEach(function(c,i){if(c.l<lo){lo=c.l;li=i}if(c.h>hi){hi=c.h;hj=i}});
+  function mk(dir,ext,ix){
+    var bar=k[ix];if(ix>=k.length-1||k.length-1-ix>AGE)return null;
+    if(!(dir>0?last.c>bar.h&&last.c>m1:last.c<bar.l&&last.c<m1))return null;
+    var sl=ext-dir*0.3*a1,R=(price-sl)*dir;if(!(R>0))return null;
+    var tp=o.revTp==="r"?price+dir*(+o.revR||1.5)*R:mean;if((tp-price)*dir<(+o.revMin||1.2)*R)return null;
+    return{dir:dir,plan:{entry:price,sl:sl,tp1:tp,tp2:tp,rr:(tp-price)*dir/R},ext:ext}}
+  var res=null;
+  if(Math.min.apply(null,rs4)<RS&&top-lo>=X*aD)res=mk(1,lo,li);
+  if(!res&&Math.max.apply(null,rs4)>100-RS&&hi-bot>=X*aD)res=mk(-1,hi,hj);
+  return res}
+/* a trend trade in the direction of a move already stretched: 4H RSI beyond o.late, or daily RSI beyond o.lateD
+   (25: under 25 for a short, over 75 for a long); 0 or absent: not checked */
+function lateHit(r,d1,o){var L4=+o.late||0,LD=+o.lateD||0,rd=LD?rsi(closes(d1)):50;
+  return r.dir<0?(L4>0&&r.r4<L4)||(LD>0&&rd<LD):(L4>0&&r.r4>100-L4)||(LD>0&&rd>100-LD)}
 function btFrames(m,d1){
   var first=m.length?m[0].t:0,hist=(d1||[]).filter(function(k){return k.t+864e5<=first});
   var tf={h1:{ms:36e5,full:btAgg(m,36e5),off:0},h4:{ms:144e5,full:btAgg(m,144e5),off:0},d1:{ms:864e5,full:hist.concat(btAgg(m,864e5)),off:hist.length}},at=-1,name;
@@ -1462,8 +1490,19 @@ function btStep(S,n){
     if(S.first===null)S.first=m[i].t;
     S.evals++;
     var r=analyze(S.sym,d1,F.get("h4",200),F.get("h1",200),o.btc?{btc:o.btc[m[i].t]||null}:null,o);
+    /* o.rev (study): a reversal after an excess, when no trend setup is at its zone; o.revBtc: Bitcoin must have moved the same way over
+       the last 4 hours (altcoins), o.revSide: 1 longs only, -1 shorts only */
+    if(o.rev&&(!r.plan||r.dist>0.5)){var rv=revSetup(d1,F.get("h4",200),F.get("h1",200),o),bc=o.btc?o.btc[m[i].t]:null;
+      if(rv&&(!o.revSide||rv.dir===+o.revSide)&&(!o.revBtc||S.sym==="BTC"||(bc&&bc.r4h*rv.dir>0))){
+        var rp=rv.plan,rR=Math.abs(rp.entry-rp.sl),rres=btResolve(m,i,rp,rv.dir,N,cost);
+        if(rres.how!=="open")S.trades.push({t:m[i].t,x:m[rres.j].t,dir:rv.dir,entry:rp.entry,sl:rp.sl,tp:rp.tp1,how:rres.how,r:rres.r,rp:+(rR/rp.entry*100).toFixed(3),cf:"rev",kind:"rev",cr:cost*rp.entry/rR,hs:[]});
+        S.free=rres.j+17;continue}}
     if(!r.plan||r.dist>0.5)continue;
     enrich(r,F.m15(500),null,null,{noHeat:true});judge(r,jo);
+    /* o.late (study): a ready trend trade in the direction of a stretched move is not taken; what it would have given is kept apart */
+    if((o.late||o.lateD)&&r.st==="ready"&&lateHit(r,d1,o)){var lr=btResolve(m,i,r.plan,r.dir,N,cost);
+      if(lr.how!=="open")(S.late=S.late||[]).push({t:m[i].t,dir:r.dir,how:lr.how,r:lr.r,r4:+r.r4.toFixed(1)});
+      continue}
     if(r.st!=="ready"){
       /* o.shadow: also follow the setups the checks alone would call ready but a blocker or missing data holds back (study only) */
       if(o.shadow&&r.st0==="ready"){var sh=btResolve(m,i,r.plan,r.dir,N,cost);
