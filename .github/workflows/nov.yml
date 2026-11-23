@@ -22,7 +22,7 @@ jobs:
           . ./caps.env
           SYMS="$CAP12,$CAP3" node tools/backtest/fetch.js klines data | tail -2
           mkdir -p res out
-          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data res 2 $k/4 '{"slsw":24,"slmode":"flag"}' & done; wait
+          for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data res 2 $k/4 '{"slsw":24,"slmode":"flag","reb":7}' & done; wait
           node tools/backtest/nov42.js res 2026-11-01 > out/nov.json; head -c 1500 out/nov.json; echo
           cp caps.env ranks.json out/
       - name: Publish

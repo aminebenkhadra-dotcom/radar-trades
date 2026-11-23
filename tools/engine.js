@@ -343,10 +343,8 @@ function enrich(r,m15,book,sqd,opt){
    Tendance, Zone and Risque must pass for a setup to be "Prêt"; the strictness setting adds Déclencheur, then Marché and Élan.
    Four statuses: "ready" (prêt selon les règles), "watch" (à surveiller), "refused" (refusé), "incomplete" (données incomplètes).
    Missing data never earns points, and a critical blocker (wide spread, obstacle before 1R) takes "ready" away. */
-/* reb 7 (23/11/2026): no short while Bitcoin stands 7 % or more above its 72-hour low, no long 7 % or more under its 72-hour high.
-   Replayed on 60 markets: year 2024-25 −96 R → −49 R, year 2025-26 +71 R → +53 R, November 2026 +81 R → +84 R; Levels 1 to 3 in
-   November +169 R → +176 R, the 7 shorts it holds back all lost (the rebound from 55 000 on 21-22/11) */
-var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move",reb:7};
+/* reb: off by default here (the sister apps keep their rules); Radar Trades passes reb 7, see REB in its page */
+var PREC={strict:2,minRR:1.5,slk:0.5,feeCap:8,fee:0.05,lev:5,spreadWatch:0.15,spreadRefuse:0.5,slsw:0,slmode:"move",reb:0};
 function judge(r,opt){
   opt=opt||{};
   if(!r.plan){r.score=r.dir?(r.f.bd?25:12):0;r.blk=[];r.miss=[];return r}
