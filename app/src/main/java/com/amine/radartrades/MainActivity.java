@@ -2,6 +2,8 @@ package com.amine.radartrades;
 
 import android.app.Activity;
 import android.app.NotificationManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -212,6 +214,20 @@ public class MainActivity extends Activity {
                     }
                 }
             });
+        }
+
+        /* « Copier pour Claude »: the WebView clipboard API is not reliable on every phone, so the copy goes through Android */
+        @JavascriptInterface
+        public boolean copy(String text) {
+            if (text == null) return false;
+            runOnUiThread(() -> {
+                try {
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(ClipData.newPlainText("Radar Trades", text));
+                } catch (Exception ignored) {
+                }
+            });
+            return true;
         }
 
         @JavascriptInterface

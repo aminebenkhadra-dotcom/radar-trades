@@ -115,6 +115,8 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .why li.no::before{content:"✕";color:var(--bad)}
 .why li.mid::before{content:"~";color:var(--accent)}
 .copy{background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:13px}
+.cpx button,.cpx input,.cpx select,.cpx canvas,.cpx form,.cpx textarea,.cpx .acts,.cpx details.vpd{display:none!important}
+.cpt{width:100%;min-height:160px;margin-top:8px;font-size:12px;box-sizing:border-box}
 .empty{color:var(--muted);text-align:center;padding:26px 0;font-size:14px}
 
 /* settings */
@@ -2395,7 +2397,7 @@ function card(r,n,force){
      +(r.rp&&r.rp.ok?'<div class="sub">Prix arrondis au pas du contrat ('+fr(r.tick,r.dec)+") : stop éloigné de l'entrée, objectifs rapprochés.</div>":"")
      +sizeView(r)+beView(r)
      +gatesView(r)+flowView(r)+gauges(r)+bookView(r)+squeezeView(r.sq)
-     +'<div class="acts"><button class="take" type="button" data-take="'+sy+'"'+(openTrades().some(function(t){return t.sym===r.sym})?" disabled>Déjà dans Mes trades":">J'ai pris ce trade")+'</button><button class="copy" type="button" data-copy="'+sy+'">Copier le plan</button></div></div>'}
+     +'<div class="acts"><button class="take" type="button" data-take="'+sy+'"'+(openTrades().some(function(t){return t.sym===r.sym})?" disabled>Déjà dans Mes trades":">J'ai pris ce trade")+'</button><button class="copy" type="button" data-copy="'+sy+'">Copier pour Claude</button></div></div>'}
   return h+"</article>"}
 function gauge(label,v){
   if(v===undefined||v===null)return"";
@@ -2668,7 +2670,7 @@ function renderTrades(){
           +'<div><div class="cap">Gain ou perte net</div><div class="net" id="net-'+id+'">…</div><div class="sub" id="sub-'+id+'">En attente du prix</div></div>'
           +'<div><div class="rail" id="rail-'+id+'"><u></u><i></i></div><div class="raill"><span>Stop '+(t.sl>0?px(t.sl):"–")+'</span><span id="px-'+id+'">–</span><span>TP '+(t.tp>0?px(t.tp):"–")+"</span></div></div>"
           +'<div class="funnel plain two" id="od-'+id+'"></div><details class="set opd" id="op-'+id+'"></details>'+vpBox(id)
-          +'<div class="warn" id="al-'+id+'" hidden></div><div class="sub">Entrée '+px(t.entry)+" · quantité "+fr(t.qty,t.qty>=100?0:t.qty>=1?3:4)+(t.liq>0?" · liquidation "+px(t.liq):"")+" · position lue par ton téléphone, non modifiable ici.</div></article>"}).join("")
+          +'<div class="warn" id="al-'+id+'" hidden></div><div class="sub">Entrée '+px(t.entry)+" · quantité "+fr(t.qty,t.qty>=100?0:t.qty>=1?3:4)+(t.liq>0?" · liquidation "+px(t.liq):"")+" · position lue par ton téléphone, non modifiable ici.</div><div class="acts"><button class="copy" type="button" data-cpc="1">Copier pour Claude</button></div></article>"}).join("")
       +'<div class="lvh"><h2>Suivi à la main</h2><span class="sub">trades pris depuis le scanner ou ajoutés ici</span></div>'}
   if(on)h+='<div class="lvh"><h2>Suivi à la main</h2><span class="sub">trades pris depuis le scanner ou ajoutés ici</span></div>';
   h+='<div class="funnel two"><div><b id="sum-open">–</b><span>net en cours</span></div><div><b id="sum-done">–</b><span>net réalisé</span></div></div>';
@@ -2686,7 +2688,7 @@ function renderTrades(){
       +'<label>Quantité<input inputmode="decimal" id="q-'+id+'" data-id="'+id+'" data-f="qty" value="'+t.qty+'"></label>'
       +'<label>Stop<input inputmode="decimal" id="s-'+id+'" data-id="'+id+'" data-f="sl" value="'+t.sl+'"></label>'
       +'<label>Objectif<input inputmode="decimal" id="t-'+id+'" data-id="'+id+'" data-f="tp" value="'+t.tp+'"></label></div>'
-      +'<div class="acts"><button class="ghost" type="button" data-close="'+id+'">Clôturer</button><button class="ghost danger" type="button" data-del="'+id+'">Supprimer</button></div></article>'}).join("");
+      +'<div class="acts"><button class="copy" type="button" data-cpc="1">Copier pour Claude</button><button class="ghost" type="button" data-close="'+id+'">Clôturer</button><button class="ghost danger" type="button" data-del="'+id+'">Supprimer</button></div></article>'}).join("");
   h+='<details class="set"><summary>Ajouter un trade à la main</summary><form class="grid" id="manual">'
     +'<label>Crypto<input id="m-sym" autocapitalize="characters" spellcheck="false" placeholder="BTC"></label>'
     +'<label>Sens<select id="m-dir"><option value="1">Long</option><option value="-1">Short</option></select></label>'
@@ -2735,6 +2737,7 @@ document.addEventListener("visibilitychange",tick);
 
 document.querySelector(".tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setView(b.dataset.v)});
 $("view-trades").addEventListener("click",function(e){
+  var cc=e.target.closest("[data-cpc]");if(cc){copyTxt("Radar Trades · trade en cours · "+nowFr()+"\n"+cardText(cc.closest("article"))+"\n\nTon avis : je garde, j'ajuste le SL ou le TP, ou je sors ?",cc);return}
   var tk2=e.target.closest("[data-tpok]");
   if(tk2){var tt=trade(tk2.dataset.tpok),hh=tt&&health[tt.id];
     if(tt&&hh&&hh.tp&&hh.tp.px){tt.tp=+hh.tp.px.toPrecision(6);hh.tp={act:"keep",done:true};saveTrades();renderTrades()}return}
@@ -3094,7 +3097,7 @@ function liveCard(p){
     +'<div><span>Au stop</span><b class="'+(risk===null||cov<0.999?"neg":risk>=0?"pos":"neg")+'">'+(!known?"?":risk===null?"aucun":sgn(risk,2)+" $"+(cov<0.999?" + ?":""))+"</b><small>"
     +stopTxt+(known&&p.sls.length>1?" · "+p.sls.length+" stops":"")+"</small></div>"
     +'<div><span>Au TP</span><b class="'+(tq?"pos":"")+'">'+(!known?"?":tq?sgn(tg,2)+" $":"aucun")+"</b><small>"+(!known?"objectif inconnu":tq?"TP "+px(p.tps[0].px)+(p.tps.length>1?" (+"+(p.tps.length-1)+")":"")+(tq<p.qty*0.999?" · "+fr(tq/p.qty*100,0)+" % de la position":"")+(acc?" · "+fr(tg/acc*100,1)+" % du compte":""):"pas de TP sur Binance")+"</small></div></div>";
-  return h+vpBox(id)+"</article>"}
+  return h+vpBox(id)+'<div class="acts"><button class="copy" type="button" data-cpc="1">Copier pour Claude</button></div></article>'}
 function paintLive(p){
   var id="bn"+lkey(p),n=$("ln-"+id);if(!n)return;
   var m=LVS[lkey(p)]||{},roe=p.margin?p.pnl/p.margin*100:null,r=m.r0?(p.mark-p.entry)*p.dir/m.r0:null;
@@ -3197,6 +3200,15 @@ $("view-aft").addEventListener("click",function(e){
   AF=AF.filter(function(x){return x.id!==id});aftArm={};aftSave();renderAft()});
 
 /* ---------- events ---------- */
+/* « Copier pour Claude » (24/11/2026): the card as it is shown, in plain text, to paste into Claude instead of a screenshot */
+function cardText(el){if(!el)return"";el.classList.add("cpx");var t=el.innerText||el.textContent||"";el.classList.remove("cpx");
+  [].forEach.call(el.querySelectorAll("details.opd:not([open])"),function(d){var x=d.textContent.replace(/\s+/g," ").trim();if(x)t+="\n"+x});
+  return t.split("\n").map(function(x){return x.replace(/\s+/g," ").trim()}).filter(Boolean).join("\n")}
+function nowFr(){return new Date().toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+function copyTxt(t,b){var ok=function(){b.textContent="Copié, colle-le dans Claude"},ko=function(){b.textContent="Copie impossible : sélectionne le texte ci-dessous";
+    if(b.nextElementSibling&&b.nextElementSibling.classList.contains("cpt"))b.nextElementSibling.value=t;else{var a=document.createElement("textarea");a.value=t;a.readOnly=true;a.className="cpt";b.parentNode.insertBefore(a,b.nextSibling)}};
+  try{if(typeof Android!=="undefined"&&Android.copy&&Android.copy(t)){ok();return}}catch(x){}
+  try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}}
 $("app").addEventListener("click",function(e){
   var sg=e.target.closest("[data-sg]");if(sg){var sy0=sg.dataset.sg;openSym=openSym===sy0?null:sy0;detSym=null;render();
     if(openSym)setTimeout(function(){var el=$("spick");if(el&&el.firstChild)try{el.scrollIntoView({block:"nearest",behavior:"smooth"})}catch(x){el.scrollIntoView()}},60);return}
@@ -3209,8 +3221,7 @@ $("app").addEventListener("click",function(e){
   var c=e.target.closest("[data-copy]");
   if(c){var r=find(c.dataset.copy);if(!r)return;var p=r.plan,z=sizing(r);
     var t=r.sym+"USDT "+(r.dir>0?"LONG":"SHORT")+" | "+STL[r.st]+" | Entrée "+pp(r,p.entry)+" | Stop "+pp(r,p.sl)+" | TP1 "+pp(r,p.tp1)+" | TP2 "+pp(r,p.tp2)+" | R:R net "+fr(r.rrNet,1)+(z?" | Qté "+fr(z.qty,z.qd)+" | Levier x"+z.lev+" ("+(S.mtype==="cross"?"croisée":"isolée")+") | Marge "+fr(z.margin,2)+" USDT | Perte max "+fr(z.loss,2)+" $":"");
-    var ok=function(){c.textContent="Copié"},ko=function(){c.textContent=t};
-    try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
+    copyTxt("Radar Trades · trade proposé · "+nowFr()+"\n"+t+"\n\n"+cardText(c.closest("article"))+"\n\nTon avis : je le prends tel quel, je modifie le SL ou le TP, ou je ne le prends pas ?",c);return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
   var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
 /* simple or detailed view: a switch at the top of every Level (24/11/2026: the old button sat under the whole list, out of reach) */

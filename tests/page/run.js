@@ -102,6 +102,7 @@ const BRIDGE = `(() => {
     startWatch(a, b, m) { M.watch = { on: b, min: m }; }, stopWatch() { M.watch = null; }, canNotify() { return true; }, batteryFree() { return true; }, askBattery() {}, test() {}, lastCheck() { return ""; },
     nextCheck() { return M.next || 0; }, exactOk() { return M.exact !== false; }, askExact() { M.askedExact = 1; },
     done(msg) { M.done = msg; },
+    copy(t) { M.copied = t; return true; },
     saveBytes(name, b64) { M.xlsx = { name, b64 }; setTimeout(() => window.onExport && window.onExport(true, name), 5); },
     saveFile(name, data) { M.saved = data; setTimeout(() => window.onBackup && window.onBackup(true, ""), 5); },
     openFile() { setTimeout(() => window.onRestore && window.onRestore(true, M.restore || ""), 5); }
@@ -171,6 +172,7 @@ async function open(browser, o) {
 }
 const results = [];
 async function test(id, title, fn) {
+  if (process.env.ONLY && !process.env.ONLY.split(",").includes(id)) return;
   const rec = { id, title, checks: [], ok: true }, ok = (c, w) => { rec.checks.push((c ? "ok   " : "FAIL ") + w); if (!c) rec.ok = false; };
   try { await fn(ok); } catch (e) { rec.ok = false; rec.checks.push("exception: " + (e && e.stack || e)); }
   results.push(rec);
@@ -775,6 +777,35 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(!b.hidden && /^Inflation US \(CPI\) aujourd'hui à \d\d:\d\d · annonce forte dans 5 h : moitié de taille conseillée sur les nouveaux trades/.test(b.t), "bandeau : « " + b.t + " »");
     ok(b.ready1 === b.ready0, "aucun trade retiré : " + b.ready1 + " prêt(s) avant et après");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p24-annonce.png") });
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P25", "« Copier pour Claude » : un appui copie le trade proposé ou en cours en texte, avec les contrôles, prêt à coller", async ok => {
+    const L = last("ETHUSDT");
+    const tr = [{ id: "x1", sym: "ETH", full: "ETHUSDT", dir: 1, entry: L, qty: 1, sl: L * 0.98, tp: L * 1.04, t: NOW - 36e5 }];
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))});localStorage.setItem("radar-settings",JSON.stringify({alv:"12",account:1000,profOk:true,nt43:1,nt44:1,nt45:1,nt46:1}))}` });
+    await waitScan(page);
+    await page.click("#view-scan article button.row");
+    await page.waitForSelector("#view-scan [data-copy]", { timeout: 20000 });
+    const lab = await page.$eval("#view-scan [data-copy]", b => b.textContent);
+    await page.click("#view-scan [data-copy]");
+    await page.waitForFunction(() => window.__M.copied, null, { timeout: 10000 });
+    const a = await page.evaluate(() => ({ t: window.__M.copied, b: document.querySelector("#view-scan [data-copy]").textContent }));
+    ok(lab === "Copier pour Claude" && a.b === "Copié, colle-le dans Claude", "trade proposé : bouton « " + lab + " », puis « " + a.b + " »");
+    ok(/^Radar Trades · trade proposé · \d\d\/\d\d\/\d{4}/.test(a.t) && /USDT (LONG|SHORT) \| .*Entrée .* \| Stop .* \| TP1 /.test(a.t) && /Ton avis : je le prends tel quel/.test(a.t) && !/Copier pour Claude|J'ai pris ce trade/.test(a.t) && a.t.split("\n").length > 8,
+      "texte copié : en-tête, plan, contrôles de la carte, question, sans les boutons (" + a.t.split("\n").length + " lignes)");
+    await page.evaluate(() => { window.__M.copied = null; });
+    await nav(page, "trades");
+    await page.waitForSelector("#view-trades article.card.tr [data-cpc]", { timeout: 20000 });
+    await page.waitForFunction(() => /vérifié à/.test((document.querySelector("#view-trades article.card.tr") || {}).textContent || ""), null, { timeout: 60000 }).catch(() => {});
+    await page.click("#view-trades article.card.tr [data-cpc]");
+    await page.waitForFunction(() => window.__M.copied && /trade en cours/.test(window.__M.copied), null, { timeout: 10000 });
+    const b = await page.evaluate(() => window.__M.copied);
+    ok(/^Radar Trades · trade en cours · /.test(b) && /ETH/.test(b) && /Long/.test(b) && /Gain ou perte net/i.test(b) && /Stop .*TP /.test(b) && /je garde, j'ajuste le SL ou le TP, ou je sors \?$/.test(b) && !/Clôturer|Supprimer/.test(b),
+      "trade en cours : en-tête, crypto, sens, gain latent, stop et TP, question finale, sans les boutons");
+    ok(/(Toujours valide|Sortie conseillée|Attendre|vérifié à)/.test(b), "l'avis de suivi de l'appli est dans le texte (« " + ((b.match(/(Toujours valide|Sortie conseillée|Attendre)[^\n]*/) || [""])[0]) + " »)");
+    if (SHOTS) { await page.$eval("#view-trades [data-cpc]", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p25-copier.png") }); }
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
