@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,1200}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,prof:S\.prof!==false\?1:0\}\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,prof:S\.prof!==false\?1:0,big:S\.prof!==false\?1:0\}\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -751,6 +751,22 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const b = await read();
     ok(b.held === 0 && b.ready >= a.ready, "décoché : plus aucun setup retenu pour son profil (" + b.ready + " prêt(s))");
     if (SHOTS) { await page.$eval("#p-prof", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p23-profils.png") }); }
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P24", "Annonce forte (CPI, PCE, Fed) dans moins de 24 h : bandeau et moitié de taille conseillée, rien n'est bloqué", async ok => {
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(page);
+    const a = await page.evaluate(() => ({ hidden: document.getElementById("annbox").hidden, pce: radarAnn.soon(Date.parse("2026-11-24T20:00:00Z")), none: radarAnn.soon(Date.parse("2026-11-19T16:50:00Z")) }));
+    ok(a.hidden && a.none === null, "le 19/11 : aucune annonce dans les 24 h, pas de bandeau");
+    ok(a.pce && a.pce.k === "PCE" && Math.abs(a.pce.h - 17.5) < 0.01, "le 24/11 à 20:00 UTC : PCE du 25/11 à 13:30 UTC dans 17,5 h");
+    const b = await page.evaluate(() => { const rd = () => JSON.parse(localStorage.getItem("radar-last-l1")).results.filter(r => r.st === "ready").length, ready0 = rd();
+      radarAnn.list.unshift([new Date(Date.now() + 5 * 36e5).toISOString(), "CPI"]); radarAnn.box();
+      return { t: document.getElementById("annbox").textContent, hidden: document.getElementById("annbox").hidden, ready0, ready1: rd() }; });
+    ok(!b.hidden && /^Inflation US \(CPI\) aujourd'hui à \d\d:\d\d · annonce forte dans 5 h : moitié de taille conseillée sur les nouveaux trades/.test(b.t), "bandeau : « " + b.t + " »");
+    ok(b.ready1 === b.ready0, "aucun trade retiré : " + b.ready1 + " prêt(s) avant et après");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p24-annonce.png") });
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });

@@ -448,3 +448,29 @@ Rejeu de contrôle (`profv.yml`, branches `profv-v42-A` à `D`) :
   JELLYJELLY ni XMR (Bitcoin en hausse, ou déjà en baisse de plus de 1 % sur 4 h).
 
 Tests de page : P23 (profils gagnants), P20 sans pause rebond.
+
+## Mise à jour du 24/11/2026 : les 8 points du mémo, testés sur deux ans
+
+Mémo d'Amine (vidéo d'un trader, projet « Application Crypo ») : 8 améliorations. Demande : toutes, mais seulement ce qui rapporte.
+Chaque point rejoué sur les 60 marchés les plus échangés (2024-25, 2025-26, octobre-novembre 2026) et sur les Levels 1 à 3 en novembre,
+frais compris, avec les règles de l'appli (profils gagnants). Workflows `memo.yml` (mesures de chaque trade, sorties, mode range),
+`memov.yml` (contrôle), `supply.yml` (offre en circulation) ; scripts `tools/backtest/memo42.js` et `feat42.js`.
+
+| Point | Résultat | Dans l'appli |
+|---|---|---|
+| 1. Sortir à la cassure du dernier sommet / creux | 1H : −52 R en 2024-25, −91 R en 2025-26 ; 4H : −25 R et 0 R. Les trades coupés finissaient mieux que la sortie | Non, le stop reste |
+| 2. Pivots hebdomadaires | Shorts sur un pivot meilleurs en 2024-25 et 2025-26, moins bons en octobre-novembre 2026 ; longs dans l'autre sens | Non |
+| 3. Gros niveau à moins de 3 % | Longs : −0,05 et −0,03 R par trade contre +0,20 et +0,21 ; shorts : écartés encore gagnants | Longs seulement : orange |
+| 4. Zone morte entre les moyennes | Longs en zone morte meilleurs ; shorts partagés | Non |
+| 5. Force face à Bitcoin (24 h, 7 j) | Sens qui change d'une période à l'autre | Non |
+| 6. Mode range (zone de valeur, ADX bas) | −0,11, −0,18, −0,09 et −0,50 R par trade | Non |
+| 7. Annonce forte dans les 24 h (FOMC, CPI) | Moitié de taille : +11,5 R en 2024-25, −1,0 R en 2025-26, −6 R en novembre 2026 | Bandeau et conseil, rien d'écarté |
+| 8. Moins de 60 % de l'offre en circulation | Longs partagés ; shorts un peu moins bons mais gagnants | Non |
+
+Contrôle du point 3 (`memov.yml`) : 2024-25 +27,7 → +27,8 R (longs +0,13 → +0,17 R par trade, baisse maximale 56 → 51 R),
+2025-26 +132,6 → +137,3 R (longs +0,13 → +0,24 R par trade). Option `big` du moteur (`r.wk` : pivots et extrêmes hebdomadaires de chaque
+setup), liée à la case « profils gagnants » de Réglages › Précision.
+
+Point 7 : `ANN` dans la page, dates officielles (Fed, BLS, BEA) de novembre 2026 à décembre 2027, CPI, PCE et Fed ; bandeau en haut du
+scan et mention dans la notification d'un trade prêt quand une annonce tombe dans les 24 h (« moitié de taille conseillée »). À
+prolonger fin 2027. Tests de page : P24 (annonce), P16 et P23 mis à jour.
