@@ -474,3 +474,12 @@ setup), liée à la case « profils gagnants » de Réglages › Précision.
 Point 7 : `ANN` dans la page, dates officielles (Fed, BLS, BEA) de novembre 2026 à décembre 2027, CPI, PCE et Fed ; bandeau en haut du
 scan et mention dans la notification d'un trade prêt quand une annonce tombe dans les 24 h (« moitié de taille conseillée »). À
 prolonger fin 2027. Tests de page : P24 (annonce), P16 et P23 mis à jour.
+
+## Mise à jour du 24/11/2026 (2) : page « Global » et choix de la vue en haut
+
+- « Global » : Levels 1 à 5 dans un seul scan (`GLOBAL="l12345"`), premier bouton de la barre des Levels et première tuile de l'accueil.
+  Comme pour plusieurs Levels cochés, le détail est lu sur les cryptos les plus proches de leur zone, les plus grosses capitalisations
+  d'abord.
+- « Vue simple · Vue détaillée » : un sélecteur juste sous les Levels (`#vseg`). L'ancien bouton était sous toute la liste détaillée :
+  une fois passé en vue détaillée, Amine ne retrouvait plus la vue simple.
+- Tests de page : P21 (sélecteur en haut, page Global), P17 et P10 mis à jour.

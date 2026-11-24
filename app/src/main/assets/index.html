@@ -467,7 +467,9 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .brief.kg .bst{background:var(--good);color:var(--bg)} .brief.ko .bst{background:var(--accent);color:var(--bg)} .brief.kr .bst{background:var(--bad);color:var(--bg)}
 .brief .bp{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--muted)} .brief .bp b{font-family:var(--mono);color:var(--ink)}
 .brief>button{align-self:flex-start}
-.vtog{align-self:center;margin:6px auto 0;display:block}
+.vseg{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;margin-top:8px}
+.vseg button{flex:1;border:0;background:transparent;border-radius:9px;padding:7px 10px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.vseg button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -521,7 +523,8 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   </section>
 
   <section class="view" id="view-scan" hidden>
-  <div class="lvseg" id="lvseg" role="group" aria-label="Level"><button type="button" data-go="l1">Level 1</button><button type="button" data-go="l2">Level 2</button><button type="button" data-go="l3">Level 3</button><button type="button" data-go="l4">Level 4</button><button type="button" data-go="l5">Level 5</button></div>
+  <div class="lvseg" id="lvseg" role="group" aria-label="Level"><button type="button" data-go="l12345">Global</button><button type="button" data-go="l1">Level 1</button><button type="button" data-go="l2">Level 2</button><button type="button" data-go="l3">Level 3</button><button type="button" data-go="l4">Level 4</button><button type="button" data-go="l5">Level 5</button></div>
+  <div class="vseg" id="vseg" role="group" aria-label="Affichage"><button type="button" data-vue="simple">Vue simple</button><button type="button" data-vue="detail">Vue détaillée</button></div>
   <button class="mline" type="button" id="mkt-line" hidden></button>
   <div class="blkbox" id="acctblk" hidden></div>
   <div class="annbox" id="annbox" hidden></div>
@@ -543,7 +546,6 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   <div class="stack" id="none"></div>
   <div id="bt-list"></div>
   </div>
-  <button class="ghost vtog" type="button" id="vtog">Vue détaillée</button>
   </section>
   <section class="view" id="view-trades" hidden></section>
   <section class="view" id="view-aft" hidden></section>
@@ -676,6 +678,8 @@ function lvName(m){var d=lvOf(m);return d?(d.length>1?"Levels "+d.join(" et "):"
 function lvRange(m){var d=lvOf(m);return d?d.map(function(x){return LEVELS[x][0]+"e au "+LEVELS[x][1]+"e"}).join(", "):""}
 function lvAt(rank){for(var k in LEVELS)if(rank>=LEVELS[k][0]&&rank<=LEVELS[k][1])return"l"+k;return""}
 var MODES=["l1","l2","l3","l4","l5"];
+/* GLOBAL (24/11/2026): Levels 1 to 5 in one scan, every possible trade; SCANS: every scanner page */
+var GLOBAL="l12345",SCANS=MODES.concat(GLOBAL);
 /* ranks of the first 1000 cryptos, read page by page as the level needs them, kept 6 hours */
 function capRanks(maxRank){
   var c=null;try{c=JSON.parse(localStorage.getItem("radar-caps")||"null")}catch(e){}
@@ -2212,7 +2216,7 @@ function saveStore(m){var st=stores[m];if(!st)return;try{localStorage.setItem(ke
 function rejudge(){
   var O=opts();
   function one(r){if(r&&r.plan&&r.z&&r.lv){replan(r,O);verdict(r,O)}}
-  MODES.forEach(function(m){var st=stores[m];if(st){st.results.forEach(one);saveStore(m)}});
+  SCANS.forEach(function(m){var st=stores[m];if(st){st.results.forEach(one);saveStore(m)}});
   one(oneRes);precRef();
   if(view==="scan"){useStore(mode);render()}else if(view==="one")renderOne()}
 function statusLine(){
@@ -2329,7 +2333,7 @@ function render(){
   if(funnel&&top&&funnel.tiles&&funnel.tiles[3]){funnel.tiles[3][0]=results.filter(function(r){return r.st==="ready"}).length;fu.lastChild.firstChild.textContent=fr(funnel.tiles[3][0],0)}
   /* simple view (22/11/2026): only the cryptos, in colour; the one tapped opens below. The lists stay behind « Vue détaillée » */
   var simple=vueSimple();$("vdet").hidden=simple;$("sgrid").hidden=!simple;$("sleg").hidden=!simple;$("spick").hidden=!simple;
-  $("vtog").textContent=simple?"Vue détaillée":"Vue simple";$("vtog").hidden=!results.length;
+  [].forEach.call($("vseg").children,function(b){b.setAttribute("aria-pressed",(b.dataset.vue==="simple")===simple)});
   [].forEach.call($("lvseg").children,function(b){b.setAttribute("aria-pressed",b.dataset.go===mode)});
   if(simple){mktLine();profAlert();simpleView(rs);["top","next","none","ready3"].forEach(function(k){$(k).innerHTML=""});$("bt-list").innerHTML="";$("bt-list").dataset.k="";return}
   $("sgrid").innerHTML="";$("spick").innerHTML="";
@@ -2590,13 +2594,13 @@ function takeSetup(r){
   function v(x){return r.tick?x:+x.toPrecision(6)}
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1),lev:z?z.lev:+S.lev,st:r.st})}
 /* page titles, and the way back: every page is a step in the history, so Android's back button returns to the home page */
-var TITLES={home:"Radar Trades",l1:"Level 1",l2:"Level 2",l3:"Level 3",l4:"Level 4",l5:"Level 5",mkt:"Tendance",cyc:"Cycle",tmp:"Temporalité",one:"Analyser",fund:"Fondamental",
+var TITLES={home:"Radar Trades",l12345:"Global",l1:"Level 1",l2:"Level 2",l3:"Level 3",l4:"Level 4",l5:"Level 5",mkt:"Tendance",cyc:"Cycle",tmp:"Temporalité",one:"Analyser",fund:"Fondamental",
   trades:"Mes trades",aft:"Après sortie",news:"Actus",res:"Résultats",pf:"Portefeuille",cap:"Capital",earn:"Earn",sim:"Simulateur",hbtc:"Heatmap BTC",heth:"Heatmap ETH",set:"Réglages"},navQuiet=false;
 function setView(v){
   if(!TITLES[v])v="trades";
   if(!BG&&!navQuiet){try{if(location.hash.slice(1).split("~")[0]!==v)history.pushState({v:v},"","#"+v)}catch(e){}}
   $("title").textContent=TITLES[v];$("back").hidden=v==="home";$("logo").hidden=v!=="home";
-  var isScan=MODES.indexOf(v)>=0,isHeat=v==="hbtc"||v==="heth";
+  var isScan=SCANS.indexOf(v)>=0,isHeat=v==="hbtc"||v==="heth";
   view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"||v==="cap"||v==="aft"||v==="home"||v==="set"?v:"trades";
   $("view-home").hidden=view!=="home";$("view-set").hidden=view!=="set";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
@@ -3209,7 +3213,9 @@ $("app").addEventListener("click",function(e){
     try{navigator.clipboard.writeText(t).then(ok,ko)}catch(x){ko()}return}
   var b=e.target.closest("button.row");if(!b)return;var s=b.dataset.s;
   var rr=find(s);if(!rr||!rr.plan||view==="one")return;openSym=openSym===s?null:s;render()});
-$("vtog").addEventListener("click",function(){var d=vueSimple();try{localStorage.setItem("radar-vue",d?"detail":"simple")}catch(e){}openSym=d?firstSetup():null;detSym=null;render()});
+/* simple or detailed view: a switch at the top of every Level (24/11/2026: the old button sat under the whole list, out of reach) */
+$("vseg").addEventListener("click",function(e){var b=e.target.closest("button[data-vue]");if(!b)return;var d=b.dataset.vue==="detail";if(d===!vueSimple())return;
+  try{localStorage.setItem("radar-vue",d?"detail":"simple")}catch(x){}openSym=d?firstSetup():null;detSym=null;render();window.scrollTo(0,0)});
 $("hm-one").addEventListener("submit",function(e){e.preventDefault();var v=cleanSym($("hm-sym").value);$("hm-sym").value="";$("hm-sym").blur();if(!v)return;setView("one");$("one-sym").value=v;analyzeOne(v)});
 $("scan").addEventListener("click",function(){if(view==="heat")loadHeat(true);else if(view==="news")loadNews(true);else if(view==="mkt"||view==="cyc")loadMkt(true);else if(view==="tmp")loadTmp(true);else scan(mode)});
 [["account","f-account"],["risk","f-risk"],["budget","f-budget"],["lev","f-lev"],["margin","f-margin"],["totrisk","f-totrisk"],["dayloss","f-dayloss"],["minvol","f-minvol"],["fee","f-fee"],["slip","f-slip"],["exclude","f-exclude"]].forEach(function(f){
@@ -4478,7 +4484,7 @@ function renderTmp(){
    wicks: not measured as an edge, a caution), and the next normal window. Gives what to do with a setup ready now */
 function tmpDecision(d,weak,wd,off){
   var pace=d&&d.now&&d.now.pace,thin=pace!==null&&pace!==undefined&&pace<0.6,busyH=pace>1.6,ready=0;
-  MODES.forEach(function(m){var st=stores[m];if(st&&Date.now()-st.stamp<60*60e3)st.results.forEach(function(r){if(r.plan&&r.st==="ready")ready++})});
+  SCANS.forEach(function(m){var st=stores[m];if(st&&Date.now()-st.stamp<60*60e3)st.results.forEach(function(r){if(r.plan&&r.st==="ready")ready++})});
   /* next Wednesday 00:00 UTC, in local time */
   var nx=new Date(),add=(3-nx.getUTCDay()+7)%7||7;nx=new Date(Date.UTC(nx.getUTCFullYear(),nx.getUTCMonth(),nx.getUTCDate()+add));
   var k,t,txt,act;
@@ -5130,6 +5136,9 @@ function renderHome(){
   $("hm-lv").innerHTML=MODES.map(function(m,i){var k=i+1,c=levelCounts(k),L=LEVELS[k];
     var cnt=c?'<span class="hm-c"><i class="kg">'+c.g+'</i><i class="ko">'+c.o+'</i><i class="kr">'+c.r+"</i><em>"+hmd(c.stamp)+"</em></span>":'<span class="hm-c"><em>pas encore scanné</em></span>';
     return'<button type="button" class="hm-l" data-go="'+m+'"><span class="n">'+k+"</span><b>Level "+k+"</b><small>"+L[0]+(L[0]===1?"er":"e")+" au "+L[1]+"e</small>"+cnt+"</button>"}).join("");
+  var gc=null;try{var gx=JSON.parse(localStorage.getItem(key(GLOBAL))||"null");if(gx&&gx.results){gc={g:0,o:0,r:0,stamp:gx.stamp};gx.results.forEach(function(r){gc[colorOf(r)]++})}}catch(e){}
+  $("hm-lv").insertAdjacentHTML("afterbegin",'<button type="button" class="hm-l" data-go="'+GLOBAL+'"><span class="n">∑</span><b>Global</b><small>Levels 1 à 5, tous les trades</small>'
+    +(gc?'<span class="hm-c"><i class="kg">'+gc.g+'</i><i class="ko">'+gc.o+'</i><i class="kr">'+gc.r+"</i><em>"+hmd(gc.stamp)+"</em></span>":'<span class="hm-c"><em>pas encore scanné</em></span>')+"</button>");
   var nT=$("tcount").textContent;
   $("hm-g1").innerHTML=hmTile("trades",nT?'<span class="bd">'+esc(nT)+"</span>":"")+hmTile("aft")+hmTile("res");
   $("hm-g2").innerHTML=["mkt","cyc","tmp","news","hbtc","heth"].map(function(v){return hmTile(v)}).join("");
@@ -5453,7 +5462,7 @@ $("bk-in").addEventListener("click",function(){
 
 /* ---------- boot ---------- */
 function loadStores(){
-  MODES.forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
+  SCANS.forEach(function(m){try{var last=JSON.parse(localStorage.getItem(key(m))||"null");
     if(last&&last.v===4&&last.results&&last.results.length&&last.stamp&&(!stores[m]||last.stamp>stores[m].stamp))
       stores[m]={results:last.results,funnel:last.funnel||null,stamp:last.stamp,live:true}}catch(e){}})}
 /* "l2~SOL" opens Level 2 on the SOL setup, "trades~id" opens that trade: used by the notifications */

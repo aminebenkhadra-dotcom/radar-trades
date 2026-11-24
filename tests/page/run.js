@@ -359,7 +359,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     }
     ok(/\d+ %de ces setups ont atteint le TP1/.test(cf.replace(/\s+/g, "")) || /\d+ %\s*de ces setups ont atteint le TP1/.test(cf), tried[tried.length - 1] + " : " + cf.replace(/\s+/g, " ").slice(24, 170) + "…");
     if (SHOTS) { await page.$eval("#one-out .cfg", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p10-config.png") }); }
-    ok(tabs.length === 21, tabs.length + " pages ouvertes depuis l'accueil, plus l'analyse d'une crypto");
+    ok(tabs.length === 22, tabs.length + " pages ouvertes depuis l'accueil (Global compris), plus l'analyse d'une crypto");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -645,7 +645,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const h = await page.evaluate(() => ({ title: document.getElementById("title").textContent, back: document.getElementById("back").hidden, scanHidden: document.getElementById("view-scan").hidden,
       lv: [...document.querySelectorAll("#hm-lv .hm-l")].map(b => b.dataset.go + ":" + b.querySelector("b").textContent), tiles: [...document.querySelectorAll("#view-home .hm-t")].map(b => b.dataset.go), tabsShown: !document.querySelector(".tabs").hidden }));
     ok(h.title === "Radar Trades" && h.back && h.scanHidden && !h.tabsShown, "l'appli s'ouvre sur l'accueil, sans la barre d'onglets");
-    ok(h.lv.join() === "l1:Level 1,l2:Level 2,l3:Level 3,l4:Level 4,l5:Level 5" && h.tiles.length === 16, "accueil : 5 Levels et " + h.tiles.length + " pages (" + h.tiles.join(", ") + ")");
+    ok(h.lv.join() === "l12345:Global,l1:Level 1,l2:Level 2,l3:Level 3,l4:Level 4,l5:Level 5" && h.tiles.length === 16, "accueil : Global, 5 Levels et " + h.tiles.length + " pages (" + h.tiles.join(", ") + ")");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p21-accueil.png") });
     /* a level: the cryptos in colour */
     await page.click('#hm-lv [data-go="l1"]'); await waitScan(page);
@@ -685,11 +685,19 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p21-analyser.png") });
     await page.click('#one-out [data-det="one"]');
     ok(await page.isVisible("#one-out .verdict"), "« Voir le détail » : l'analyse complète");
-    /* « Vue détaillée » brings the old lists back */
-    await nav(page, "l1"); await page.click("#vtog");
+    /* « Vue détaillée » brings the old lists back; the switch sits at the top, above the grid (24/11/2026) */
+    await nav(page, "l1");
+    const sw = await page.evaluate(() => ({ seg: document.getElementById("vseg").getBoundingClientRect().top, grid: document.getElementById("sgrid").getBoundingClientRect().top, on: (document.querySelector('#vseg [aria-pressed="true"]') || {}).textContent }));
+    ok(sw.seg < sw.grid && sw.on === "Vue simple", "le choix « Vue simple · Vue détaillée » est en haut, au-dessus de la grille (" + Math.round(sw.seg) + " px)");
+    await page.click('#vseg [data-vue="detail"]');
     ok(await page.isVisible("#top article.card") && !(await page.isVisible("#sgrid")), "« Vue détaillée » : les listes complètes reviennent");
-    await page.click("#vtog");
+    await page.click('#vseg [data-vue="simple"]');
     ok(await page.isVisible("#sgrid .sg"), "« Vue simple » : retour à la grille");
+    /* Global: Levels 1 to 5 in one page */
+    await nav(page, "l12345");
+    await page.waitForFunction(() => { try { return JSON.parse(localStorage.getItem("radar-last-l12345")).results.length > 0; } catch (e) { return false; } }, null, { timeout: 60000 });
+    const gl = await page.evaluate(() => ({ title: document.getElementById("title").textContent, lv: [...new Set(JSON.parse(localStorage.getItem("radar-last-l12345")).results.map(r => r.cap <= 30 ? 1 : r.cap <= 60 ? 2 : r.cap <= 200 ? 3 : r.cap <= 400 ? 4 : 5))].sort(), tiles: document.querySelectorAll("#sgrid .sg").length, pressed: (document.querySelector('#lvseg [aria-pressed="true"]') || {}).textContent }));
+    ok(gl.title === "Global" && gl.pressed === "Global" && gl.lv.length >= 2 && gl.tiles > 0, "Global : " + gl.tiles + " cryptos des Levels " + gl.lv.join(", ") + " sur une seule page");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
     /* a notification in the simple view: its crypto opens below the grid, the home page one step back */
@@ -778,7 +786,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const af = [{ id: "s1", sym: "SOL", full: "SOLUSDT", dir: 1, entry: ex * 1.02, qty: 1, sl: ex, tp: ex * 1.5, r0: ex * 0.02, tc: m[at].t, exit: ex, net: -2, src: "main", out: null, at: 0, hi: 0, lo: 0, last: 0 }];
     const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-trades",${JSON.stringify(JSON.stringify(tr))});localStorage.setItem("radar-after",${JSON.stringify(JSON.stringify(af))});localStorage.setItem("radar-settings",JSON.stringify({account:1000,fee:0.05,profOk:true,nt45:1}))}` });
     const tabs = await page.$$eval("#lvseg button", a => a.map(b => b.textContent));
-    ok(tabs.join() === "Level 1,Level 2,Level 3,Level 4,Level 5", "onglets du scanner : " + tabs.join(" · "));
+    ok(tabs.join() === "Global,Level 1,Level 2,Level 3,Level 4,Level 5", "onglets du scanner : " + tabs.join(" · "));
     await waitScan(page);
     const l1 = await page.evaluate(() => ({ syms: JSON.parse(localStorage.getItem("radar-last-l1")).results.map(r => r.sym), caps: JSON.parse(localStorage.getItem("radar-last-l1")).results.map(r => r.cap), fd: (() => { const e = document.getElementById("fdet"); e.open = true; return e.textContent.replace(/\s+/g, " "); })() }));
     ok(l1.syms.length === 10 && l1.caps.every(c => c >= 1 && c <= 30) && !l1.syms.includes("APT"), "Level 1 : les 10 cryptos cotées parmi les 30 premières capitalisations (" + l1.syms.join(", ") + ")");
