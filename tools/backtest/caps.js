@@ -33,4 +33,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   /* rank of each contract, for the per-level report */
   const rk = {}; cg.forEach(c => { const b = String(c.symbol).toUpperCase(); ["", "1000", "1000000", "1M"].map(x => x + b + "USDT").forEach(s => { if (fut.has(s) && !rk[s]) rk[s] = c._r; }); });
   require("fs").writeFileSync("ranks.json", JSON.stringify(rk));
+  /* supply of each contract's coin (memo of 24/11/2026, point 8: dilution to come): circulating / total and circulating / max, in % */
+  const sp = {}; cg.forEach(c => { const b = String(c.symbol).toUpperCase(); ["", "1000", "1000000", "1M"].map(x => x + b + "USDT").forEach(s => {
+    if (fut.has(s) && !sp[s] && c.circulating_supply > 0) sp[s] = { ct: c.total_supply > 0 ? +(c.circulating_supply / c.total_supply * 100).toFixed(1) : null,
+      cm: c.max_supply > 0 ? +(c.circulating_supply / c.max_supply * 100).toFixed(1) : null }; }); });
+  require("fs").writeFileSync("supply.json", JSON.stringify(sp));
 })().catch(e => { console.error(e); process.exit(1); });

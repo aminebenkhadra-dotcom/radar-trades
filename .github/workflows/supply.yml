@@ -1,0 +1,18 @@
+name: Coin supply
+# Memo of 24/11/2026, point 8: circulating share of each contract's coin (CoinGecko), to branch supply-data.
+on:
+  push:
+    branches: [supply-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          node tools/backtest/caps.js > caps.env && mkdir -p out && cp ranks.json supply.json out/ && head -c 300 out/supply.json
+          cd out && git init -q -b supply-data && git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Coin supply" && git push -q -f "$REMOTE" supply-data
