@@ -483,3 +483,12 @@ prolonger fin 2027. Tests de page : P24 (annonce), P16 et P23 mis à jour.
 - « Vue simple · Vue détaillée » : un sélecteur juste sous les Levels (`#vseg`). L'ancien bouton était sous toute la liste détaillée :
   une fois passé en vue détaillée, Amine ne retrouvait plus la vue simple.
 - Tests de page : P21 (sélecteur en haut, page Global), P17 et P10 mis à jour.
+
+## Mise à jour du 24/11/2026 (3) : page « Suivi »
+
+Chaque trade que l'appli met « Prêt » (scan à l'écran ou contrôle en arrière-plan) est enregistré une fois par épisode (crypto, sens,
+moment où il passe prêt) dans `radar-track`, puis joué sur les bougies 15 min qui suivent : entrée au prix du marché à ce moment,
+stop et TP1 du plan, frais et glissement compris ; une bougie qui touche le stop et le TP compte comme stop. La page « Suivi »
+(tuile de l'accueil) donne les trades terminés, les gagnants, le total et la moyenne en R, et chaque ligne. Elle se relit à chaque
+ouverture. Seuls les Levels scannés sont suivis (en arrière-plan : les Levels surveillés). Test de page P25.
+`pool()` accepte maintenant d'être appelé sans suivi de progression.

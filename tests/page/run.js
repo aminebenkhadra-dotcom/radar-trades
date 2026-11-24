@@ -359,7 +359,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     }
     ok(/\d+ %de ces setups ont atteint le TP1/.test(cf.replace(/\s+/g, "")) || /\d+ %\s*de ces setups ont atteint le TP1/.test(cf), tried[tried.length - 1] + " : " + cf.replace(/\s+/g, " ").slice(24, 170) + "…");
     if (SHOTS) { await page.$eval("#one-out .cfg", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p10-config.png") }); }
-    ok(tabs.length === 22, tabs.length + " pages ouvertes depuis l'accueil (Global compris), plus l'analyse d'une crypto");
+    ok(tabs.length === 23, tabs.length + " pages ouvertes depuis l'accueil (Global compris), plus l'analyse d'une crypto");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -645,7 +645,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const h = await page.evaluate(() => ({ title: document.getElementById("title").textContent, back: document.getElementById("back").hidden, scanHidden: document.getElementById("view-scan").hidden,
       lv: [...document.querySelectorAll("#hm-lv .hm-l")].map(b => b.dataset.go + ":" + b.querySelector("b").textContent), tiles: [...document.querySelectorAll("#view-home .hm-t")].map(b => b.dataset.go), tabsShown: !document.querySelector(".tabs").hidden }));
     ok(h.title === "Radar Trades" && h.back && h.scanHidden && !h.tabsShown, "l'appli s'ouvre sur l'accueil, sans la barre d'onglets");
-    ok(h.lv.join() === "l12345:Global,l1:Level 1,l2:Level 2,l3:Level 3,l4:Level 4,l5:Level 5" && h.tiles.length === 16, "accueil : Global, 5 Levels et " + h.tiles.length + " pages (" + h.tiles.join(", ") + ")");
+    ok(h.lv.join() === "l12345:Global,l1:Level 1,l2:Level 2,l3:Level 3,l4:Level 4,l5:Level 5" && h.tiles.length === 17, "accueil : Global, 5 Levels et " + h.tiles.length + " pages (" + h.tiles.join(", ") + ")");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p21-accueil.png") });
     /* a level: the cryptos in colour */
     await page.click('#hm-lv [data-go="l1"]'); await waitScan(page);
@@ -775,6 +775,25 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(!b.hidden && /^Inflation US \(CPI\) aujourd'hui à \d\d:\d\d · annonce forte dans 5 h : moitié de taille conseillée sur les nouveaux trades/.test(b.t), "bandeau : « " + b.t + " »");
     ok(b.ready1 === b.ready0, "aucun trade retiré : " + b.ready1 + " prêt(s) avant et après");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p24-annonce.png") });
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P25", "Suivi : chaque trade « Prêt » enregistré, joué sur les vrais prix avec son stop et son TP1, bilan en R", async ok => {
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,prof:false,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(page);
+    const a = await page.evaluate(() => ({ ready: JSON.parse(localStorage.getItem("radar-last-l1")).results.filter(r => r.st === "ready").map(r => r.sym + (r.dir > 0 ? "L" : "S")),
+      trk: JSON.parse(localStorage.getItem("radar-track") || "[]").map(x => x.sym + (x.dir > 0 ? "L" : "S")) }));
+    ok(a.ready.length > 0 && a.ready.every(k => a.trk.includes(k)), "chaque setup prêt est enregistré (" + a.trk.join(", ") + ")");
+    const p = await page.evaluate(() => { const x = { t: 0, dir: -1, e: 100, sl: 102, tp: 96 }, c = (t, o, h, l, cl) => ({ t, o, h, l, c: cl });
+      return { tp: radarTrk.play(x, [c(0, 100, 101, 99, 99.5), c(9e5, 99.5, 100, 95.5, 96)]), sl: radarTrk.play(x, [c(0, 100, 102.5, 95, 96)]), run: radarTrk.play(x, [c(0, 100, 101, 98, 99)]) }; });
+    ok(p.tp.k === "tp" && Math.abs(p.tp.r - (2 - 0.12 * 100 / 2 / 100)) < 0.01 && p.sl.k === "sl" && p.run.k === "run" && Math.abs(p.run.r - 0.44) < 0.01,
+      "un short à 100, stop 102, TP 96 : TP = " + p.tp.r.toFixed(2) + " R ; bougie qui touche les deux = stop ; en cours = " + p.run.r.toFixed(2) + " R");
+    await nav(page, "trk");
+    await page.waitForFunction(() => document.querySelectorAll("#view-trk .trk-r").length > 0 && !/à lire/.test(document.getElementById("view-trk").textContent), null, { timeout: 30000 });
+    const v = await page.evaluate(() => ({ t: document.getElementById("title").textContent, rows: document.querySelectorAll("#view-trk .trk-r").length, top: document.querySelector("#view-trk .funnel").textContent }));
+    ok(v.t === "Suivi" && v.rows === a.trk.length && /terminés/.test(v.top) && /total/.test(v.top), "page Suivi : " + v.rows + " ligne(s) · « " + v.top + " »");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p25-suivi.png") });
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });

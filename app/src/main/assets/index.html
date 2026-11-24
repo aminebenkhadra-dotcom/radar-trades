@@ -87,6 +87,8 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .mline .mst.gate{color:var(--accent);font-weight:600}
 .chips .lvc{color:var(--accent);font-weight:600}
 .alinfo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 4px} .alinfo.ok{color:var(--good)} .alinfo.no{color:var(--bad)} .alinfo button{padding:6px 12px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.trk{display:flex;flex-direction:column;gap:6px;margin:10px 0}.trk-r{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+.trk-r .up{color:var(--good)}.trk-r .dn{color:var(--bad)}.trk-r .pos{color:var(--good);font-weight:700}.trk-r .neg{color:var(--bad);font-weight:700}
 .annbox{border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.4} .annbox b{color:var(--accent)} .annbox[hidden]{display:none}
 .blkbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:6px} .blkbox>b{font-family:var(--display);font-size:16px;color:var(--bad)} .blkbox[hidden]{display:none}
 .sim3{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 10px;font-size:12.5px;align-items:baseline}
@@ -549,6 +551,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   </section>
   <section class="view" id="view-trades" hidden></section>
   <section class="view" id="view-aft" hidden></section>
+  <section class="view" id="view-trk" hidden></section>
   <section class="view" id="view-mkt" hidden></section>
   <section class="view" id="view-cyc" hidden></section>
   <section class="view" id="view-tmp" hidden></section>
@@ -2122,7 +2125,7 @@ function pool(items,n,fn,tick){
     return fn(it).then(function(r){streak=0;out.push(r)},function(e){
         if(e&&e.code==="short")return;
         streak++;last=e;if(streak>=12||(e&&(e.code==="rate"||e.code==="geo")))stop=true})
-      .then(function(){done++;tick(done,items.length);return worker()})}
+      .then(function(){done++;if(tick)tick(done,items.length);return worker()})}
   var ws=[];for(var i=0;i<n;i++)ws.push(worker());
   return Promise.all(ws).then(function(){return{out:out,stopped:stop,last:last}})}
 
@@ -2209,6 +2212,7 @@ function stampSeen(list){
     if(!o||now-o.l>2*36e5)o={t:now,rt:0,l:now};
     if(r.st==="ready"&&!o.rt)o.rt=now;if(r.st!=="ready")o.rt=0;
     o.l=now;M[k]=o;r.seen=o.t;r.rdy=o.rt||0});
+  trkAdd(list);
   for(var k in M)if(now-M[k].l>48*36e5)delete M[k];
   try{localStorage.setItem("radar-seen",JSON.stringify(M))}catch(e){}}
 function saveStore(m){var st=stores[m];if(!st)return;try{localStorage.setItem(key(m),JSON.stringify({v:4,stamp:st.stamp,funnel:st.funnel,results:st.results}))}catch(e){}}
@@ -2595,17 +2599,17 @@ function takeSetup(r){
   addTrade({sym:r.sym,full:r.full||r.sym+"USDT",dir:r.dir,entry:v(r.plan.entry),qty:q,sl:v(r.plan.sl),tp:v(r.plan.tp1),lev:z?z.lev:+S.lev,st:r.st})}
 /* page titles, and the way back: every page is a step in the history, so Android's back button returns to the home page */
 var TITLES={home:"Radar Trades",l12345:"Global",l1:"Level 1",l2:"Level 2",l3:"Level 3",l4:"Level 4",l5:"Level 5",mkt:"Tendance",cyc:"Cycle",tmp:"Temporalité",one:"Analyser",fund:"Fondamental",
-  trades:"Mes trades",aft:"Après sortie",news:"Actus",res:"Résultats",pf:"Portefeuille",cap:"Capital",earn:"Earn",sim:"Simulateur",hbtc:"Heatmap BTC",heth:"Heatmap ETH",set:"Réglages"},navQuiet=false;
+  trades:"Mes trades",aft:"Après sortie",trk:"Suivi",news:"Actus",res:"Résultats",pf:"Portefeuille",cap:"Capital",earn:"Earn",sim:"Simulateur",hbtc:"Heatmap BTC",heth:"Heatmap ETH",set:"Réglages"},navQuiet=false;
 function setView(v){
   if(!TITLES[v])v="trades";
   if(!BG&&!navQuiet){try{if(location.hash.slice(1).split("~")[0]!==v)history.pushState({v:v},"","#"+v)}catch(e){}}
   $("title").textContent=TITLES[v];$("back").hidden=v==="home";$("logo").hidden=v!=="home";
   var isScan=SCANS.indexOf(v)>=0,isHeat=v==="hbtc"||v==="heth";
-  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"||v==="cap"||v==="aft"||v==="home"||v==="set"?v:"trades";
+  view=isScan?"scan":isHeat?"heat":v==="one"||v==="fund"||v==="pf"||v==="res"||v==="news"||v==="mkt"||v==="cyc"||v==="earn"||v==="tmp"||v==="sim"||v==="cap"||v==="aft"||v==="trk"||v==="home"||v==="set"?v:"trades";
   $("view-home").hidden=view!=="home";$("view-set").hidden=view!=="set";
   [].forEach.call(document.querySelectorAll(".tabs button"),function(b){b.setAttribute("aria-selected",b.dataset.v===v)});
   $("view-scan").hidden=view!=="scan";$("view-trades").hidden=view!=="trades";$("view-heat").hidden=view!=="heat";
-  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-aft").hidden=view!=="aft";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-cap").hidden=view!=="cap";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
+  $("view-news").hidden=view!=="news";$("view-res").hidden=view!=="res";$("view-aft").hidden=view!=="aft";$("view-trk").hidden=view!=="trk";$("view-pf").hidden=view!=="pf";$("view-one").hidden=view!=="one";$("view-fund").hidden=view!=="fund";$("view-mkt").hidden=view!=="mkt";$("view-cyc").hidden=view!=="cyc";$("view-earn").hidden=view!=="earn";$("view-sim").hidden=view!=="sim";$("view-cap").hidden=view!=="cap";$("view-tmp").hidden=view!=="tmp";$("scan").hidden=view!=="scan"&&view!=="heat"&&view!=="news"&&view!=="mkt"&&view!=="cyc"&&view!=="tmp";$("scan").textContent=view==="scan"?"Scanner":"Actualiser";
   if(view==="home"){statusLine();renderHome();return}
   if(view==="set"){statusLine();alertStatus();profView();return}
   if(isScan){mode=v;useStore(v);openSym=vueSimple()?null:firstSetup();detSym=null;statusLine();render();
@@ -2614,6 +2618,7 @@ function setView(v){
   else if(view==="news"){statusLine();loadNews(false)}
   else if(view==="res"){statusLine();loadRes()}
   else if(view==="aft"){statusLine();renderAft();loadAft()}
+  else if(view==="trk"){statusLine();renderTrk();trkUpdate().then(function(){if(view==="trk")renderTrk()})}
   else if(view==="tmp"){statusLine();renderTmp();loadTmp(false)}
   else if(view==="pf"){statusLine();renderPf();loadAllPf()}
   else if(view==="one"){statusLine();renderOne()}
@@ -3172,6 +3177,43 @@ function aftCard(a){
     +'<div><b class="neg">'+(a.chk?sgn(Math.min(0,v.worst),1)+" %":"–")+"</b><span>au pire depuis la sortie</span></div>"
     +"<div><b>"+hrs(Math.max(0,((a.out?a.out.t:Date.now())-a.tc)/36e5))+"</b><span>"+(a.out?"entre la sortie et le "+(a.out.why==="sl"?"stop":"TP"):"de suivi")+"</span></div></div>";
   return h+'<div class="acts"><button class="ghost danger" type="button" data-adel="'+a.id+'">'+(aftArm[a.id]?"Confirmer la suppression":"Supprimer")+"</button></div></article>"}
+/* ---------- Suivi (24/11/2026): every trade the app showed « Prêt », played with its own entry, stop and TP1 on the real candles that
+   followed, fees included. One line per ready episode (crypto, side, moment it turned ready). Kept on the device, 400 lines at most ---------- */
+function trkLoad(){try{var a=JSON.parse(localStorage.getItem("radar-track")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
+function trkSave(a){try{localStorage.setItem("radar-track",JSON.stringify(a.slice(-400)))}catch(e){}}
+function trkAdd(list){var a=null,ch=false;
+  list.forEach(function(r){if(!r.plan||r.st!=="ready"||!r.rdy||!r.full)return;a=a||trkLoad();var id=r.sym+(r.dir>0?"L":"S")+r.rdy;
+    if(a.some(function(x){return x.id===id}))return;
+    /* entry at the market price of that moment, as Amine takes them; the plan's stop and TP1 */
+    var e=isFinite(r.price)&&(r.price-r.plan.sl)*r.dir>0&&(r.plan.tp1-r.price)*r.dir>0?r.price:r.plan.entry;
+    a.push({id:id,sym:r.sym,full:r.full,dir:r.dir,t:r.rdy,e:e,sl:r.plan.sl,tp:r.plan.tp1,cap:r.cap||0,res:null});ch=true});
+  if(ch)trkSave(a)}
+/* one trade played on 15-minute candles from the moment it turned ready: stop first when a candle touches both */
+function trkPlay(x,k){var R=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||0.02))/100*x.e/R,d=x.dir;if(!(R>0))return null;
+  for(var i=0;i<k.length;i++){var c=k[i];if(c.t+9e5<=x.t)continue;
+    if(d>0?c.l<=x.sl:c.h>=x.sl)return{k:"sl",r:-1-cost,at:c.t};
+    if(d>0?c.h>=x.tp:c.l<=x.tp)return{k:"tp",r:Math.abs(x.tp-x.e)/R-cost,at:c.t}}
+  var last=k.length?k[k.length-1].c:x.e;return{k:"run",r:(last-x.e)*d/R-cost,at:0}}
+window.radarTrk={play:trkPlay,upd:function(){return trkUpdate()}};
+var trkBusy=false;
+function trkUpdate(){if(trkBusy)return Promise.resolve();var a=trkLoad(),open=a.filter(function(x){return!x.res||x.res.k==="run"});if(!open.length)return Promise.resolve();trkBusy=true;
+  return pool(open,4,function(x){var n=Math.min(1500,Math.ceil((Date.now()-x.t)/9e5)+4);
+    return klines(x.full,"15m",n,1).then(function(k){var v=trkPlay(x,k);if(v){x.res=v;x.chk=Date.now()}}).catch(function(){})})
+    .then(function(){var b=trkLoad();b.forEach(function(y){var z=a.filter(function(x){return x.id===y.id})[0];if(z&&z.res)y.res=z.res});trkSave(b);trkBusy=false},function(){trkBusy=false})}
+function renderTrk(){var el=$("view-trk");if(!el)return;var a=trkLoad().slice().reverse();
+  var h='<div class="lvh"><h2>Suivi des trades proposés</h2><span class="sub">chaque trade passé « Prêt », joué avec son entrée, son stop et son TP1, frais compris</span></div>';
+  if(!a.length){el.innerHTML=h+'<div class="empty">Rien encore. Chaque trade que l\'appli met en vert, dans un scan ou en arrière-plan, arrive ici et se joue tout seul sur les vrais prix.</div>';return}
+  var done=a.filter(function(x){return x.res&&x.res.k!=="run"}),w=done.filter(function(x){return x.res.k==="tp"}).length,tot=done.reduce(function(s,x){return s+x.res.r},0),run=a.length-done.length;
+  h+='<div class="funnel plain" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div><b>'+done.length+"</b><span>terminés</span></div>"
+    +'<div><b class="pos">'+w+"</b><span>gagnants"+(done.length?" · "+fr(w/done.length*100,0)+" %":"")+"</span></div>"
+    +'<div><b class="'+(tot>=0?"pos":"neg")+'">'+sgn(tot,1)+" R</b><span>total</span></div>"
+    +"<div><b>"+run+"</b><span>en cours</span></div></div>";
+  if(done.length)h+='<div class="sub">'+(done.length<20?"Moins de 20 trades terminés : trop tôt pour juger. ":"")+"Sur deux ans de rejeu : 37 à 42 % de gagnants et +0,04 à +0,21 R par trade. Ici : "+sgn(tot/done.length,2)+" R par trade.</div>";
+  h+='<div class="trk">'+a.map(function(x){var v=x.res,c=!v?"":v.k==="tp"?"pos":v.k==="sl"?"neg":"";
+    return'<div class="trk-r"><b>'+esc(x.sym)+'</b><span class="'+(x.dir>0?"up":"dn")+'">'+(x.dir>0?"Long":"Short")+"</span><span>"+hmd(x.t)+"</span>"
+      +'<span class="'+c+'">'+(!v?"à lire":v.k==="tp"?"TP "+sgn(v.r,2)+" R":v.k==="sl"?"SL "+sgn(v.r,2)+" R":"en cours "+sgn(v.r,2)+" R")+"</span></div>"}).join("")+"</div>"
+    +'<div class="sub">Entrée au prix du marché au moment où le setup est passé « Prêt », stop et TP1 du plan. Une bougie qui touche le stop et le TP compte comme stop. Gardé sur ce téléphone.</div>';
+  el.innerHTML=h}
 function renderAft(){
   var el=$("view-aft");if(!el)return;AF=aftLoad();
   var h='<div class="lvh"><h2>Après sortie</h2><span class="sub">ce que tes trades auraient fait si tu étais resté</span></div>';
@@ -5121,7 +5163,7 @@ function levelCounts(k){
   var best=null,keys=["l"+k];if(S.alv&&String(S.alv).length>1&&String(S.alv).indexOf(String(k))>=0)keys.push("l"+S.alv);
   keys.forEach(function(m){try{var x=JSON.parse(localStorage.getItem(key(m))||"null");if(x&&x.results&&x.stamp&&(!best||x.stamp>best.stamp))best={stamp:x.stamp,results:m.length>2?x.results.filter(function(r){return r.cap&&lvAt(r.cap)==="l"+k}):x.results}}catch(e){}});
   if(!best)return null;var c={g:0,o:0,r:0};best.results.forEach(function(r){c[colorOf(r)]++});c.stamp=best.stamp;return c}
-var HMI={trades:'<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',aft:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+var HMI={trk:'<path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>',trades:'<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',aft:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
   res:'<path d="M4 20V11M10 20V5M16 20v-7M21 20H3"/>',mkt:'<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',cyc:'<path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20 3v5h-5"/>',
   tmp:'<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>',news:'<path d="M4 4h13v16H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v10a2 2 0 0 1-2 2"/><path d="M8 8h5M8 12h5M8 16h3"/>',
   hbtc:'<path d="M12 22c4 0 7-3 7-7 0-5-5-7-5-12-3 2-6 6-6 9-1-1-2-2-2-4-1 2-1 4-1 7 0 4 3 7 7 7z"/>',heth:'<path d="M12 2l7 10-7 4-7-4z"/><path d="M5 13.5l7 8.5 7-8.5-7 4z"/>',
@@ -5140,7 +5182,7 @@ function renderHome(){
   $("hm-lv").insertAdjacentHTML("afterbegin",'<button type="button" class="hm-l" data-go="'+GLOBAL+'"><span class="n">∑</span><b>Global</b><small>Levels 1 à 5, tous les trades</small>'
     +(gc?'<span class="hm-c"><i class="kg">'+gc.g+'</i><i class="ko">'+gc.o+'</i><i class="kr">'+gc.r+"</i><em>"+hmd(gc.stamp)+"</em></span>":'<span class="hm-c"><em>pas encore scanné</em></span>')+"</button>");
   var nT=$("tcount").textContent;
-  $("hm-g1").innerHTML=hmTile("trades",nT?'<span class="bd">'+esc(nT)+"</span>":"")+hmTile("aft")+hmTile("res");
+  $("hm-g1").innerHTML=hmTile("trades",nT?'<span class="bd">'+esc(nT)+"</span>":"")+hmTile("trk")+hmTile("aft")+hmTile("res");
   $("hm-g2").innerHTML=["mkt","cyc","tmp","news","hbtc","heth"].map(function(v){return hmTile(v)}).join("");
   $("hm-g3").innerHTML=["one","fund","sim","pf","cap","earn"].map(function(v){return hmTile(v)}).join("")+hmTile("set","",true,"alertes, profil, sauvegarde");
   var m=MKT,el=$("hm-mkt");
