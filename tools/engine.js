@@ -88,7 +88,9 @@ function calm(d1,h4,h1){
 function market(d1,h4,h1){var n=h1.length,lo=Infinity,hi=-Infinity,i,p=h1[n-1].c;
   /* up3 / dn3: how far Bitcoin stands from its lowest low / highest high of the last 72 hours, in % (study of 23/11/2026) */
   for(i=Math.max(0,n-72);i<n;i++){if(h1[i].l<lo)lo=h1[i].l;if(h1[i].h>hi)hi=h1[i].h}
-  return{b4:bias(h4),bd:bias(d1.length>90?d1.slice(-90):d1),r4h:(h1[n-1].c/h1[Math.max(0,n-5)].c-1)*100,up3:(p/lo-1)*100,dn3:(p/hi-1)*100}}
+  /* r24 / r7: Bitcoin's move over 24 hours and 7 days, in % (strength of a crypto against Bitcoin, memo of 24/11/2026) */
+  return{b4:bias(h4),bd:bias(d1.length>90?d1.slice(-90):d1),r4h:(h1[n-1].c/h1[Math.max(0,n-5)].c-1)*100,up3:(p/lo-1)*100,dn3:(p/hi-1)*100,
+    r24:(p/h1[Math.max(0,n-25)].c-1)*100,r7:h4.length>43?(h4[h4.length-1].c/h4[h4.length-43].c-1)*100:null}}
 
 /* ---------- setup engine ---------- */
 function targets(lv,dir,entry,R,k60){
@@ -647,6 +649,52 @@ function featOf(r,bc){var f=r.f||{},T=r.trig||{},p=r.plan||{},d=r.dir,R=Math.abs
     r4:n(f.r4,0),r1:n(f.r1,0),rt:n(f.retr,2),rg:n(f.rng24,2),rv:n(f.relVol,2),kN:n(f.kN,0),fl:f.flip?1:0,cc:f.conf?1:0,zk:f.zkind?1:0,zn:n(f.zn,0),
     dv:f.div?1:0,d4:n(f.dl4,2),pv:n(f.pbVol,2),tg:(T.bos?1:0)|(T.sweep?2:0)|(T.candle?4:0)|(T.rsiT?8:0)|(T.delta?16:0)|(T.climax?32:0),
     sc:n(r.score,0),fw:r.flow?n(r.flow.sc,0):null,rr:n(p.rr,2),rp:p.entry?n(R/p.entry*100,2):null}}
+/* ---------- memo of 24/11/2026 (video of a trader): weekly pivots, big levels, dead zone, strength against Bitcoin ----------
+   weekPivots: classic pivots of the last full UTC week (Monday to Sunday) and that week's high and low; null without 5 days of it */
+function weekPivots(d1){var n=d1.length;if(n<10)return null;var t=d1[n-1].t,wd=(new Date(t).getUTCDay()+6)%7,ws=t-wd*864e5,H=-Infinity,L=Infinity,C=null,k=0,i,cH=-Infinity,cL=Infinity;
+  for(i=0;i<n;i++){var c=d1[i];if(c.t>=ws-7*864e5&&c.t<ws){if(c.h>H)H=c.h;if(c.l<L)L=c.l;C=c.c;k++}else if(c.t>=ws){if(c.h>cH)cH=c.h;if(c.l<cL)cL=c.l}}
+  if(k<5)return null;var P=(H+L+C)/3;return{P:P,R1:2*P-L,S1:2*P-H,H:H,L:L,cH:cH,cL:cL}}
+/* tunnel of a timeframe: the band between its EMA 20 and EMA 50 */
+function tunnel(k){var c=closes(k),a=ema(c,20),b=ema(c,50),x=a[a.length-1],y=b[b.length-1];return[Math.min(x,y),Math.max(x,y)]}
+/* price stuck between two tunnels (above the lower one, under the upper one) */
+function deadZone(p,A,B){var lo=A[0]+A[1]<B[0]+B[1]?A:B,hi=lo===A?B:A;return p>lo[1]&&p<hi[0]}
+/* memoFeat: the memo's measures for a setup at its entry, side-relative where it matters */
+function memoFeat(r,d1,h4,h1,m15,bc){var p=r.plan||{},d=r.dir,e=p.entry,R=Math.abs(p.entry-p.sl),aD=atr(d1.slice(-31,-1)),w=weekPivots(d1),o={},n1=h1.length,n4=h4.length,px=r.price||e;
+  function n(x,k){return x===null||x===undefined||!isFinite(x)?null:+(+x).toFixed(k)}
+  if(w&&aD>0){var lv=[w.P,w.R1,w.S1];
+    o.pvE=n(Math.min.apply(null,lv.map(function(v){return Math.abs(e-v)}))/aD,2);
+    o.pvT=n(Math.min.apply(null,lv.map(function(v){return Math.abs(p.tp1-v)}))/aD,2);
+    o.pvW=lv.filter(function(v){return d<0?v<e&&v>p.tp1:v>e&&v<p.tp1}).length;
+    /* nearest big level on the trade's way: S1, P, last week's low, this week's low (short); R1, P, last week's high, this week's high (long) */
+    var big=(d<0?[w.S1,w.P,w.L,w.cL]:[w.R1,w.P,w.H,w.cH]).filter(function(v){return isFinite(v)&&(d<0?v<e:v>e)}),nb=big.length?(d<0?Math.max.apply(null,big):Math.min.apply(null,big)):null;
+    o.bigP=nb===null?null:n(Math.abs(e-nb)/e*100,2);o.bigR=nb===null||!R?null:n(Math.abs(e-nb)/R,2)}
+  if(m15&&m15.length>60&&n1>60&&n4>60){var t15=tunnel(m15),t1=tunnel(h1),t4=tunnel(h4);o.dz1=deadZone(px,t15,t1)?1:0;o.dz4=deadZone(px,t1,t4)?1:0}
+  if(n1>25)o.c24=n((px/h1[n1-25].c-1)*100,2);if(n4>43)o.c7=n((px/h4[n4-43].c-1)*100,2);
+  if(bc&&r.sym!=="BTC"){if(o.c24!==undefined&&isFinite(bc.r24))o.rs24=n(d*(o.c24-bc.r24),2);if(o.c7!==undefined&&isFinite(bc.r7))o.rs7=n(d*(o.c7-bc.r7),2)}
+  return o}
+/* o.inv (memo, point 1): each trade also run with an exit at the close beyond the last confirmed swing against it, 1H (x1) or 4H (x4),
+   followed while the trade lives; stop and target as usual, fees in. Result in rec.ix[rule] = [R, how] */
+var INV_RULES=["x1","x4"];
+function lastSwing(k,d,L){var i,j,n=k.length;for(i=n-1-L;i>=L;i--){var ok=true;for(j=i-L;j<=i+L;j++){if(j===i)continue;if(d<0?k[j].h>=k[i].h:k[j].l<=k[i].l){ok=false;break}}if(ok)return d<0?k[i].h:k[i].l}return null}
+function btInv(S,F,m,i,N){
+  if(!S.isims||!S.isims.length)return;var c=m[i],end1=(c.t+9e5)%36e5===0,end4=(c.t+9e5)%144e5===0,s1={},s4={};
+  S.isims=S.isims.filter(function(q){if(i<=q.i)return true;var t=q.t,d=t.dir,left=0;
+    INV_RULES.forEach(function(r){var v=q.v[r];if(v.done)return;
+      if(d>0?c.l<=t.sl:c.h>=t.sl){var f=d>0?Math.min(c.o,t.sl):Math.max(c.o,t.sl);v.done=[+((f-t.entry)*d/t.r0-q.cr).toFixed(3),"sl"];return}
+      if(d>0?c.h>=t.tp:c.l<=t.tp){v.done=[+(Math.abs(t.tp-t.entry)/t.r0-q.cr).toFixed(3),"tp"];return}
+      if(i>=q.end||i>=N){v.done=[+((c.c-t.entry)*d/t.r0-q.cr).toFixed(3),"time"];return}
+      if((r==="x1"&&end1)||(r==="x4"&&end4)){var key=r+d,lv;if(!(key in s1)){var kk=r==="x1"?F.get("h1",80):F.get("h4",80);s1[key]=lastSwing(kk,d,3)}lv=s1[key];
+        if(lv!==null&&(d<0?lv<t.sl&&c.c>lv:lv>t.sl&&c.c<lv)){v.done=[+((c.c-t.entry)*d/t.r0-q.cr).toFixed(3),"inv"];return}}
+      left++});
+    if(left)return true;q.rec.ix={};INV_RULES.forEach(function(r){q.rec.ix[r]=q.v[r].done});return false})}
+/* o.rng (memo, point 6): in a market without trend (ADX 4H under 20, no trend setup at its zone), a long when the last closed 1H candle
+   dipped under the low of the 4H value area (last 120 bars) and closed back inside, a short at the top the same way; stop 0.3 ATR 4H
+   beyond that candle, target the point of control, kept when it is at least 1.2 R away */
+function rngSetup(h4,h1){var n4=h4.length,n1=h1.length;if(n4<130||n1<30)return null;var a=adx(h4.slice(0,-1));if(!(a<20))return null;
+  var vp=vprofile(h4.slice(-121,-1),40),a4=atr(h4.slice(0,-1)),c=h1[n1-2],px=h1[n1-1].c,res=null;
+  if(c.l<vp.val&&c.c>vp.val&&px>vp.val&&px<vp.poc){var sl=c.l-0.3*a4,R=px-sl;if(R>0&&(vp.poc-px)/R>=1.2)res={dir:1,plan:{entry:px,sl:sl,tp1:vp.poc,tp2:vp.poc,rr:(vp.poc-px)/R}}}
+  else if(c.h>vp.vah&&c.c<vp.vah&&px<vp.vah&&px>vp.poc){var sl2=c.h+0.3*a4,R2=sl2-px;if(R2>0&&(px-vp.poc)/R2>=1.2)res={dir:-1,plan:{entry:px,sl:sl2,tp1:vp.poc,tp2:vp.poc,rr:(px-vp.poc)/R2}}}
+  return res}
 function btFrames(m,d1){
   var first=m.length?m[0].t:0,hist=(d1||[]).filter(function(k){return k.t+864e5<=first});
   var tf={h1:{ms:36e5,full:btAgg(m,36e5),off:0},h4:{ms:144e5,full:btAgg(m,144e5),off:0},d1:{ms:864e5,full:hist.concat(btAgg(m,864e5)),off:hist.length}},at=-1,name;
@@ -768,6 +816,7 @@ function btStep(S,n){
   for(k in o)jo[k]=o[k];
   for(;S.i<end;S.i++){var i=S.i;F.step(i);
     if(o.trail)btTrail(S,F,m,i,N);
+    if(o.inv)btInv(S,F,m,i,N);
     /* o.state: every 4 hours of a replayed trade, its state as the app would read it (study of the reliability label) */
     if(o.state&&S.cur&&i>S.cur.i&&i<S.cur.j&&(i-S.cur.i)%16===0){var ts=tradeState(S.sym,F.get("d1",400),F.get("h4",200),F.get("h1",200),F.m15(500),S.cur.t,m[i].t,o);
       S.cur.rec.hs.push([ts.sc,ts.hard?1:0,+ts.r.toFixed(2),stateKey(ts)])}
@@ -820,6 +869,10 @@ function btStep(S,n){
         var rp=rv.plan,rR=Math.abs(rp.entry-rp.sl),rres=btResolve(m,i,rp,rv.dir,N,cost);
         if(rres.how!=="open")S.trades.push({t:m[i].t,x:m[rres.j].t,dir:rv.dir,entry:rp.entry,sl:rp.sl,tp:rp.tp1,how:rres.how,r:rres.r,rp:+(rR/rp.entry*100).toFixed(3),cf:"rev",kind:"rev",cr:cost*rp.entry/rR,hs:[]});
         S.free=rres.j+17;continue}}
+    if(o.rng&&(!r.plan||r.dist>0.5)){var rg=rngSetup(F.get("h4",200),F.get("h1",200));
+      if(rg){var gp=rg.plan,gR=Math.abs(gp.entry-gp.sl),gres=btResolve(m,i,gp,rg.dir,N,cost);
+        if(gres.how!=="open")S.trades.push({t:m[i].t,x:m[gres.j].t,dir:rg.dir,entry:gp.entry,sl:gp.sl,tp:gp.tp1,how:gres.how,r:gres.r,rp:+(gR/gp.entry*100).toFixed(3),cf:"rng",kind:"rng",cr:cost*gp.entry/gR,hs:[]});
+        S.free=gres.j+17;continue}}
     if(!r.plan||r.dist>0.5)continue;
     enrich(r,F.m15(500),null,null,{noHeat:true});judge(r,jo);
     /* o.reb (study): no short while Bitcoin stands o.reb % or more above its 72-hour low (a rebound under way), no long while it stands
@@ -839,7 +892,9 @@ function btStep(S,n){
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,sx:r.slx?(r.slx.sl===p.sl?2:1):0,rp:+(R/e*100).toFixed(3),score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
-    if(o.feat&&res.how!=="open")S.trades[S.trades.length-1].fx=featOf(r,o.btc?o.btc[m[i].t]:null);
+    if(o.feat&&res.how!=="open"){var fbc=o.btc?o.btc[m[i].t]:null,fx=featOf(r,fbc),mf=memoFeat(r,d1,F.get("h4",200),F.get("h1",200),F.m15(200),fbc),fk;for(fk in mf)fx[fk]=mf[fk];S.trades[S.trades.length-1].fx=fx}
+    if(o.inv&&res.how!=="open"){var iq={i:i,end:i+960,cr:cost*e/R,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
+      INV_RULES.forEach(function(r){iq.v[r]={done:null}});(S.isims=S.isims||[]).push(iq)}
     if(o.trail&&res.how!=="open"){var tq={i:i,end:i+960,cr:cost*e/R,far:e,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
       TRAIL_RULES.forEach(function(r){tq.v[r]={sl:p.sl,done:null}});(S.sims=S.sims||[]).push(tq)}
     if((o.state||o.tpup||o.tpdn||o.exits)&&res.how!=="open")S.cur={i:i,j:j,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,t:m[i].t,r0:R}};else S.cur=null;
