@@ -128,6 +128,8 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   var r={v:3,sym:sym,price:price,bd:bd,b4:b4,r1:r1,r4:r4,h4:h4.slice(-60),h1t:h1.slice(-49,-1).concat(h1.slice(-1)),dir:0,score:0,st:"wait",why:[],plan:null,f:{},a:a};
   if(b4===0||bd===-b4){r.st="none";r.why.push({t:b4===0?"4H sans tendance nette":"1J et 4H en sens opposé",k:"no"});return r}
   var dir=b4,f=r.f;r.dir=dir;f.bd=bd===b4?1:0;
+  /* weekly pivots and highs / lows of the last and current weeks (memo of 24/11/2026) */
+  r.wk=weekPivots(d1);
   var lv=levels(h4,0.5*a),obs=orderBlocks(h4,a),zs=[];
   lv.forEach(function(l){if(dir>0?l.p<=price+0.25*a:l.p>=price-0.25*a)zs.push({lo:l.p-0.25*a,hi:l.p+0.25*a,kind:"sr",n:l.n,flip:l.nh>0&&l.nl>0})});
   obs.forEach(function(o){if(o.dir===dir&&(dir>0?o.lo<price:o.hi>price))zs.push({lo:o.lo,hi:o.hi,kind:"ob",n:1,flip:false})});
@@ -498,6 +500,10 @@ function judge(r,opt){
   /* opt.prof (study of 23/11/2026, Radar Trades): « Prêt » only for the two profiles that won on both years of replay (60 markets, fees
      included, feat.yml + prof42.js): a long in an agitated market (24-hour range above 130 % of normal), a short while Bitcoin moved 0
      to 1 % its way over 4 hours. Any other setup stays « À surveiller » with the reason; both sides are always analysed */
+  /* opt.big (memo of 24/11/2026, point 3, longs only): a long with a big resistance less than 3 % above its entry (weekly R1 or pivot,
+     high of last week or of this week) stays « À surveiller »: on both years of replay these longs lost, the others won */
+  if(opt.big&&L&&r.wk&&r.plan){var wk=r.wk,eb=r.plan.entry,bl=[[wk.R1,"R1 hebdo"],[wk.P,"pivot hebdo"],[wk.H,"plus haut de la semaine passée"],[wk.cH,"plus haut de la semaine"]].filter(function(x){return isFinite(x[0])&&x[0]>eb}).sort(function(a,b){return a[0]-b[0]})[0];
+    if(bl&&(bl[0]-eb)/eb*100<3)blk.push({k:"big",sev:"watch",t:"Grosse résistance à "+fr((bl[0]-eb)/eb*100,1)+" % au-dessus de l'entrée ("+bl[1]+", "+px(bl[0])+") : sur deux ans, les longs dans ce cas ont perdu"})}
   if(opt.prof){var pw=L?f.rng24!==null&&f.rng24>1.3:f.btcSh!==null&&f.btcSh>=0&&f.btcSh<1;r.prof=pw?1:0;
     if(pw)add(G.mkt,"ok",0,function(){return L?"Profil gagnant : marché agité (amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale), le seul où les longs ont gagné sur deux ans":"Profil gagnant : Bitcoin "+sgn(-f.btcSh,1)+" % sur 4 h, le cas où les shorts ont le mieux gagné sur deux ans"});
     else blk.push({k:"prof",sev:"watch",t:L?"Profil sans avantage : sur deux ans, les longs n'ont gagné que dans un marché agité (amplitude 24 h au-dessus de 130 % de la normale)"+(f.rng24!==null?" ; ici "+fr(f.rng24*100,0)+" %":""):"Profil sans avantage : sur deux ans, les shorts ont gagné quand Bitcoin baissait de 0 à 1 % sur 4 h"+(f.btcSh!==null?" ; ici "+sgn(-f.btcSh,1)+" %":"")})}

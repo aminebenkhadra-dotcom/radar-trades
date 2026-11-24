@@ -1,0 +1,45 @@
+name: Memo check v42
+# Memo of 24/11/2026, check of point 3 for longs (engine option big) on top of the app's rules (prof).
+# Three periods on the 60 markets by volume, plus November on the Levels 1 to 3.
+on:
+  push:
+    branches: [memov-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          if [ -n "${{ matrix.period.caps }}" ]; then node tools/backtest/caps.js > caps.env; . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -3
+      - name: Replay the variants
+        run: |
+          mkdir -p out
+          run() { id=$1; o=$2; mkdir -p r-$id
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $k/4 "$o" & done; wait
+            node tools/backtest/rev42.js r-$id > out/$id.json; node tools/backtest/feat42.js r-$id > out/$id-trades.json
+            echo "== $id"; head -c 600 out/$id.json; echo; }
+          B='"slsw":24,"slmode":"flag","feat":1'
+          run prof "{$B,\"prof\":1}"
+          run big  "{$B,\"prof\":1,\"big\":1}"
+      - name: Publish
+        run: |
+          B=memov-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Memo check ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B
