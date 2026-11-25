@@ -716,6 +716,20 @@ function rngSetup(h4,h1){var n4=h4.length,n1=h1.length;if(n4<130||n1<30)return n
   if(c.l<vp.val&&c.c>vp.val&&px>vp.val&&px<vp.poc){var sl=c.l-0.3*a4,R=px-sl;if(R>0&&(vp.poc-px)/R>=1.2)res={dir:1,plan:{entry:px,sl:sl,tp1:vp.poc,tp2:vp.poc,rr:(vp.poc-px)/R}}}
   else if(c.h>vp.vah&&c.c<vp.vah&&px<vp.vah&&px>vp.poc){var sl2=c.h+0.3*a4,R2=sl2-px;if(R2>0&&(px-vp.poc)/R2>=1.2)res={dir:-1,plan:{entry:px,sl:sl2,tp1:vp.poc,tp2:vp.poc,rr:(px-vp.poc)/R2}}}
   return res}
+/* ---------- study of 25/11/2026 (« deux trades en deux jours » while Bitcoin fell 9 % without a rebound): a trade at the breakout, no wait
+   for the pullback. Short: daily and 4H trends down, the last closed 1H candle is the first to close under the low of the 24 hours before,
+   with a real body (half an hourly ATR) and volume 1.3 times the usual; not taken if the price is already more than 0.6 ATR past the level.
+   Stop over that candle's high, TP1 at 2 R. Long the same way up. Not in the app ---------- */
+function brkSetup(d1,h4,h1,o){var n1=h1.length;if(n1<60||d1.length<55||h4.length<60)return null;
+  var bd=bias(d1.length>90?d1.slice(-90):d1),b4=bias(h4.slice(0,-1));if(!bd||bd!==b4)return null;
+  var c=h1[n1-2],pv=h1[n1-3],px=h1[n1-1].c,w=h1.slice(n1-26,n1-2),a1=atr(h1.slice(-40,-1)),d=bd,L,i,q=0;if(!(a1>0))return null;
+  for(i=n1-22;i<n1-2;i++)q+=h1[i].q;q/=20;
+  if(d<0){L=Infinity;for(i=0;i<w.length-1;i++)if(w[i].l<L)L=w[i].l}else{L=-Infinity;for(i=0;i<w.length-1;i++)if(w[i].h>L)L=w[i].h}
+  if(!((c.c-L)*d>0&&(pv.c-L)*d<=0))return null;
+  if(!((c.c-c.o)*d>0.5*a1&&c.q>(o.brkVol||1.3)*q))return null;
+  if((px-L)*d>0.6*a1||(px-L)*d<0)return null;
+  var sl=d<0?c.h+0.1*a1:c.l-0.1*a1,R=Math.abs(px-sl);if(!(R>0)||R/px>0.04||R/px<0.003)return null;
+  var tp=px+d*(o.brkRR||2)*R;return{dir:d,plan:{entry:px,sl:sl,tp1:tp,tp2:tp,rr:o.brkRR||2}}}
 /* ---------- memo 2 of 25/11/2026 (video of a trader): open interest, retest of a V move, compressed volatility, extreme funding, daily
    pivot. memo2Feat: those measures for a setup at its entry; fund [[ms, rate]], met [{t, oi}] hourly, from data.binance.vision ---------- */
 function lastAt(a,t,key){var lo=0,hi=a.length-1,k=-1;while(lo<=hi){var mid=(lo+hi)>>1,v=key?a[mid][key]:a[mid][0];if(v<=t){k=mid;lo=mid+1}else hi=mid-1}return k}
@@ -915,6 +929,12 @@ function btStep(S,n){
       if(rg){var gp=rg.plan,gR=Math.abs(gp.entry-gp.sl),gres=btResolve(m,i,gp,rg.dir,N,cost);
         if(gres.how!=="open")S.trades.push({t:m[i].t,x:m[gres.j].t,dir:rg.dir,entry:gp.entry,sl:gp.sl,tp:gp.tp1,how:gres.how,r:gres.r,rp:+(gR/gp.entry*100).toFixed(3),cf:"rng",kind:"rng",cr:cost*gp.entry/gR,hs:[]});
         S.free=gres.j+17;continue}}
+    /* o.brk (study of 25/11/2026): a breakout trade when no trend setup is at its zone; o.brkBtc: Bitcoin's 4H trend on the same side */
+    if(o.brk&&(!r.plan||r.dist>0.5)){var bk=brkSetup(d1,F.get("h4",200),F.get("h1",200),o),bbc=o.btc?o.btc[m[i].t]:null;
+      if(bk&&(!o.brkSide||bk.dir===+o.brkSide)&&(!o.brkBtc||S.sym==="BTC"||(bbc&&bbc.b4===bk.dir))){
+        var kp=bk.plan,kR=Math.abs(kp.entry-kp.sl),kres=btResolve(m,i,kp,bk.dir,N,cost);
+        if(kres.how!=="open")S.trades.push({t:m[i].t,x:m[kres.j].t,dir:bk.dir,entry:kp.entry,sl:kp.sl,tp:kp.tp1,how:kres.how,r:kres.r,rp:+(kR/kp.entry*100).toFixed(3),cf:"brk",kind:"brk",cr:cost*kp.entry/kR,hs:[]});
+        S.free=kres.j+17;continue}}
     if(!r.plan||r.dist>0.5)continue;
     enrich(r,F.m15(500),null,null,{noHeat:true});judge(r,jo);
     /* o.reb (study): no short while Bitcoin stands o.reb % or more above its 72-hour low (a rebound under way), no long while it stands

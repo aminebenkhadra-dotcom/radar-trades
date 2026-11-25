@@ -1,0 +1,46 @@
+name: Breakout check v42
+# Study of 25/11/2026: trades at the breakout (engine option brk) on top of the app's rules (prof, big), longs and shorts, on the
+# three periods of the 60 markets by volume and November on the Levels 1 to 3. Published to branches brk-v42-<period>.
+on:
+  push:
+    branches: [brk-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          if [ -n "${{ matrix.period.caps }}" ]; then node tools/backtest/caps.js > caps.env; . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -3
+      - name: Replay the variants
+        run: |
+          mkdir -p out
+          run() { id=$1; o=$2; mkdir -p r-$id
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $k/4 "$o" & done; wait
+            node tools/backtest/brk42.js r-$id > out/$id.json; echo "== $id"; head -c 700 out/$id.json; echo; }
+          B='"slsw":24,"slmode":"flag","prof":1,"big":1'
+          run app   "{$B}"
+          run brk   "{$B,\"brk\":1}"
+          run brkb  "{$B,\"brk\":1,\"brkBtc\":1}"
+          run brkv  "{$B,\"brk\":1,\"brkVol\":2}"
+      - name: Publish
+        run: |
+          B=brk-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Breakout check ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B
