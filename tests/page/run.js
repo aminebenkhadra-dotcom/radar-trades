@@ -793,6 +793,8 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     await page.waitForFunction(() => document.querySelectorAll("#view-trk .trk-r").length > 0 && !/à lire/.test(document.getElementById("view-trk").textContent), null, { timeout: 30000 });
     const v = await page.evaluate(() => ({ t: document.getElementById("title").textContent, rows: document.querySelectorAll("#view-trk .trk-r").length, top: document.querySelector("#view-trk .funnel").textContent }));
     ok(v.t === "Suivi" && v.rows === a.trk.length && /terminés/.test(v.top) && /total/.test(v.top), "page Suivi : " + v.rows + " ligne(s) · « " + v.top + " »");
+    const u = await page.evaluate(() => ({ line: document.querySelector("#view-trk .trk-u").textContent, b: JSON.parse(localStorage.getItem("radar-track"))[0].b }));
+    ok(/^taille [\d\s\u202f,]+ \$ · risque [\d\s\u202f,]+ \$$/.test(u.line) && u.b > 0, "montants en USDT : « " + u.line + " » (risque enregistré " + u.b + " $)");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p25-suivi.png") });
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();

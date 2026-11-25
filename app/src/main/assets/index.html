@@ -88,7 +88,7 @@ h1{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.05;ma
 .chips .lvc{color:var(--accent);font-weight:600}
 .alinfo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:0 0 4px} .alinfo.ok{color:var(--good)} .alinfo.no{color:var(--bad)} .alinfo button{padding:6px 12px;font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .trk{display:flex;flex-direction:column;gap:6px;margin:10px 0}.trk-r{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
-.trk-r .up{color:var(--good)}.trk-r .dn{color:var(--bad)}.trk-r .pos{color:var(--good);font-weight:700}.trk-r .neg{color:var(--bad);font-weight:700}
+.trk-r .trk-u{grid-column:1/-1;font-size:12.5px;color:var(--muted);margin-top:-4px}.trk-r .up{color:var(--good)}.trk-r .dn{color:var(--bad)}.trk-r .pos{color:var(--good);font-weight:700}.trk-r .neg{color:var(--bad);font-weight:700}
 .annbox{border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.4} .annbox b{color:var(--accent)} .annbox[hidden]{display:none}
 .blkbox{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:6px} .blkbox>b{font-family:var(--display);font-size:16px;color:var(--bad)} .blkbox[hidden]{display:none}
 .sim3{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 10px;font-size:12.5px;align-items:baseline}
@@ -3186,8 +3186,14 @@ function trkAdd(list){var a=null,ch=false;
     if(a.some(function(x){return x.id===id}))return;
     /* entry at the market price of that moment, as Amine takes them; the plan's stop and TP1 */
     var e=isFinite(r.price)&&(r.price-r.plan.sl)*r.dir>0&&(r.plan.tp1-r.price)*r.dir>0?r.price:r.plan.entry;
-    a.push({id:id,sym:r.sym,full:r.full,dir:r.dir,t:r.rdy,e:e,sl:r.plan.sl,tp:r.plan.tp1,cap:r.cap||0,res:null});ch=true});
+    a.push({id:id,sym:r.sym,full:r.full,dir:r.dir,t:r.rdy,e:e,sl:r.plan.sl,tp:r.plan.tp1,cap:r.cap||0,b:trkBudget(r),res:null});ch=true});
   if(ch)trkSave(a)}
+/* risk budget in USDT of a trade (25/11/2026): the one the app sized it with, else the account and risk of Réglages */
+function trkBudget(r){if(r&&r.sz&&r.sz.budget>0)return+r.sz.budget.toFixed(2);try{var A=acctState(),b=A.bmode==="usdt"?+A.budget||0:(+A.capital||0)*(+A.risk||0)/100;return b>0?+b.toFixed(2):0}catch(e){return 0}}
+/* size and result in USDT: quantity = budget / (stop distance + fees), result = R × budget */
+function trkUsd(x){var b=x.b>0?x.b:trkBudget(null);if(!(b>0))return null;var d=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||0.02))/100*x.e,q=b/(d+cost);
+  return{b:b,n:q*x.e,pnl:x.res?x.res.r*b:null}}
+function trkMoney(v,sg){return(sg&&v>0?"+":v<0?"−":"")+Math.abs(v).toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(v)>=100?0:2})+" $"}
 /* one trade played on 15-minute candles from the moment it turned ready: stop first when a candle touches both */
 function trkPlay(x,k){var R=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||0.02))/100*x.e/R,d=x.dir;if(!(R>0))return null;
   for(var i=0;i<k.length;i++){var c=k[i];if(c.t+9e5<=x.t)continue;
@@ -3203,16 +3209,18 @@ function trkUpdate(){if(trkBusy)return Promise.resolve();var a=trkLoad(),open=a.
 function renderTrk(){var el=$("view-trk");if(!el)return;var a=trkLoad().slice().reverse();
   var h='<div class="lvh"><h2>Suivi des trades proposés</h2><span class="sub">chaque trade passé « Prêt », joué avec son entrée, son stop et son TP1, frais compris</span></div>';
   if(!a.length){el.innerHTML=h+'<div class="empty">Rien encore. Chaque trade que l\'appli met en vert, dans un scan ou en arrière-plan, arrive ici et se joue tout seul sur les vrais prix.</div>';return}
-  var done=a.filter(function(x){return x.res&&x.res.k!=="run"}),w=done.filter(function(x){return x.res.k==="tp"}).length,tot=done.reduce(function(s,x){return s+x.res.r},0),run=a.length-done.length;
+  var done=a.filter(function(x){return x.res&&x.res.k!=="run"}),w=done.filter(function(x){return x.res.k==="tp"}).length,tot=done.reduce(function(s,x){return s+x.res.r},0),run=a.length-done.length,
+    totU=done.reduce(function(s,x){var u=trkUsd(x);return s+(u&&u.pnl!==null?u.pnl:0)},0),hasU=done.some(function(x){return trkUsd(x)});
   h+='<div class="funnel plain" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div><b>'+done.length+"</b><span>terminés</span></div>"
     +'<div><b class="pos">'+w+"</b><span>gagnants"+(done.length?" · "+fr(w/done.length*100,0)+" %":"")+"</span></div>"
-    +'<div><b class="'+(tot>=0?"pos":"neg")+'">'+sgn(tot,1)+" R</b><span>total</span></div>"
+    +'<div><b class="'+(tot>=0?"pos":"neg")+'">'+(hasU?trkMoney(totU,1):sgn(tot,1)+" R")+"</b><span>total"+(hasU?" · "+sgn(tot,1)+" R":"")+"</span></div>"
     +"<div><b>"+run+"</b><span>en cours</span></div></div>";
   if(done.length)h+='<div class="sub">'+(done.length<20?"Moins de 20 trades terminés : trop tôt pour juger. ":"")+"Sur deux ans de rejeu : 37 à 42 % de gagnants et +0,04 à +0,21 R par trade. Ici : "+sgn(tot/done.length,2)+" R par trade.</div>";
-  h+='<div class="trk">'+a.map(function(x){var v=x.res,c=!v?"":v.k==="tp"?"pos":v.k==="sl"?"neg":"";
+  h+='<div class="trk">'+a.map(function(x){var v=x.res,c=!v?"":v.k==="tp"?"pos":v.k==="sl"?"neg":"",u=trkUsd(x);
     return'<div class="trk-r"><b>'+esc(x.sym)+'</b><span class="'+(x.dir>0?"up":"dn")+'">'+(x.dir>0?"Long":"Short")+"</span><span>"+hmd(x.t)+"</span>"
-      +'<span class="'+c+'">'+(!v?"à lire":v.k==="tp"?"TP "+sgn(v.r,2)+" R":v.k==="sl"?"SL "+sgn(v.r,2)+" R":"en cours "+sgn(v.r,2)+" R")+"</span></div>"}).join("")+"</div>"
-    +'<div class="sub">Entrée au prix du marché au moment où le setup est passé « Prêt », stop et TP1 du plan. Une bougie qui touche le stop et le TP compte comme stop. Gardé sur ce téléphone.</div>';
+      +'<span class="'+c+'">'+(!v?"à lire":(v.k==="tp"?"TP ":v.k==="sl"?"SL ":"en cours ")+(u&&u.pnl!==null?trkMoney(u.pnl,1)+" · ":"")+sgn(v.r,2)+" R")+"</span>"
+      +(u?'<span class="trk-u">taille '+trkMoney(u.n)+" · risque "+trkMoney(u.b)+"</span>":"")+"</div>"}).join("")+"</div>"
+    +'<div class="sub">Entrée au prix du marché au moment où le setup est passé « Prêt », stop et TP1 du plan. Montants en USDT avec ton risque par trade de Réglages. Une bougie qui touche le stop et le TP compte comme stop. Gardé sur ce téléphone.</div>';
   el.innerHTML=h}
 function renderAft(){
   var el=$("view-aft");if(!el)return;AF=aftLoad();
