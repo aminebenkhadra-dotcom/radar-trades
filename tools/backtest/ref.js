@@ -10,7 +10,7 @@ const B = L.loadSymbol(DIR, "BTCUSDT"), btc = E.btMarket(B.m15, B.d1);
 let trades = [], evals = 0, shadow = [], late = [], fn = {};
 syms.filter(s => !SKIP[s]).forEach((sym, idx) => {
   if (idx % PART[1] !== PART[0]) return;
-  const D = L.loadSymbol(DIR, sym), S = E.btStart(sym.replace(/USDT$/, ""), D.m15, D.d1, Object.assign({ strict: STRICT, btc }, EXTRA));
+  const D = L.loadSymbol(DIR, sym), S = E.btStart(sym.replace(/USDT$/, ""), D.m15, D.d1, Object.assign({ strict: STRICT, btc }, EXTRA, EXTRA.feat2 ? { fund: D.fund, met: D.met } : {}));
   while (!E.btStep(S, 5000)) { }
   evals += S.evals; S.trades.forEach(t => trades.push(Object.assign({ sym: S.sym }, t)));
   (S.shadow || []).forEach(t => shadow.push(Object.assign({ sym: S.sym }, t)));
