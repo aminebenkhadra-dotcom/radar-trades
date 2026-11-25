@@ -1,0 +1,47 @@
+name: Last days check v42
+# Audit of 25/11/2026 (« deux trades en deux jours ») : the app's rules of today replayed on the last ten days, Levels 1-2, 3 and 4-5.
+# For each universe: the trades the app would have proposed (prof and big on, as in the app) and the same without the profile rules,
+# with their profile, plus the 15-minute funnel (how often a setup is ready, at the zone, or held back). Published to branch now-check.
+on:
+  push:
+    branches: [now-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+      START: "2026-10"
+      END: "2026-11"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Universes
+        run: node tools/backtest/caps.js > caps.env && cut -c1-300 caps.env
+      - name: Fetch and replay
+        run: |
+          mkdir -p out
+          . ./caps.env
+          run() { n=$1; mkdir -p d-$n
+            SYMS=$2 node tools/backtest/fetch.js klines d-$n | tail -2
+            B='"slsw":24,"slmode":"flag","feat":1'
+            for v in app base; do mkdir -p r-$n-$v
+              if [ $v = app ]; then o="{$B,\"prof\":1,\"big\":1}"; else o="{$B}"; fi
+              for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js d-$n r-$n-$v 2 $k/4 "$o" & done; wait
+              node tools/backtest/feat42.js r-$n-$v > out/$n-$v.json
+              node tools/backtest/nov42.js r-$n-$v 2026-11-10 > out/$n-$v-list.json; echo "== $n $v"; head -c 400 out/$n-$v-list.json; echo
+            done
+            mkdir -p r-$n-fn
+            for k in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js d-$n r-$n-fn 2 $k/4 '{"funnel":true,"slsw":24,"slmode":"flag","prof":1,"big":1}' & done; wait
+            node tools/backtest/live42.js r-$n-fn 2026-11-10 2026-11-20 > out/$n-funnel.json; head -c 800 out/$n-funnel.json; echo
+          }
+          run lvl12 "$CAP12"
+          run lvl3 "BTCUSDT,$CAP3"
+          run lvl45 "BTCUSDT,$CAP45"
+          cp caps.env ranks.json out/
+      - name: Publish
+        run: |
+          cd out && git init -q -b now-check
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Last days check" && git push -q -f "$REMOTE" now-check
