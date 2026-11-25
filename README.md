@@ -492,3 +492,19 @@ stop et TP1 du plan, frais et glissement compris ; une bougie qui touche le stop
 (tuile de l'accueil) donne les trades terminés, les gagnants, le total et la moyenne en R, et chaque ligne. Elle se relit à chaque
 ouverture. Seuls les Levels scannés sont suivis (en arrière-plan : les Levels surveillés). Test de page P25.
 `pool()` accepte maintenant d'être appelé sans suivi de progression.
+
+## Mise à jour du 25/11/2026 : mémo 2 et montants en USDT dans le Suivi
+
+Mémo 2 d'Amine (projet, revu) : rejoué sur deux ans et novembre, règles de l'appli, frais compris (workflow `memo2.yml`, open interest
+et funding de data.binance.vision passés au rejeu par `ref.js`, option `feat2` du moteur).
+
+| Point du mémo | Rejeu | Dans l'appli |
+|---|---|---|
+| 1. Prix contre open interest sur 24 h (top 30) | Cas rares ; « vendeurs qui ajoutent » : shorts −0,18 et −0,10 R par trade ; « hausse sans acheteurs » : +0,12 puis −0,03 | Étiquette neutre (contrôle « Marché »), funding extrême ajouté au texte |
+| 2. Moitié de taille hors top 20 | 85 à 90 % des trades sont hors top 20 : gains −33 à −45 %, baisse maximale divisée par deux | Non appliqué |
+| 3. Retest d'un V (0,618–0,786) | Shorts −0,33 puis +0,70 R par trade, longs +0,36 puis +0,08 : pas régulier | Non |
+| 4. Volatilité compressée (10e centile de l'année) | Trades meilleurs les deux années, des deux côtés (shorts +0,37 et +0,34 R, longs +0,27 et +0,68) | Avertissement « garde le stop prévu » (contrôle « Risque ») |
+| 5. Pivot du jour | Écarté par le mémo | Non |
+
+Suivi : chaque ligne donne la taille de la position et le risque en USDT (budget de risque du trade au moment où il passe prêt, ou
+celui de Réglages), et le résultat en USDT ; le total est en USDT, avec les R à côté.

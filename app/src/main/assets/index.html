@@ -844,6 +844,8 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   var dir=b4,f=r.f;r.dir=dir;f.bd=bd===b4?1:0;
   /* weekly pivots and highs / lows of the last and current weeks (memo of 24/11/2026) */
   r.wk=weekPivots(d1);
+  /* memo 2, point 4: daily ATR (14) over price, percentile among the last 365 days (compressed when 10 or less) */
+  if(d1.length>120){var vc=d1.slice(-366,-1),vv=[],vi;for(vi=15;vi<vc.length;vi++)vv.push(atr(vc.slice(vi-15,vi))/vc[vi-1].c);var vcur=vv[vv.length-1];r.volPct=Math.round(vv.filter(function(v){return v<=vcur}).length/vv.length*100)}
   var lv=levels(h4,0.5*a),obs=orderBlocks(h4,a),zs=[];
   lv.forEach(function(l){if(dir>0?l.p<=price+0.25*a:l.p>=price-0.25*a)zs.push({lo:l.p-0.25*a,hi:l.p+0.25*a,kind:"sr",n:l.n,flip:l.nh>0&&l.nl>0})});
   obs.forEach(function(o){if(o.dir===dir&&(dir>0?o.lo<price:o.hi>price))zs.push({lo:o.lo,hi:o.hi,kind:"ob",n:1,flip:false})});
@@ -1051,6 +1053,9 @@ function enrich(r,m15,book,sqd,opt){
   var b=bookStats(book,dir,r.plan);r.book=b;
   var hm=opt.noHeat?null:(m15&&m15.length>=100?heatModel(m15):null);
   r.sq=squeeze(sqd||{fund:r.fund===undefined?null:r.fund,ls:null,oi:null},hm);
+  /* memo 2 of 25/11/2026, point 1: the price and the open interest over 24 hours (open interest read on 25 hourly points) */
+  if(m15&&m15.length>97){var c0=m15[m15.length-97].c,c1=m15[m15.length-1].c;r.px24=c0>0?(c1/c0-1)*100:null}
+  r.oi24=sqd&&sqd.oi!==null&&sqd.oi!==undefined&&isFinite(sqd.oi)?+sqd.oi:null;r.fr=sqd&&sqd.fund!==null&&isFinite(sqd.fund)?sqd.fund*100:(isFinite(r.fund)?r.fund*100:null);
   f.sqA=dir>0?r.sq.dn:r.sq.up;f.sqF=dir>0?r.sq.up:r.sq.dn;
   if(hm){var p=r.plan;
     r.liqOwn=(dir>0?hm.below:hm.above).filter(function(z){return dir>0?(z.p>p.sl&&z.p<p.entry):(z.p<p.sl&&z.p>p.entry)})[0]||null;
@@ -1214,6 +1219,16 @@ function judge(r,opt){
   /* opt.prof (study of 23/11/2026, Radar Trades): « Prêt » only for the two profiles that won on both years of replay (60 markets, fees
      included, feat.yml + prof42.js): a long in an agitated market (24-hour range above 130 % of normal), a short while Bitcoin moved 0
      to 1 % its way over 4 hours. Any other setup stays « À surveiller » with the reason; both sides are always analysed */
+  /* opt.oiTag (memo 2 of 25/11/2026, point 1, top 30 by capitalisation): price against open interest over 24 hours, labels only.
+     « hausse sans acheteurs »: price up 1 % or more while open interest fell 2 % or more; « vendeurs qui ajoutent »: price down 1 % or
+     more while open interest rose 2 % or more. An extreme funding (+0.05 % or −0.03 % or beyond) is added to the label, never alone */
+  if(opt.oiTag&&r.cap&&r.cap<=30&&r.px24!==null&&r.px24!==undefined&&r.oi24!==null){var tg=null,fx=r.fr!==null&&(r.fr>=0.05||r.fr<=-0.03)?" · funding "+(r.fr>0?"+":"")+fr(r.fr,3)+" %":"";
+    if(r.px24>=1&&r.oi24<=-2)tg=["Hausse sans acheteurs","prix "+sgn(r.px24,1)+" % en 24 h, positions ouvertes "+sgn(r.oi24,1)+" %",-1];
+    else if(r.px24<=-1&&r.oi24>=2)tg=["Vendeurs qui ajoutent","prix "+sgn(r.px24,1)+" % en 24 h, positions ouvertes "+sgn(r.oi24,1)+" %",-1];
+    /* a label, not a signal: on the replay (memo2.yml) these cases did not win more often, either side */
+    if(tg){r.oiTag=tg[0];add(G.mkt,"mid",0,function(){return tg[0]+" : "+tg[1]+fx})}}
+  /* opt.volTag (memo 2, point 4): compressed volatility, a warning only */
+  if(opt.volTag&&isFinite(r.volPct)&&r.volPct<=10)add(G.risk,"mid",0,function(){return"Volatilité compressée ("+r.volPct+"e centile de l'année) : un gros mouvement peut arriver, garde le stop prévu, pas plus serré"});
   /* opt.big (memo of 24/11/2026, point 3, longs only): a long with a big resistance less than 3 % above its entry (weekly R1 or pivot,
      high of last week or of this week) stays « À surveiller »: on both years of replay these longs lost, the others won */
   if(opt.big&&L&&r.wk&&r.plan){var wk=r.wk,eb=r.plan.entry,bl=[[wk.R1,"R1 hebdo"],[wk.P,"pivot hebdo"],[wk.H,"plus haut de la semaine passée"],[wk.cH,"plus haut de la semaine"]].filter(function(x){return isFinite(x[0])&&x[0]>eb}).sort(function(a,b){return a[0]-b[0]})[0];
@@ -2068,7 +2083,7 @@ window.radarAnn={soon:annSoon,box:annBox,list:ANN};
 /* S.prof (23/11/2026, on by default): « Prêt » and alerts only for the two profiles that won on both years of replay, both sides analysed.
    60 markets, fees included (feat.yml, prof42.js): longs in an agitated market +0.14 and +0.12 R a trade (all longs −0.11 and −0.07),
    shorts while Bitcoin moved 0 to 1 % their way over 4 hours +0.16 and +0.27 R (all shorts −0.02 and +0.12) */
-function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB,prof:S.prof!==false?1:0,big:S.prof!==false?1:0}}
+function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB,prof:S.prof!==false?1:0,big:S.prof!==false?1:0,oiTag:1,volTag:1}}
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */
 var EXI={},exiP=null,btcC=null;
 function readExi(info){((info&&info.symbols)||[]).forEach(function(s){EXI[s.symbol]=contractOf(s)})}
@@ -2087,6 +2102,8 @@ function verdict(r,O){
 function finalize(r,A){
   if(!r||!r.plan||!r.ste)return r;
   var X=EXI[r.full]||r.xc||null;
+  /* memo 2 of 25/11/2026, point 2 (half size outside the top 20) not applied: 85 to 90 % of the trades are outside the top 20, halving
+     them cut the gains by 33 to 45 % on every period of the replay (memo2.yml) */
   r.sz=X?sizePlan(r.plan,r.dir,A||acctState(),X,r.dist<=0.5):null;
   var f=finalStatus({plan:r.plan,st:r.ste,blk:r.blk,miss:r.miss},r.rp,r.sz,!!X);
   r.st=f.st;r.stWhy=f.why;return r}

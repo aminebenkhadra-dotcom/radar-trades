@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,prof:S\.prof!==false\?1:0,big:S\.prof!==false\?1:0\}\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,prof:S\.prof!==false\?1:0,big:S\.prof!==false\?1:0,oiTag:1,volTag:1\}\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
