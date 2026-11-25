@@ -3218,11 +3218,17 @@ function aftCard(a){
   return h+'<div class="acts"><button class="ghost danger" type="button" data-adel="'+a.id+'">'+(aftArm[a.id]?"Confirmer la suppression":"Supprimer")+"</button></div></article>"}
 /* ---------- Suivi (24/11/2026): every trade the app showed « Prêt », played with its own entry, stop and TP1 on the real candles that
    followed, fees included. One line per ready episode (crypto, side, moment it turned ready). Kept on the device, 400 lines at most ---------- */
-function trkLoad(){try{var a=JSON.parse(localStorage.getItem("radar-track")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}}
+function trkLoad(){try{var a=JSON.parse(localStorage.getItem("radar-track")||"[]");return Array.isArray(a)?trkClean(a):[]}catch(e){return[]}}
+/* lines saved before the fix of 25/11/2026: a second line on the same crypto and side, opened while the first was still running, is dropped */
+function trkClean(a){var k=[];a.slice().sort(function(x,y){return x.t-y.t}).forEach(function(x){
+  if(!k.some(function(y){return y.sym===x.sym&&y.dir===x.dir&&x.t-y.t<12*36e5&&(!y.res||y.res.k==="run"||y.res.at>x.t)}))k.push(x)});return k}
 function trkSave(a){try{localStorage.setItem("radar-track",JSON.stringify(a.slice(-400)))}catch(e){}}
 function trkAdd(list){var a=null,ch=false;
   list.forEach(function(r){if(!r.plan||r.st!=="ready"||!r.rdy||!r.full)return;a=a||trkLoad();var id=r.sym+(r.dir>0?"L":"S")+r.rdy;
     if(a.some(function(x){return x.id===id}))return;
+    /* 25/11/2026: SKY short twice, at 00:17 and 01:02. The setup went orange for one scan and green again: the same trade, still open, so
+       not a second line. A new line only once the previous one on this crypto and side has hit its stop or TP, or after 12 hours */
+    if(a.some(function(x){return x.sym===r.sym&&x.dir===r.dir&&(!x.res||x.res.k==="run")&&r.rdy-x.t<12*36e5}))return;
     /* entry at the market price of that moment, as Amine takes them; the plan's stop and TP1 */
     var e=isFinite(r.price)&&(r.price-r.plan.sl)*r.dir>0&&(r.plan.tp1-r.price)*r.dir>0?r.price:r.plan.entry;
     a.push({id:id,sym:r.sym,full:r.full,dir:r.dir,t:r.rdy,e:e,sl:r.plan.sl,tp:r.plan.tp1,cap:r.cap||0,b:trkBudget(r),res:null});ch=true});
@@ -3239,7 +3245,7 @@ function trkPlay(x,k){var R=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||
     if(d>0?c.l<=x.sl:c.h>=x.sl)return{k:"sl",r:-1-cost,at:c.t};
     if(d>0?c.h>=x.tp:c.l<=x.tp)return{k:"tp",r:Math.abs(x.tp-x.e)/R-cost,at:c.t}}
   var last=k.length?k[k.length-1].c:x.e;return{k:"run",r:(last-x.e)*d/R-cost,at:0}}
-window.radarTrk={play:trkPlay,upd:function(){return trkUpdate()}};
+window.radarTrk={play:trkPlay,add:trkAdd,load:trkLoad,upd:function(){return trkUpdate()}};
 var trkBusy=false;
 function trkUpdate(){if(trkBusy)return Promise.resolve();var a=trkLoad(),open=a.filter(function(x){return!x.res||x.res.k==="run"});if(!open.length)return Promise.resolve();trkBusy=true;
   return pool(open,4,function(x){var n=Math.min(1500,Math.ceil((Date.now()-x.t)/9e5)+4);

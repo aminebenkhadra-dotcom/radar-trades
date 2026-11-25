@@ -789,6 +789,15 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
       return { tp: radarTrk.play(x, [c(0, 100, 101, 99, 99.5), c(9e5, 99.5, 100, 95.5, 96)]), sl: radarTrk.play(x, [c(0, 100, 102.5, 95, 96)]), run: radarTrk.play(x, [c(0, 100, 101, 98, 99)]) }; });
     ok(p.tp.k === "tp" && Math.abs(p.tp.r - (2 - 0.12 * 100 / 2 / 100)) < 0.01 && p.sl.k === "sl" && p.run.k === "run" && Math.abs(p.run.r - 0.44) < 0.01,
       "un short à 100, stop 102, TP 96 : TP = " + p.tp.r.toFixed(2) + " R ; bougie qui touche les deux = stop ; en cours = " + p.run.r.toFixed(2) + " R");
+    const dup = await page.evaluate(() => { const T = Date.now() - 3 * 36e5, r = t => ({ sym: "ZZZ", full: "ZZZUSDT", dir: -1, st: "ready", rdy: t, price: 100, plan: { entry: 100, sl: 102, tp1: 96 } }),
+      n = () => radarTrk.load().filter(x => x.sym === "ZZZ").length, out = [];
+      const a0 = JSON.parse(localStorage.getItem("radar-track")); a0.push({ id: "old1", sym: "ZZZ", full: "ZZZUSDT", dir: -1, t: T - 9e5, e: 100, sl: 102, tp: 96, b: 20, res: null }, { id: "old2", sym: "ZZZ", full: "ZZZUSDT", dir: -1, t: T - 6e5, e: 100, sl: 102, tp: 96, b: 20, res: null });
+      localStorage.setItem("radar-track", JSON.stringify(a0)); out.push(n()); localStorage.setItem("radar-track", JSON.stringify(JSON.parse(localStorage.getItem("radar-track")).filter(x => x.sym !== "ZZZ")));
+      radarTrk.add([r(T)]); out.push(n()); radarTrk.add([r(T + 45 * 6e4)]); out.push(n());
+      const a = JSON.parse(localStorage.getItem("radar-track")); a.find(x => x.sym === "ZZZ").res = { k: "tp", r: 1.9, at: T + 36e5 }; localStorage.setItem("radar-track", JSON.stringify(a));
+      radarTrk.add([r(T + 2 * 36e5)]); out.push(n());
+      localStorage.setItem("radar-track", JSON.stringify(JSON.parse(localStorage.getItem("radar-track")).filter(x => x.sym !== "ZZZ"))); return out; });
+    ok(dup.join() === "1,1,1,2", "doublon déjà enregistré retiré ; même crypto, même sens, trade encore ouvert : pas de deuxième ligne ; nouvelle ligne une fois le premier fini (" + dup.join(" → ") + ")");
     await nav(page, "trk");
     await page.waitForFunction(() => document.querySelectorAll("#view-trk .trk-r").length > 0 && !/à lire/.test(document.getElementById("view-trk").textContent), null, { timeout: 30000 });
     const v = await page.evaluate(() => ({ t: document.getElementById("title").textContent, rows: document.querySelectorAll("#view-trk .trk-r").length, top: document.querySelector("#view-trk .funnel").textContent }));
