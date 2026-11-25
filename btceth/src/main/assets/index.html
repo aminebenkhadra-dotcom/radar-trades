@@ -897,6 +897,27 @@ function rngSetup(h4,h1){var n4=h4.length,n1=h1.length;if(n4<130||n1<30)return n
   if(c.l<vp.val&&c.c>vp.val&&px>vp.val&&px<vp.poc){var sl=c.l-0.3*a4,R=px-sl;if(R>0&&(vp.poc-px)/R>=1.2)res={dir:1,plan:{entry:px,sl:sl,tp1:vp.poc,tp2:vp.poc,rr:(vp.poc-px)/R}}}
   else if(c.h>vp.vah&&c.c<vp.vah&&px<vp.vah&&px>vp.poc){var sl2=c.h+0.3*a4,R2=sl2-px;if(R2>0&&(px-vp.poc)/R2>=1.2)res={dir:-1,plan:{entry:px,sl:sl2,tp1:vp.poc,tp2:vp.poc,rr:(px-vp.poc)/R2}}}
   return res}
+/* ---------- memo 2 of 25/11/2026 (video of a trader): open interest, retest of a V move, compressed volatility, extreme funding, daily
+   pivot. memo2Feat: those measures for a setup at its entry; fund [[ms, rate]], met [{t, oi}] hourly, from data.binance.vision ---------- */
+function lastAt(a,t,key){var lo=0,hi=a.length-1,k=-1;while(lo<=hi){var mid=(lo+hi)>>1,v=key?a[mid][key]:a[mid][0];if(v<=t){k=mid;lo=mid+1}else hi=mid-1}return k}
+function memo2Feat(r,d1,h1,t,fund,met){var p=r.plan||{},d=r.dir,e=p.entry,o={},n1=h1.length,px=r.price||e,aD=atr(d1.slice(-31,-1));
+  function n(x,k){return x===null||x===undefined||!isFinite(x)?null:+(+x).toFixed(k)}
+  /* 1. open interest over 24 hours, with the price over 24 hours */
+  if(met&&met.length){var a=lastAt(met,t,"t"),b=lastAt(met,t-864e5,"t");if(a>=0&&b>=0&&met[b].oi>0&&t-met[a].t<3*36e5){o.oi24=n((met[a].oi/met[b].oi-1)*100,2)}}
+  if(n1>25)o.px24=n((px/h1[n1-25].c-1)*100,2);
+  /* 5. funding: the last rate before the entry, in % per 8 hours */
+  if(fund&&fund.length){var fk=lastAt(fund,t);if(fk>=0&&t-fund[fk][0]<12*36e5)o.fr=n(fund[fk][1]*100,4)}
+  /* 2. a V move: more than 10 % in under 3 days (the last 72 hours); how far the price has come back into it (0 = still at the end) */
+  if(n1>75){var w=h1.slice(-73,-1),lo=Infinity,li=0,hi=-Infinity,hj=0;w.forEach(function(c,i){if(c.l<lo){lo=c.l;li=i}if(c.h>hi){hi=c.h;hj=i}});
+    if(hi/lo-1>0.10){var up=li<hj;o.vDir=up?1:-1;o.vRet=n(up?(hi-px)/(hi-lo):(px-lo)/(hi-lo),3)}else o.vDir=0}
+  /* 3. compressed volatility: daily ATR (14) over price, percentile among the last 365 days */
+  if(d1.length>120){var c=d1.slice(-366,-1),vals=[],i;for(i=15;i<c.length;i++){vals.push(atr(c.slice(i-15,i))/c[i-1].c)}var cur=vals[vals.length-1];
+    o.volPct=n(vals.filter(function(v){return v<=cur}).length/vals.length*100,0)}
+  /* 6. daily pivot of the last full UTC day */
+  var dd=d1[d1.length-2];if(dd&&aD>0){var P=(dd.h+dd.l+dd.c)/3,lv=[P,2*P-dd.l,2*P-dd.h];
+    o.pdE=n(Math.min.apply(null,lv.map(function(v){return Math.abs(e-v)}))/aD,2);
+    o.pdW=lv.filter(function(v){return d<0?v<e&&v>p.tp1:v>e&&v<p.tp1}).length}
+  return o}
 function btFrames(m,d1){
   var first=m.length?m[0].t:0,hist=(d1||[]).filter(function(k){return k.t+864e5<=first});
   var tf={h1:{ms:36e5,full:btAgg(m,36e5),off:0},h4:{ms:144e5,full:btAgg(m,144e5),off:0},d1:{ms:864e5,full:hist.concat(btAgg(m,864e5)),off:hist.length}},at=-1,name;
@@ -1094,7 +1115,8 @@ function btStep(S,n){
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
     if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,sx:r.slx?(r.slx.sl===p.sl?2:1):0,rp:+(R/e*100).toFixed(3),score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
-    if(o.feat&&res.how!=="open"){var fbc=o.btc?o.btc[m[i].t]:null,fx=featOf(r,fbc),mf=memoFeat(r,d1,F.get("h4",200),F.get("h1",200),F.m15(200),fbc),fk;for(fk in mf)fx[fk]=mf[fk];S.trades[S.trades.length-1].fx=fx}
+    if(o.feat&&res.how!=="open"){var fbc=o.btc?o.btc[m[i].t]:null,fx=featOf(r,fbc),mf=memoFeat(r,d1,F.get("h4",200),F.get("h1",200),F.m15(200),fbc),fk;for(fk in mf)fx[fk]=mf[fk];
+      if(o.feat2){var m2=memo2Feat(r,F.get("d1",400),F.get("h1",200),m[i].t+9e5,o.fund,o.met);for(fk in m2)fx[fk]=m2[fk]}S.trades[S.trades.length-1].fx=fx}
     if(o.inv&&res.how!=="open"){var iq={i:i,end:i+960,cr:cost*e/R,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
       INV_RULES.forEach(function(r){iq.v[r]={done:null}});(S.isims=S.isims||[]).push(iq)}
     if(o.trail&&res.how!=="open"){var tq={i:i,end:i+960,cr:cost*e/R,far:e,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
