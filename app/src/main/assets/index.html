@@ -2166,8 +2166,11 @@ function opts(p){p=p||preset();var o={strict:+S.strict,minRR:+S.minrr||1.5,slk:+
   return o}
 /* ---------- réglages (26/11/2026): four sets of rules to choose from. The one chosen makes the lists, the « Prêt » and the notifications;
    the Suivi plays the four side by side on every scan, so their results can be compared on the same days ---------- */
-var PRESETS=[["radar","Radar","Règles actuelles de l'appli, testées sur deux ans"],["nico","Nico","Points des mémos Nico : gros niveaux, zone morte, pivots, force face à BTC, mode range, sortie à l'inversion, demi-taille"],
-  ["avant","Avant les mémos","Règles du 23/11 : « Prêt » seulement pour les profils gagnants"],["sr","RSI · Volume","Rebond sur un support ou rejet sous une résistance 4H, RSI extrême et volume fort, longs et shorts"]];
+var PRESETS=[["radar","Radar","Règles actuelles de l'appli · rejeu sur deux ans : +165 R (conseillé)"],["nico","Nico","Points des mémos Nico : gros niveaux, zone morte, pivots, force face à BTC, mode range, sortie à l'inversion, demi-taille · rejeu sur deux ans : −329 R"],
+  ["avant","Avant les mémos","Règles du 23/11 : « Prêt » seulement pour les profils gagnants · rejeu sur deux ans : +160 R"],["sr","RSI · Volume","Rebond sur un support ou rejet sous une résistance 4H, RSI extrême et volume fort, longs et shorts · rejeu sur deux ans : −391 R"]];
+/* two-year replay of 26/11/2026 (presets.yml, 60 markets, fees included): radar +27.8 R (2024-25) and +137.3 R (2025-26), avant +27.7 and
+   +132.6, nico −162.6 and −166.2 (its range mode alone −128.8 and −199.7), RSI · Volume −327.1 and −63.7 (thresholds 35 and volume 1.2 lost
+   too); October-November 2026, Levels 1 to 3: radar +94.5, avant +94.5, nico −51.3, RSI · Volume +8.9 */
 function preset(){var p=S.preset;return PRESETS.some(function(x){return x[0]===p})?p:"radar"}
 function presetName(p){var x=PRESETS.filter(function(y){return y[0]===p})[0];return x?x[1]:"Radar"}
 /* Nico (memo of 24/11, point 7; memo 2, point 2): half size before a strong announcement (within 24 hours) or outside the top 20 */

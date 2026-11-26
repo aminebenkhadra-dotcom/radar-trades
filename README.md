@@ -508,3 +508,20 @@ et funding de data.binance.vision passés au rejeu par `ref.js`, option `feat2` 
 
 Suivi : chaque ligne donne la taille de la position et le risque en USDT (budget de risque du trade au moment où il passe prêt, ou
 celui de Réglages), et le résultat en USDT ; le total est en USDT, avec les R à côté.
+
+## Mise à jour du 26/11/2026 : quatre réglages au choix, comparés dans le Suivi
+
+Sélecteur « Réglage » sur l'accueil et au-dessus des Levels. Le réglage choisi fait les listes, les « Prêt » et les notifications ; le Suivi
+joue les quatre en même temps à chaque scan (un onglet par réglage, bilan côte à côte).
+
+| Réglage | Règles | Rejeu 2024-25 | Rejeu 2025-26 | Oct.-nov. 2026, Levels 1-3 |
+|---|---|---|---|---|
+| Radar (défaut) | règles actuelles : profils gagnants, grosse résistance sur les longs, étiquettes | +27,8 R | +137,3 R | +94,5 R |
+| Avant les mémos | profils gagnants seuls (règles du 23/11) | +27,7 R | +132,6 R | +94,5 R |
+| Nico | gros niveau à moins de 3 % des deux côtés et zone morte en « À surveiller », pivots et force face à BTC au score, mode range, sortie à l'inversion 1H, demi-taille avant annonce ou hors top 20 | −162,6 R | −166,2 R | −51,3 R |
+| RSI · Volume | rebond sur support / rejet sous résistance 4H, RSI 1H ≤ 30 / ≥ 70 sur 3 h, volume 1,5 fois la normale, TP au niveau suivant (1,5 à 3 R) | −327,1 R | −63,7 R | +8,9 R |
+
+Le mode range de Nico perd à lui seul −128,8 et −199,7 R. RSI · Volume avec un seuil à 35 ou un volume à 1,2 perd aussi. Non retenus dans les mémos
+et donc absents de Nico : déblocages de tokens (pas de données fiables), retest des V (le mémo 2 demandait de le prouver d'abord : pas régulier).
+Moteur : options `big2`, `dz`, `nicoPts`, `sr` (fonction `srSetup`) ; rejeu : workflow `presets.yml`, script `tools/backtest/presets42.js`.
+Étude de la même journée, non retenue : entrée « à la cassure » (branche `study-brk`, workflow `brk.yml`) : longs perdants, shorts irréguliers.
