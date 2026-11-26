@@ -525,3 +525,12 @@ Le mode range de Nico perd à lui seul −128,8 et −199,7 R. RSI · Volume ave
 et donc absents de Nico : déblocages de tokens (pas de données fiables), retest des V (le mémo 2 demandait de le prouver d'abord : pas régulier).
 Moteur : options `big2`, `dz`, `nicoPts`, `sr` (fonction `srSetup`) ; rejeu : workflow `presets.yml`, script `tools/backtest/presets42.js`.
 Étude de la même journée, non retenue : entrée « à la cassure » (branche `study-brk`, workflow `brk.yml`) : longs perdants, shorts irréguliers.
+
+## Mise à jour du 26/11/2026 (2) : mémo 3 (vidéo « 6 stratégies », Le QG du Trading)
+
+- Étiquette orange « Milieu de range, pas d'avantage » (score −4, rien de bloqué) : prix entre 40 et 60 % du plus haut et du plus bas des 48 dernières
+  bougies 1H, moyennes 1H 20 et 50 à plat, pas de cassure. Rejeu, règles Radar : 3 % des trades seulement, et pas moins bons
+  (2024-25 : 21 trades, −2 R ; 2025-26 : 18 trades, +9 R ; oct.-nov. 2026 : +3,6 R et +3,2 R). Étiquette d'information.
+- « Confirmé » / « En formation · clôture dans X min » sur chaque « Prêt » : le setup relu sur les bougies 15 min clôturées seulement.
+  Un « Prêt » vu en formation qui disparaît à la clôture affiche « Non confirmé » pendant 45 minutes. Rien ne change dans le statut ni le score.
+Moteur : `midRange`, option `midTag`, `r.trigC` dans `enrich` ; workflow `mid.yml`, script `tools/backtest/mid42.js`.
