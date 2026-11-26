@@ -1,0 +1,51 @@
+name: Réglages check v42
+# Réglages of 26/11/2026: the app's current rules (radar), the rules before the memos (avant), Nico's rules (all the memo points that can
+# be replayed) and RSI · Volume · Niveaux (three thresholds), on the three periods of the 60 markets by volume and November on Levels 1 to 3.
+# Published to branches presets-v42-<period>.
+on:
+  push:
+    branches: [presets-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch candles
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          node tools/backtest/caps.js > caps.env || true
+          if [ -n "${{ matrix.period.caps }}" ]; then . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -3
+      - name: Replay the réglages
+        run: |
+          mkdir -p out
+          run() { id=$1; k=$2; o=$3; mkdir -p r-$id
+            for p in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r-$id 2 $p/4 "$o" & done; wait
+            node tools/backtest/presets42.js r-$id $k ranks.json > out/$id.json; echo "== $id"; head -c 600 out/$id.json; echo; }
+          B='"slsw":24,"slmode":"flag"'
+          run radar radar "{$B,\"prof\":1,\"big\":1}"
+          run avant avant "{$B,\"prof\":1}"
+          run nico  nico  "{$B,\"big2\":1,\"dz\":1,\"rng\":1,\"inv\":1}"
+          run nico0 radar "{$B,\"big2\":1,\"dz\":1,\"rng\":1}"
+          run sr30  sr    "{$B,\"sr\":1}"
+          run sr35  sr    "{$B,\"sr\":1,\"srLo\":35}"
+          run sr30v sr    "{$B,\"sr\":1,\"srVol\":1.2}"
+      - name: Publish
+        run: |
+          B=presets-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Réglages check ${{ matrix.period.id }}" && git push -q -f "$REMOTE" $B

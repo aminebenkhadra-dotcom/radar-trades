@@ -909,6 +909,10 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   /* how far Bitcoin has moved against the trade from its 72-hour extreme: its rise from the low for a short, its fall from the high for a long */
   f.btcReb=ctx&&ctx.btc&&ctx.btc.up3!==undefined?(dir<0?ctx.btc.up3:-ctx.btc.dn3):null;
 
+  /* Nico (memo of 24/11/2026, point 4): the 1H and 4H tunnels (EMA 20 to 50), for the dead zone read with the 15-minute one in enrich;
+     point 5: the move over 24 hours against Bitcoin's, in points */
+  r.tun={h1:tunnel(h1),h4:tunnel(h4)};
+  if(ctx&&ctx.btc&&isFinite(ctx.btc.r24)&&n1>25&&sym!=="BTC")r.rs24=(price/h1[n1-25].c-1)*100-ctx.btc.r24;
   replan(r,opt);
   r.flow=flowRead(h1,h4,dir,r.plan,a,f.struct);
   r.a1=atr(h1);
@@ -1050,6 +1054,7 @@ function triggers(m,dir,z,a4){
 function enrich(r,m15,book,sqd,opt){
   opt=opt||{};var f=r.f,dir=r.dir;
   if(m15&&m15.length>=60){var T=triggers(m15,dir,r.z,r.a);r.trig=T;r.r15=T.r15}
+  if(m15&&m15.length>=60&&r.tun){var t15=tunnel(m15),pz=m15[m15.length-1].c;r.dz=deadZone(pz,t15,r.tun.h1)?"15 min / 1H":deadZone(pz,r.tun.h1,r.tun.h4)?"1H / 4H":null}
   var b=bookStats(book,dir,r.plan);r.book=b;
   var hm=opt.noHeat?null:(m15&&m15.length>=100?heatModel(m15):null);
   r.sq=squeeze(sqd||{fund:r.fund===undefined?null:r.fund,ls:null,oi:null},hm);
@@ -1233,6 +1238,16 @@ function judge(r,opt){
      high of last week or of this week) stays « À surveiller »: on both years of replay these longs lost, the others won */
   if(opt.big&&L&&r.wk&&r.plan){var wk=r.wk,eb=r.plan.entry,bl=[[wk.R1,"R1 hebdo"],[wk.P,"pivot hebdo"],[wk.H,"plus haut de la semaine passée"],[wk.cH,"plus haut de la semaine"]].filter(function(x){return isFinite(x[0])&&x[0]>eb}).sort(function(a,b){return a[0]-b[0]})[0];
     if(bl&&(bl[0]-eb)/eb*100<3)blk.push({k:"big",sev:"watch",t:"Grosse résistance à "+fr((bl[0]-eb)/eb*100,1)+" % au-dessus de l'entrée ("+bl[1]+", "+px(bl[0])+") : sur deux ans, les longs dans ce cas ont perdu"})}
+  /* Nico (memo of 24/11/2026): opt.big2, a big level less than 3 % on the way, both sides (support under a short, resistance over a
+     long), and opt.dz, the dead zone between two tunnels: « À surveiller », as the memo asks. opt.nicoPts: weekly pivot near the zone or
+     the target, and strength against Bitcoin over 24 hours, as score only */
+  if(opt.big2&&r.wk&&r.plan){var w2=r.wk,e2=r.plan.entry,b2=(L?[[w2.R1,"R1 hebdo"],[w2.P,"pivot hebdo"],[w2.H,"plus haut de la semaine passée"],[w2.cH,"plus haut de la semaine"]]:[[w2.S1,"S1 hebdo"],[w2.P,"pivot hebdo"],[w2.L,"plus bas de la semaine passée"],[w2.cL,"plus bas de la semaine"]])
+      .filter(function(x){return isFinite(x[0])&&(x[0]-e2)*dir>0}).sort(function(a,b){return Math.abs(a[0]-e2)-Math.abs(b[0]-e2)})[0];
+    if(b2&&Math.abs(b2[0]-e2)/e2*100<3)blk.push({k:"big",sev:"watch",t:(L?"Grosse résistance":"Gros support")+" à "+fr(Math.abs(b2[0]-e2)/e2*100,1)+" % de l'entrée ("+b2[1]+", "+px(b2[0])+") : Nico conseille d'attendre"})}
+  if(opt.dz&&r.dz)blk.push({k:"dz",sev:"watch",t:"Zone morte : prix coincé entre les moyennes "+r.dz+" (Nico)"});
+  if(opt.nicoPts&&r.wk&&r.plan){var pvs=[r.wk.P,r.wk.R1,r.wk.S1].filter(isFinite),ax=r.a||0;
+    if(ax>0&&pvs.some(function(v){return Math.abs(v-r.plan.entry)<0.25*ax||Math.abs(v-r.plan.tp1)<0.25*ax}))add(G.zone,"ok",3,function(){return"Pivot hebdomadaire sur la zone ou le TP (Nico)"});
+    if(isFinite(r.rs24)&&r.rs24*dir>0)add(G.mkt,"ok",3,function(){return(L?"Plus forte":"Plus faible")+" que Bitcoin sur 24 h ("+sgn(r.rs24*dir,1)+" points) (Nico)"})}
   if(opt.prof){var pw=L?f.rng24!==null&&f.rng24>1.3:f.btcSh!==null&&f.btcSh>=0&&f.btcSh<1;r.prof=pw?1:0;
     if(pw)add(G.mkt,"ok",0,function(){return L?"Profil gagnant : marché agité (amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale), le seul où les longs ont gagné sur deux ans":"Profil gagnant : Bitcoin "+sgn(-f.btcSh,1)+" % sur 4 h, le cas où les shorts ont le mieux gagné sur deux ans"});
     else blk.push({k:"prof",sev:"watch",t:L?"Profil sans avantage : sur deux ans, les longs n'ont gagné que dans un marché agité (amplitude 24 h au-dessus de 130 % de la normale)"+(f.rng24!==null?" ; ici "+fr(f.rng24*100,0)+" %":""):"Profil sans avantage : sur deux ans, les shorts ont gagné quand Bitcoin baissait de 0 à 1 % sur 4 h"+(f.btcSh!==null?" ; ici "+sgn(-f.btcSh,1)+" %":"")})}
@@ -1430,6 +1445,26 @@ function rngSetup(h4,h1){var n4=h4.length,n1=h1.length;if(n4<130||n1<30)return n
   if(c.l<vp.val&&c.c>vp.val&&px>vp.val&&px<vp.poc){var sl=c.l-0.3*a4,R=px-sl;if(R>0&&(vp.poc-px)/R>=1.2)res={dir:1,plan:{entry:px,sl:sl,tp1:vp.poc,tp2:vp.poc,rr:(vp.poc-px)/R}}}
   else if(c.h>vp.vah&&c.c<vp.vah&&px<vp.vah&&px>vp.poc){var sl2=c.h+0.3*a4,R2=sl2-px;if(R2>0&&(px-vp.poc)/R2>=1.2)res={dir:-1,plan:{entry:px,sl:sl2,tp1:vp.poc,tp2:vp.poc,rr:(px-vp.poc)/R2}}}
   return res}
+/* ---------- RSI · Volume · Niveaux (réglage du 26/11/2026): a rebound on a 4H support for a long, a rejection under a 4H resistance for
+   a short, whatever the trend. Ready: the last closed 1H candle touched the level (0.2 ATR 4H) and closed back on the right side, the RSI
+   1H reached o.srLo (30) or less for a long, 100 − o.srLo or more for a short, over the last 3 closed candles, and that candle's volume is
+   o.srVol (1.5) times the usual. Watch: price within half an ATR 4H of the level with the RSI 1H within 5 points of the threshold.
+   Stop 0.25 ATR 4H beyond the level or the candle; target the next level, 1.5 R at least, 3 R at most ---------- */
+function srSetup(h4,h1,o){o=o||{};var n1=h1.length,n4=h4.length;if(n1<60||n4<60)return null;
+  var k4=h4.slice(0,-1),a4=atr(k4);if(!(a4>0))return null;
+  var lv=levels(k4,0.5*a4).filter(function(l){return l.n>=(o.srN||2)}),c=h1[n1-2],px=h1[n1-1].c,rs=rsiSeries(closes(h1.slice(0,-1)));if(!lv.length||rs.length<3)return null;
+  var rl=rs.slice(-3),rlo=Math.min.apply(null,rl),rhi=Math.max.apply(null,rl),rn=rs[rs.length-1],q=0,i;for(i=n1-22;i<n1-2;i++)q+=h1[i].q;q/=20;
+  var vr=q>0?c.q/q:0,LO=o.srLo||30,HI=100-LO,best=null;
+  lv.forEach(function(l){[1,-1].forEach(function(d){var S=l.p;if((S-px)*d>0.2*a4)return;
+    var touch=d>0?c.l<=S+0.2*a4:c.h>=S-0.2*a4,back=(c.c-S)*d>0&&(px-S)*d>0,rsiOk=d>0?rlo<=LO:rhi>=HI,volOk=vr>=(o.srVol||1.5);
+    var st=touch&&back&&rsiOk&&volOk?"ready":Math.abs(px-S)<=0.5*a4&&(d>0?rn<=LO+5:rn>=HI-5)?"watch":null;if(!st)return;
+    var sl=d>0?Math.min(c.l,S)-0.25*a4:Math.max(c.h,S)+0.25*a4,e=st==="ready"?px:S,R=Math.abs(e-sl);
+    if(!(R>0)||(sl-e)*d>=0||R/e>0.05||R/e<0.003)return;
+    var nx=lv.filter(function(m){return(m.p-e)*d>0.5*R}).sort(function(x,y){return(x.p-y.p)*d})[0],tp=nx?nx.p:e+d*2*R;
+    if(Math.abs(tp-e)>3*R)tp=e+d*3*R;var rr=Math.abs(tp-e)/R;if(rr<(o.srRR||1.5))return;
+    var cd={dir:d,st:st,lvl:S,n:l.n,rsi:+(d>0?rlo:rhi).toFixed(0),rsiNow:+rn.toFixed(0),vol:+vr.toFixed(1),a4:a4,plan:{entry:e,sl:sl,tp1:tp,tp2:tp,rr:rr}};
+    if(!best||(cd.st==="ready")>(best.st==="ready")||(cd.st===best.st&&Math.abs(px-S)<Math.abs(px-best.lvl)))best=cd})});
+  return best}
 /* ---------- memo 2 of 25/11/2026 (video of a trader): open interest, retest of a V move, compressed volatility, extreme funding, daily
    pivot. memo2Feat: those measures for a setup at its entry; fund [[ms, rate]], met [{t, oi}] hourly, from data.binance.vision ---------- */
 function lastAt(a,t,key){var lo=0,hi=a.length-1,k=-1;while(lo<=hi){var mid=(lo+hi)>>1,v=key?a[mid][key]:a[mid][0];if(v<=t){k=mid;lo=mid+1}else hi=mid-1}return k}
@@ -1616,6 +1651,12 @@ function btStep(S,n){
     if(i<BT_WARM||i<S.free)continue;
     var d1=F.get("d1",400);if(d1.length<55)continue;
     if(S.first===null)S.first=m[i].t;
+    /* o.sr (réglage RSI · Volume · Niveaux): only those trades, no trend setup */
+    if(o.sr){S.evals++;var sx=srSetup(F.get("h4",200),F.get("h1",200),o);
+      if(sx&&sx.st==="ready"&&(!o.srSide||sx.dir===+o.srSide)){var sp=sx.plan,sR=Math.abs(sp.entry-sp.sl),sres=btResolve(m,i,sp,sx.dir,N,cost);
+        if(sres.how!=="open")S.trades.push({t:m[i].t,x:m[sres.j].t,dir:sx.dir,entry:sp.entry,sl:sp.sl,tp:sp.tp1,how:sres.how,r:sres.r,rp:+(sR/sp.entry*100).toFixed(3),cf:"sr",kind:"sr",cr:cost*sp.entry/sR,hs:[]});
+        S.free=sres.j+17}
+      continue}
     S.evals++;
     var r=analyze(S.sym,d1,F.get("h4",200),F.get("h1",200),o.btc?{btc:o.btc[m[i].t]||null}:null,o);
     /* o.rev (study): a reversal after an excess, when no trend setup is at its zone; o.revBtc: Bitcoin must have moved the same way over
