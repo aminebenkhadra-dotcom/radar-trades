@@ -1,0 +1,38 @@
+name: Mid-range check v42
+# Memo 3 of 26/11/2026: are the app's trades taken in the middle of a 1H range worse? Rules of the app (réglage Radar), three periods of the
+# 60 markets by volume and November on Levels 1 to 3. Published to branches mid-v42-<period>.
+on:
+  push:
+    branches: [mid-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        period:
+          - { id: A, start: "2024-09", end: "2025-10", caps: "" }
+          - { id: B, start: "2025-10", end: "2026-10", caps: "" }
+          - { id: C, start: "2026-10", end: "2026-11", caps: "" }
+          - { id: D, start: "2026-10", end: "2026-11", caps: "1" }
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and replay
+        env: { START: "${{ matrix.period.start }}", END: "${{ matrix.period.end }}" }
+        run: |
+          if [ -n "${{ matrix.period.caps }}" ]; then node tools/backtest/caps.js > caps.env; . ./caps.env; export SYMS="$CAP12,$CAP3"; fi
+          node tools/backtest/fetch.js klines data 2>&1 | tail -2
+          mkdir -p out r
+          for p in 0 1 2 3; do TAG=v42 node tools/backtest/ref.js data r 2 $p/4 '{"slsw":24,"slmode":"flag","prof":1,"big":1}' & done; wait
+          node tools/backtest/mid42.js r > out/mid.json; cat out/mid.json
+      - name: Publish
+        run: |
+          B=mid-v42-${{ matrix.period.id }}
+          cd out && git init -q -b $B
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "Mid-range check" && git push -q -f "$REMOTE" $B

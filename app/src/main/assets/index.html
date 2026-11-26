@@ -457,6 +457,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 .pseg button{flex:1 0 auto;white-space:nowrap;border:0;background:transparent;border-radius:9px;padding:8px 10px;font-weight:600;font-size:13.5px;color:var(--muted)}
 .pseg button[aria-pressed="true"]{background:var(--accent,#f0b90b);color:#111}
 .pdesc{margin:0 2px 8px}
+.cf-ok{color:var(--pos,#2ebd85)!important}.cf-form{color:var(--muted)!important}.cf-no{color:var(--warn,#f0b90b)!important}
 .tcmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 6px}
 .tcr{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line,#2a2f36);background:var(--surface);border-radius:12px;padding:10px 12px;color:var(--ink)}
 .tcr.on{border-color:var(--accent,#f0b90b)}
@@ -855,7 +856,7 @@ function analyze(sym,d1,h4,h1,ctx,opt){
   if(b4===0||bd===-b4){r.st="none";r.why.push({t:b4===0?"4H sans tendance nette":"1J et 4H en sens opposé",k:"no"});return r}
   var dir=b4,f=r.f;r.dir=dir;f.bd=bd===b4?1:0;
   /* weekly pivots and highs / lows of the last and current weeks (memo of 24/11/2026) */
-  r.wk=weekPivots(d1);
+  r.wk=weekPivots(d1);r.midR=midRange(h1);
   /* memo 2, point 4: daily ATR (14) over price, percentile among the last 365 days (compressed when 10 or less) */
   if(d1.length>120){var vc=d1.slice(-366,-1),vv=[],vi;for(vi=15;vi<vc.length;vi++)vv.push(atr(vc.slice(vi-15,vi))/vc[vi-1].c);var vcur=vv[vv.length-1];r.volPct=Math.round(vv.filter(function(v){return v<=vcur}).length/vv.length*100)}
   var lv=levels(h4,0.5*a),obs=orderBlocks(h4,a),zs=[];
@@ -1066,6 +1067,8 @@ function triggers(m,dir,z,a4){
 function enrich(r,m15,book,sqd,opt){
   opt=opt||{};var f=r.f,dir=r.dir;
   if(m15&&m15.length>=60){var T=triggers(m15,dir,r.z,r.a);r.trig=T;r.r15=T.r15}
+  /* memo 3, change 2: the same reading on closed 15-minute candles only, to tell « Confirmé » from « En formation » */
+  if(m15&&m15.length>=61&&!opt.noConf){var Tc=triggers(m15.slice(0,-1),dir,r.z,r.a);r.trigC=Tc;r.t15=m15[m15.length-1].t}
   if(m15&&m15.length>=60&&r.tun){var t15=tunnel(m15),pz=m15[m15.length-1].c;r.dz=deadZone(pz,t15,r.tun.h1)?"15 min / 1H":deadZone(pz,r.tun.h1,r.tun.h4)?"1H / 4H":null}
   var b=bookStats(book,dir,r.plan);r.book=b;
   var hm=opt.noHeat?null:(m15&&m15.length>=100?heatModel(m15):null);
@@ -1260,6 +1263,8 @@ function judge(r,opt){
   if(opt.nicoPts&&r.wk&&r.plan){var pvs=[r.wk.P,r.wk.R1,r.wk.S1].filter(isFinite),ax=r.a||0;
     if(ax>0&&pvs.some(function(v){return Math.abs(v-r.plan.entry)<0.25*ax||Math.abs(v-r.plan.tp1)<0.25*ax}))add(G.zone,"ok",3,function(){return"Pivot hebdomadaire sur la zone ou le TP (Nico)"});
     if(isFinite(r.rs24)&&r.rs24*dir>0)add(G.mkt,"ok",3,function(){return(L?"Plus forte":"Plus faible")+" que Bitcoin sur 24 h ("+sgn(r.rs24*dir,1)+" points) (Nico)"})}
+  /* memo 3: « Milieu de range — pas d'avantage », an orange label and a small score cut, never a block */
+  if(opt.midTag&&r.midR)add(G.zone,"mid",-4,function(){return"Milieu de range, pas d'avantage : prix à "+fr(r.midR.pos*100,0)+" % entre le plus bas ("+px(r.midR.lo)+") et le plus haut ("+px(r.midR.hi)+") des 48 dernières heures, moyennes 1H à plat"});
   if(opt.prof){var pw=L?f.rng24!==null&&f.rng24>1.3:f.btcSh!==null&&f.btcSh>=0&&f.btcSh<1;r.prof=pw?1:0;
     if(pw)add(G.mkt,"ok",0,function(){return L?"Profil gagnant : marché agité (amplitude 24 h à "+fr(f.rng24*100,0)+" % de la normale), le seul où les longs ont gagné sur deux ans":"Profil gagnant : Bitcoin "+sgn(-f.btcSh,1)+" % sur 4 h, le cas où les shorts ont le mieux gagné sur deux ans"});
     else blk.push({k:"prof",sev:"watch",t:L?"Profil sans avantage : sur deux ans, les longs n'ont gagné que dans un marché agité (amplitude 24 h au-dessus de 130 % de la normale)"+(f.rng24!==null?" ; ici "+fr(f.rng24*100,0)+" %":""):"Profil sans avantage : sur deux ans, les shorts ont gagné quand Bitcoin baissait de 0 à 1 % sur 4 h"+(f.btcSh!==null?" ; ici "+sgn(-f.btcSh,1)+" %":"")})}
@@ -1413,6 +1418,16 @@ function featOf(r,bc){var f=r.f||{},T=r.trig||{},p=r.plan||{},d=r.dir,R=Math.abs
     sc:n(r.score,0),fw:r.flow?n(r.flow.sc,0):null,rr:n(p.rr,2),rp:p.entry?n(R/p.entry*100,2):null}}
 /* ---------- memo of 24/11/2026 (video of a trader): weekly pivots, big levels, dead zone, strength against Bitcoin ----------
    weekPivots: classic pivots of the last full UTC week (Monday to Sunday) and that week's high and low; null without 5 days of it */
+/* memo 3 of 26/11/2026 (video « 6 stratégies », point 6): a range, never trade its middle. Range: the high and low of the last 48 closed
+   1H candles while the 1H EMA 20 and EMA 50 are flat (moved less than 0.3 ATR 1H over 10 hours) and the last close has not broken out.
+   Returns the price's place in the range (0 at the low, 1 at the high) when it is between 40 % and 60 %, else null */
+function midRange(h1){var n=h1.length;if(n<70)return null;var k=h1.slice(0,-1),w=k.slice(-48),hi=-Infinity,lo=Infinity,i;
+  for(i=0;i<w.length;i++){if(w[i].h>hi)hi=w[i].h;if(w[i].l<lo)lo=w[i].l}
+  var a1=atr(k.slice(-40)),cl=closes(k),e20=ema(cl,20),e50=ema(cl,50),m=cl.length;if(!(a1>0)||!(hi>lo))return null;
+  if(Math.abs(e20[m-1]-e20[m-11])>=0.3*a1||Math.abs(e50[m-1]-e50[m-11])>=0.3*a1)return null;
+  var prev=w.slice(0,-1),ph=Math.max.apply(null,prev.map(function(x){return x.h})),pl=Math.min.apply(null,prev.map(function(x){return x.l})),c=w[w.length-1].c;
+  if(c>ph||c<pl)return null;
+  var pos=(h1[n-1].c-lo)/(hi-lo);return pos>=0.4&&pos<=0.6?{pos:pos,hi:hi,lo:lo}:null}
 function weekPivots(d1){var n=d1.length;if(n<10)return null;var t=d1[n-1].t,wd=(new Date(t).getUTCDay()+6)%7,ws=t-wd*864e5,H=-Infinity,L=Infinity,C=null,k=0,i,cH=-Infinity,cL=Infinity;
   for(i=0;i<n;i++){var c=d1[i];if(c.t>=ws-7*864e5&&c.t<ws){if(c.h>H)H=c.h;if(c.l<L)L=c.l;C=c.c;k++}else if(c.t>=ws){if(c.h>cH)cH=c.h;if(c.l<cL)cL=c.l}}
   if(k<5)return null;var P=(H+L+C)/3;return{P:P,R1:2*P-L,S1:2*P-H,H:H,L:L,cH:cH,cL:cL}}
@@ -1700,7 +1715,7 @@ function btStep(S,n){
       continue}
     S.ready++;
     var p=r.plan,dir=r.dir,e=p.entry,R=Math.abs(e-p.sl),res=btResolve(m,i,p,dir,N,cost),j=res.j;
-    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,sx:r.slx?(r.slx.sl===p.sl?2:1):0,rp:+(R/e*100).toFixed(3),score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),cr:cost*e/R,hs:[]});
+    if(res.how!=="open")S.trades.push({t:m[i].t,x:m[j].t,dir:dir,entry:e,sl:p.sl,tp:p.tp1,how:res.how,r:res.r,sx:r.slx?(r.slx.sl===p.sl?2:1):0,rp:+(R/e*100).toFixed(3),score:r.score,fl:r.flow?r.flow.sc:null,fc:r.flow?r.flow.c:null,cf:cfgOf(r),mid:r.midR?1:0,cr:cost*e/R,hs:[]});
     if(o.feat&&res.how!=="open"){var fbc=o.btc?o.btc[m[i].t]:null,fx=featOf(r,fbc),mf=memoFeat(r,d1,F.get("h4",200),F.get("h1",200),F.m15(200),fbc),fk;for(fk in mf)fx[fk]=mf[fk];
       if(o.feat2){var m2=memo2Feat(r,F.get("d1",400),F.get("h1",200),m[i].t+9e5,o.fund,o.met);for(fk in m2)fx[fk]=m2[fk]}S.trades[S.trades.length-1].fx=fx}
     if(o.inv&&res.how!=="open"){var iq={i:i,end:i+960,cr:cost*e/R,rec:S.trades[S.trades.length-1],t:{dir:dir,entry:e,sl:p.sl,tp:p.tp1,r0:R},v:{}};
@@ -2158,7 +2173,7 @@ window.radarAnn={soon:annSoon,box:annBox,list:ANN};
 /* S.prof (23/11/2026, on by default): « Prêt » and alerts only for the two profiles that won on both years of replay, both sides analysed.
    60 markets, fees included (feat.yml, prof42.js): longs in an agitated market +0.14 and +0.12 R a trade (all longs −0.11 and −0.07),
    shorts while Bitcoin moved 0 to 1 % their way over 4 hours +0.16 and +0.27 R (all shorts −0.02 and +0.12) */
-function opts(p){p=p||preset();var o={strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB};
+function opts(p){p=p||preset();var o={strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB,midTag:1};
   /* réglages of 26/11/2026: avant = rules of 23/11 (winning profiles only); nico = the memo points (big levels both sides, dead zone,
      pivots and strength as score, labels), without the profile rule; radar (and the trend reading behind RSI · Volume) = rules of now */
   if(p==="avant")o.prof=1;else if(p==="nico"){o.big2=1;o.dz=1;o.nicoPts=1;o.oiTag=1;o.volTag=1}
@@ -2243,8 +2258,15 @@ function btcContext(){
 function verdict(r,O){
   var X=EXI[r.full]||null;
   if(r.plan){r.rp=roundPlan(r.plan,r.dir,X);if(X){r.plan=r.rp.plan;r.xc=X;r.tick=X.tick;r.dec=stepDec(X.tick);r.step=X.step}}
-  judge(r,O);timing(r);r.ste=r.st;
+  judge(r,O);timing(r);r.ste=r.st;r.conf=confState(r,O);
   return finalize(r)}
+/* memo 3 of 26/11/2026, change 2: a « Prêt » read on the 15-minute candle still open (« En formation ») or that holds on the closed ones
+   (« Confirmé »). Information only: nothing changes in the status or the score */
+function confState(r,O){if(r.st!=="ready"||!r.trigC||!r.trig)return null;var c=Object.assign({},r,{trig:r.trigC,r15:r.trigC.r15});
+  judge(c,Object.assign({},O,{quiet:true}));return c.st==="ready"?"ok":"form"}
+function confChip(r){if(r.nconf)return'<span class="cf-no">Non confirmé</span>';if(r.st!=="ready"||!r.conf)return"";
+  if(r.conf==="ok")return'<span class="cf-ok">Confirmé</span>';var m=r.t15?Math.max(1,Math.ceil((r.t15+9e5-Date.now())/6e4)):null;
+  return'<span class="cf-form">En formation'+(m&&m<=15?" · clôture dans "+m+" min":"")+"</span>"}
 /* size and final status from the account as it is now: called after each scan and again before each display */
 function finalize(r,A){
   if(!r||!r.plan||!r.ste)return r;
@@ -2380,6 +2402,8 @@ function stampSeen(list){
     /* a setup gone for more than 2 hours is a new one when it comes back */
     if(!o||now-o.l>2*36e5)o={t:now,rt:0,l:now};
     if(r.st==="ready"&&!o.rt)o.rt=now;if(r.st!=="ready")o.rt=0;
+    /* memo 3: a « Prêt » seen « En formation » that is gone after the close shows « Non confirmé » for 45 minutes, not a silent drop */
+    if(r.st==="ready"){if(r.conf==="form")o.fm=now;else if(r.conf==="ok")delete o.fm}else if(o.fm&&now-o.fm<45*6e4)r.nconf=true;else delete o.fm;
     o.l=now;M[k]=o;r.seen=o.t;r.rdy=o.rt||0});
   try{trkAll(list)}catch(e){}
   for(var k in M)if(now-M[k].l>48*36e5)delete M[k];
@@ -2559,7 +2583,7 @@ function card(r,n,force){
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span>"+(r.seen?'<span class="when">'+(r.st==="ready"&&r.rdy?"prêt à "+hmd(r.rdy):"reco à "+hmd(r.seen))+"</span>":"")+"</span>"
    +'<span class="chips">'+(r.cap&&lvAt(r.cap)?'<span class="lvc">'+lvName(lvAt(r.cap))+" · n°"+r.cap+"</span>":"")+'<span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +(r.gates?"<span>"+dots(r)+"</span>":"")+(r.kind==="sr"?"<span>RSI · Volume · Niveau 4H</span>":r.kind==="rng"?"<span>Mode range (Nico)</span>":"")+(r.half?'<span class="dn">Demi-taille (Nico)</span>':"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap&&!lvAt(r.cap)?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +(r.gates?"<span>"+dots(r)+"</span>":"")+confChip(r)+(r.kind==="sr"?"<span>RSI · Volume · Niveau 4H</span>":r.kind==="rng"?"<span>Mode range (Nico)</span>":"")+(r.half?'<span class="dn">Demi-taille (Nico)</span>':"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap&&!lvAt(r.cap)?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan;finalize(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'+statusBox(r)
