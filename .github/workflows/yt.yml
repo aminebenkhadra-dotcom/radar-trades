@@ -1,0 +1,37 @@
+name: Video transcript
+# Reads the title, description and automatic subtitles of a YouTube video (VIDEO_ID) for a study; published to branch yt-out.
+on:
+  push:
+    branches: [yt-run]
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+      VIDEO_ID: 59HTUZ4wdDA
+    steps:
+      - name: Transcript
+        run: |
+          pip install -q yt-dlp youtube-transcript-api
+          mkdir out && cd out
+          yt-dlp --skip-download --write-info-json --write-auto-subs --write-subs --sub-langs "fr.*,en.*" --sub-format vtt -o "v.%(ext)s" "https://www.youtube.com/watch?v=$VIDEO_ID" 2>&1 | tail -5 || true
+          python3 -c "
+          from youtube_transcript_api import YouTubeTranscriptApi as Y
+          import os,json
+          try:
+            t=Y().fetch(os.environ['VIDEO_ID'],languages=['fr','en'])
+            open('t.txt','w').write('\n'.join('%d %s'%(int(s.start),s.text) for s in t))
+          except Exception as e: print('api',e)
+          " || true
+          python3 -c "
+          import json;j=json.load(open('v.info.json'));open('meta.txt','w').write(j.get('title','')+'\n'+j.get('channel','')+'\n'+j.get('upload_date','')+'\n\n'+j.get('description','')+'\n\n'+json.dumps(j.get('chapters'),ensure_ascii=False))
+          " || true
+          ls -la
+      - name: Publish
+        run: |
+          cd out && rm -f v.info.json && git init -q -b yt-out
+          git config user.name radar-backtest && git config user.email noreply@github.com
+          git add -A && git commit -qm "transcript" --allow-empty && git push -q -f "$REMOTE" yt-out
