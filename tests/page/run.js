@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(\)\{return\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,prof:S\.prof!==false\?1:0,big:S\.prof!==false\?1:0,oiTag:1,volTag:1\}\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(p\)\{p=p\|\|preset\(\);var o=\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB\};[\s\S]{0,400}?else\{o\.prof=S\.prof!==false\?1:0;o\.big=o\.prof;o\.oiTag=1;o\.volTag=1\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -783,7 +783,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,prof:false,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(page);
     const a = await page.evaluate(() => ({ ready: JSON.parse(localStorage.getItem("radar-last-l1")).results.filter(r => r.st === "ready").map(r => r.sym + (r.dir > 0 ? "L" : "S")),
-      trk: JSON.parse(localStorage.getItem("radar-track") || "[]").map(x => x.sym + (x.dir > 0 ? "L" : "S")) }));
+      trk: JSON.parse(localStorage.getItem("radar-track") || "[]").filter(x => (x.p || "radar") === "radar").map(x => x.sym + (x.dir > 0 ? "L" : "S")) }));
     ok(a.ready.length > 0 && a.ready.every(k => a.trk.includes(k)), "chaque setup prêt est enregistré (" + a.trk.join(", ") + ")");
     const p = await page.evaluate(() => { const x = { t: 0, dir: -1, e: 100, sl: 102, tp: 96 }, c = (t, o, h, l, cl) => ({ t, o, h, l, c: cl });
       return { tp: radarTrk.play(x, [c(0, 100, 101, 99, 99.5), c(9e5, 99.5, 100, 95.5, 96)]), sl: radarTrk.play(x, [c(0, 100, 102.5, 95, 96)]), run: radarTrk.play(x, [c(0, 100, 101, 98, 99)]) }; });
@@ -805,6 +805,45 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const u = await page.evaluate(() => ({ line: document.querySelector("#view-trk .trk-u").textContent, b: JSON.parse(localStorage.getItem("radar-track"))[0].b }));
     ok(/^taille [\d\s\u202f,]+ \$ · risque [\d\s\u202f,]+ \$$/.test(u.line) && u.b > 0, "montants en USDT : « " + u.line + " » (risque enregistré " + u.b + " $)");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p25-suivi.png") });
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P26", "Réglages : Radar, Nico, Avant les mémos, RSI · Volume ; la liste suit le réglage, le Suivi joue les quatre", async ok => {
+    const { ctx, page, errors } = await open(browser, { init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,prof:false,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
+    await waitScan(page);
+    const h = await page.evaluate(() => ({ btn: [...document.querySelectorAll("#view-home .pseg [data-preset]")].map(b => b.textContent + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
+      seen: Object.keys(JSON.parse(localStorage.getItem("radar-seen-p") || "{}")).length, o: [radarPreset.opts("radar"), radarPreset.opts("avant"), radarPreset.opts("nico")] }));
+    ok(h.btn.join() === "Radar*,Nico,Avant les mémos,RSI · Volume", "accueil : " + h.btn.join(" | "));
+    ok(h.o[0].big === h.o[0].prof && h.o[0].oiTag === 1 && h.o[1].prof === 1 && !h.o[1].big && !h.o[1].oiTag && h.o[2].big2 && h.o[2].dz && h.o[2].nicoPts && !h.o[2].prof, "options : Avant = profils gagnants seuls ; Nico = gros niveaux des deux côtés, zone morte, pivots, sans la règle de profil");
+    const v = await page.evaluate(() => { const r = radarPreset.results().find(x => x.plan && x.h4) || radarPreset.results().find(x => x.h4), a = r.a || r.price * 0.01,
+      s = { dir: 1, st: "ready", lvl: r.price * 0.99, n: 3, rsi: 28, rsiNow: 34, vol: 1.8, a4: a, plan: { entry: r.price, sl: r.price * 0.98, tp1: r.price * 1.04, tp2: r.price * 1.04, rr: 2 } },
+      x = radarPreset.alt(r, s, "sr"), html = radarPreset.card(x); return { g: x.gates.length, ok: x.gates.filter(g => g.ok).length, st: x.st, card: /RSI · Volume · Niveau 4H/.test(html) && /Rejet/.test(html), sz: !!x.sz }; });
+    ok(v.g === 6 && v.ok === 6 && v.card && v.sz, "setup RSI · Volume : 6 contrôles validés, carte et taille (" + v.st + ")");
+    await nav(page, "l1");
+    await page.click("#view-scan .pseg [data-preset=sr]");
+    const sr = await page.evaluate(() => ({ p: radarPreset.get(), kinds: [...new Set(radarPreset.results().filter(r => r.plan).map(r => r.kind || "trend"))], n: radarPreset.results().length,
+      pressed: document.querySelector("#view-scan .pseg [aria-pressed=true]").dataset.preset }));
+    ok(sr.p === "sr" && sr.pressed === "sr" && sr.n > 0 && sr.kinds.every(k => k === "sr"), "RSI · Volume choisi : seulement ses setups (" + (sr.kinds.join(",") || "aucun pour l'instant") + "), " + sr.n + " cryptos");
+    await page.click("#view-scan .pseg [data-preset=nico]");
+    const ni = await page.evaluate(() => ({ p: radarPreset.get(), kinds: [...new Set(radarPreset.results().filter(r => r.plan).map(r => r.kind || "trend"))] }));
+    ok(ni.p === "nico" && ni.kinds.every(k => k === "trend" || k === "rng"), "Nico choisi : tendance et mode range (" + ni.kinds.join(",") + ")");
+    await page.click("#view-scan .pseg [data-preset=radar]");
+    const inv = await page.evaluate(() => { const H = 36e5, k1 = [100, 100.5, 101, 102, 101, 100.5, 100, 99.5, 99, 98.8].map((hh, i) => ({ t: (i - 10) * H, o: hh - 0.3, h: hh, l: hh - 1, c: hh - 0.5 })),
+      x = { t: 0, dir: -1, e: 100, sl: 105, tp: 90, inv: 1 }, k = [{ t: 0, o: 100, h: 100.5, l: 99.5, c: 100 }, { t: 9e5, o: 100, h: 101, l: 99.8, c: 100.8 }, { t: 18e5, o: 100.8, h: 102, l: 100.5, c: 101.5 }, { t: 27e5, o: 101.5, h: 103, l: 101, c: 102.6 }];
+      return [radarTrk.play(x, k, k1), radarTrk.play(Object.assign({}, x, { inv: 0 }), k, k1)]; });
+    ok(inv[0].k === "inv" && Math.abs(inv[0].r - (-0.52 - 0.12 / 5)) < 0.01 && inv[1].k === "run", "Nico : un short à 100 sort quand une bougie 1H clôture au-dessus du dernier sommet 1H (102) : " + inv[0].r.toFixed(2) + " R ; sans la règle, le trade continue");
+    await nav(page, "trk");
+    const t = await page.evaluate(() => ({ rows: [...document.querySelectorAll("#view-trk .tcr b")].map(b => b.textContent), on: document.querySelector("#view-trk .tcr.on b").textContent }));
+    ok(t.rows.length === 4 && /^Radar/.test(t.rows[0]) && /choisi/.test(t.on), "Suivi : les quatre réglages comparés (" + t.rows.join(" | ") + ")");
+    await page.click("#view-trk [data-trktab=nico]");
+    const t2 = await page.evaluate(() => document.querySelector("#view-trk .tcr.on b").textContent);
+    const keep = await page.evaluate(() => { const T = Date.now() - 36e5, l = p => ({ id: p + "Q", p, sym: "QQQ", full: "QQQUSDT", dir: 1, t: T, e: 1, sl: 0.9, tp: 1.2, b: 10, res: null });
+      localStorage.setItem("radar-track", JSON.stringify(JSON.parse(localStorage.getItem("radar-track")).concat(["radar", "nico", "avant", "sr"].map(l))));
+      const n = radarTrk.load().filter(x => x.sym === "QQQ").length; localStorage.setItem("radar-track", JSON.stringify(JSON.parse(localStorage.getItem("radar-track")).filter(x => x.sym !== "QQQ"))); return n; });
+    ok(keep === 4, "même trade pour quatre réglages : quatre lignes gardées (" + keep + ")");
+    ok(/^Nico/.test(t2) && h.seen > 0, "onglet Nico du Suivi ; réglages lus à chaque scan (" + h.seen + " setups prêts repérés)");
+    if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p26-reglages.png") });
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });

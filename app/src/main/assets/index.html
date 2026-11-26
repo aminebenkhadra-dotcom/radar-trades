@@ -452,6 +452,16 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 /* a level in colours: green ready, orange in progress, red no trade; the one picked opens below */
 .lvseg{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;overflow-x:auto;scrollbar-width:none}
 .lvseg::-webkit-scrollbar{display:none}
+.pseg{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;overflow-x:auto;scrollbar-width:none;margin-bottom:4px}
+.pseg::-webkit-scrollbar{display:none}
+.pseg button{flex:1 0 auto;white-space:nowrap;border:0;background:transparent;border-radius:9px;padding:8px 10px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.pseg button[aria-pressed="true"]{background:var(--accent,#f0b90b);color:#111}
+.pdesc{margin:0 2px 8px}
+.tcmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 6px}
+.tcr{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--line,#2a2f36);background:var(--surface);border-radius:12px;padding:10px 12px;color:var(--ink)}
+.tcr.on{border-color:var(--accent,#f0b90b)}
+.tcr b{font-size:14px}.tcr small{font-size:11px;font-weight:600;color:var(--muted);margin-left:4px}.tcr small.pos{color:var(--pos,#2ebd85)}
+.tcr span{font-size:12px;color:var(--muted)}.tcr em{font-style:normal;font-weight:700;font-size:15px}
 .lvseg button{flex:1 0 auto;white-space:nowrap;border:0;background:transparent;border-radius:9px;padding:8px 10px;font-weight:600;font-size:13.5px;color:var(--muted)}
 .lvseg button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px}
@@ -518,6 +528,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
     <button class="hm-mkt" type="button" id="hm-mkt" data-go="mkt" hidden></button>
     <div class="hm-sec"><div class="hm-h"><h2>Trades proposés</h2></div><div class="sleg hm-leg"><i class="kg"></i>Prêt<i class="ko"></i>En cours<i class="kr"></i>Pas de trade</div>
       <div class="hm-lv" id="hm-lv"></div></div>
+    <div class="hm-sec"><div class="hm-h"><h2>Réglage</h2></div><div class="pseg" role="group" aria-label="Réglage"><button type="button" data-preset="radar">Radar</button><button type="button" data-preset="nico">Nico</button><button type="button" data-preset="avant">Avant les mémos</button><button type="button" data-preset="sr">RSI · Volume</button></div><div class="sub pdesc"></div></div>
     <form class="hm-one" id="hm-one"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg><input id="hm-sym" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Analyser une crypto, ex. SOL" aria-label="Crypto à analyser"><button class="take" type="submit">Analyser</button></form>
     <div class="hm-sec"><div class="hm-h"><h2>Mes trades</h2></div><div class="hm-grid" id="hm-g1"></div></div>
     <div class="hm-sec"><div class="hm-h"><h2>Marché</h2></div><div class="hm-grid" id="hm-g2"></div></div>
@@ -525,6 +536,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
   </section>
 
   <section class="view" id="view-scan" hidden>
+  <div class="pseg" role="group" aria-label="Réglage"><button type="button" data-preset="radar">Radar</button><button type="button" data-preset="nico">Nico</button><button type="button" data-preset="avant">Avant les mémos</button><button type="button" data-preset="sr">RSI · Volume</button></div><div class="sub pdesc"></div>
   <div class="lvseg" id="lvseg" role="group" aria-label="Level"><button type="button" data-go="l12345">Global</button><button type="button" data-go="l1">Level 1</button><button type="button" data-go="l2">Level 2</button><button type="button" data-go="l3">Level 3</button><button type="button" data-go="l4">Level 4</button><button type="button" data-go="l5">Level 5</button></div>
   <div class="vseg" id="vseg" role="group" aria-label="Affichage"><button type="button" data-vue="simple">Vue simple</button><button type="button" data-vue="detail">Vue détaillée</button></div>
   <button class="mline" type="button" id="mkt-line" hidden></button>
@@ -672,7 +684,7 @@ details.man{background:var(--sunk);border-color:transparent} details.man summary
 (function(){
 "use strict";
 var NONCRYPTO="USDC,BTCDOM,PAXG,XAUT,XAU,XAG,XPT,XPD,CL,BZ,NATGAS,COPPER,USDBRL,AAPL,MSFT,NVDA,TSLA,AMZN,GOOGL,META,AMD,INTC,NFLX,COIN,MSTR,PLTR,HOOD,AVGO,TSM,ASML,ORCL,CRM,ADBE,IBM,CSCO,QCOM,MU,UBER,BABA,PDD,JPM,GS,WMT,COST,MCD,KO,NKE,DIS,XOM,LLY,MRK,UNH,MRNA,NVO,GME,AMC,RIVN,SOFI,PYPL,SHOP,SNOW,CRWD,PANW,NET,DDOG,MDB,ZS,ARM,SMCI,DELL,HPE,WDC,SNDK,MRVL,LRCX,AMAT,KLAC,TXN,RDDT,RKLB,IONQ,MARA,CRCL,CRWV,SPY,QQQ,IWM,SMH,SOXL,SOXS,TQQQ,SQQQ,TSLL,NVDL,UVXY,TMF,TBT,GDX,XLE,XBI,EWY,EWJ,EWT,EWZ,BRKB,OPENAI,ANTHROPIC,SPCX,SAMSUNG,SKHYNIX,TENCENT,MEITUAN,HYUNDAI,SONY,NAVER";
-var DEF={nt43:0,nt44:0,nt45:0,nt46:0,abrut:true,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
+var DEF={preset:"radar",trkTab:"",nt43:0,nt44:0,nt45:0,nt46:0,abrut:true,alv:"12",exlv:2,side:"both",acsync:true,account:1000,bmode:"pct",risk:2,budget:20,lev:5,mtype:"isolated",margin:25,totrisk:6,dayloss:6,minvol:20,fee:0.05,slip:0.02,mmr:1,exclude:"",a10:false,a50:false,amin:15,atr:false,strict:2,minrr:1.5,slk:0.5,feecap:8,tmode:"signal",profOk:false,profAt:0};
 var MAXDEEP=60;
 /* scanner levels, by market capitalisation rank (CoinGecko). A background run may watch several: "l12" is levels 1 and 2 */
 var LEVELS={1:[1,30],2:[31,60],3:[61,200],4:[201,400],5:[401,1000]};
@@ -2146,7 +2158,76 @@ window.radarAnn={soon:annSoon,box:annBox,list:ANN};
 /* S.prof (23/11/2026, on by default): « Prêt » and alerts only for the two profiles that won on both years of replay, both sides analysed.
    60 markets, fees included (feat.yml, prof42.js): longs in an agitated market +0.14 and +0.12 R a trade (all longs −0.11 and −0.07),
    shorts while Bitcoin moved 0 to 1 % their way over 4 hours +0.16 and +0.27 R (all shorts −0.02 and +0.12) */
-function opts(){return{strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB,prof:S.prof!==false?1:0,big:S.prof!==false?1:0,oiTag:1,volTag:1}}
+function opts(p){p=p||preset();var o={strict:+S.strict,minRR:+S.minrr||1.5,slk:+S.slk||0.5,feeCap:+S.feecap||8,fee:+S.fee||0,lev:+S.lev||1,slsw:SLSW_H,slmode:"flag",reb:REB};
+  /* réglages of 26/11/2026: avant = rules of 23/11 (winning profiles only); nico = the memo points (big levels both sides, dead zone,
+     pivots and strength as score, labels), without the profile rule; radar (and the trend reading behind RSI · Volume) = rules of now */
+  if(p==="avant")o.prof=1;else if(p==="nico"){o.big2=1;o.dz=1;o.nicoPts=1;o.oiTag=1;o.volTag=1}
+  else{o.prof=S.prof!==false?1:0;o.big=o.prof;o.oiTag=1;o.volTag=1}
+  return o}
+/* ---------- réglages (26/11/2026): four sets of rules to choose from. The one chosen makes the lists, the « Prêt » and the notifications;
+   the Suivi plays the four side by side on every scan, so their results can be compared on the same days ---------- */
+var PRESETS=[["radar","Radar","Règles actuelles de l'appli, testées sur deux ans"],["nico","Nico","Points des mémos Nico : gros niveaux, zone morte, pivots, force face à BTC, mode range, sortie à l'inversion, demi-taille"],
+  ["avant","Avant les mémos","Règles du 23/11 : « Prêt » seulement pour les profils gagnants"],["sr","RSI · Volume","Rebond sur un support ou rejet sous une résistance 4H, RSI extrême et volume fort, longs et shorts"]];
+function preset(){var p=S.preset;return PRESETS.some(function(x){return x[0]===p})?p:"radar"}
+function presetName(p){var x=PRESETS.filter(function(y){return y[0]===p})[0];return x?x[1]:"Radar"}
+/* Nico (memo of 24/11, point 7; memo 2, point 2): half size before a strong announcement (within 24 hours) or outside the top 20 */
+function nicoHalf(r){var a=null;try{a=annSoon(24)}catch(e){}return(r&&r.cap>20)||!!a}
+/* a set of rules other than the trend one shown as a setup: RSI · Volume · Niveaux (kind sr) or Nico's range mode (kind rng) */
+function presetSetup(b,s,kind){var r=Object.assign({},b),p=s.plan,a4=s.a4||b.a||0,L=s.dir>0,fee=(2*(+S.fee||0)+0.02)/100;
+  r.base=b;r.kind=kind;r.dir=s.dir;r.plan={entry:p.entry,sl:p.sl,tp1:p.tp1,tp2:p.tp2,rr:p.rr,rr2:p.rr};r.st=r.ste=s.st||"ready";
+  r.blk=[];r.miss=[];r.flow=null;r.book=null;r.sq=null;r.trig=null;r.keys=[];r.need=[];r.tm=false;r.tmBlock=false;r.oiTag=null;
+  r.dist=r.st==="ready"?0:Math.abs(b.price-p.entry)/(b.a||1);r.distPct=Math.abs(b.price-p.entry)/b.price*100;
+  r.z={lo:(kind==="sr"?s.lvl:p.entry)-0.25*a4,hi:(kind==="sr"?s.lvl:p.entry)+0.25*a4,kind:"sr",n:s.n||1};
+  var R=Math.abs(p.entry-p.sl),c=fee*p.entry;r.rrNet=R>0?(Math.abs(p.tp1-p.entry)-c)/(R+c):p.rr;r.costPct=R>0?c/R*100:null;
+  function g(k,label,st,head,t){return{k:k,label:label,ok:st==="ok",st:st,head:head,items:[{k:st,t:t}]}}
+  var ag=(b.bd||0)===s.dir?"ok":"mid";
+  if(kind==="sr")r.gates=[g("lvl","Niveau 4H","ok",(L?"support":"résistance")+" · "+(s.n||2)+" contacts",(L?"Support":"Résistance")+" 4H à "+px(s.lvl)+", touché "+(s.n||2)+" fois"),
+    g("rej","Rejet",r.st==="ready"?"ok":"mid",r.st==="ready"?"bougie 1H revenue":"pas encore",r.st==="ready"?"La dernière bougie 1H a touché le niveau et a clôturé "+(L?"au-dessus":"en dessous"):"Prix à "+fr(r.distPct,1)+" % du niveau : il faut une bougie 1H qui le touche et clôture "+(L?"au-dessus":"en dessous")),
+    g("rsi","RSI 1H",(L?s.rsi<=30:s.rsi>=70)?"ok":"mid","RSI "+s.rsi,"RSI 1H "+(L?"au plus bas":"au plus haut")+" à "+s.rsi+" sur les 3 dernières heures ("+(L?"survente sous 30":"surachat au-dessus de 70")+")"),
+    g("vol","Volume",s.vol>=1.5?"ok":"mid",fr(s.vol,1)+"× la normale","Volume de la dernière bougie 1H : "+fr(s.vol,1)+" fois la moyenne des 20 précédentes (1,5 fois demandé)"),
+    g("tp","Objectif","ok","R:R "+fr(p.rr,1),"TP au prochain niveau 4H, ou à 2 R s'il n'y en a pas ; 3 R au plus"),
+    g("trend","Tendance",ag,ag==="ok"?"dans le sens du 1J":"contre le 1J",ag==="ok"?"Dans le sens de la tendance 1J":"Contre la tendance 1J : un rebond, à prendre sans le laisser courir")];
+  else r.gates=[g("mkt","Marché sans tendance","ok","ADX 4H sous 20","ADX 4H sous 20 : marché en range, mode de Nico"),g("va","Zone de valeur","ok",L?"bas de zone":"haut de zone",(L?"Achat près du bas":"Vente près du haut")+" de la zone de valeur 4H (les 120 dernières bougies)"),
+    g("rej","Rejet","ok","bougie 1H revenue","La dernière bougie 1H est sortie de la zone puis y est revenue"),g("tp","Objectif","ok","point de contrôle","TP au prix le plus échangé de la zone (point de contrôle)"),
+    g("rr","R:R",p.rr>=1.5?"ok":"mid","R:R "+fr(p.rr,1),"Gain prévu "+fr(p.rr,1)+" fois le risque"),g("trend","Tendance",ag,ag==="ok"?"dans le sens du 1J":"neutre ou contre","Tendance 1J : "+(b.bd>0?"haussière":b.bd<0?"baissière":"neutre"))];
+  r.score=Math.round(passedOf(r.gates)/6*100);
+  var X=EXI[r.full]||null;if(X){r.rp=roundPlan(r.plan,r.dir,X);if(r.rp&&r.rp.plan){r.plan=r.rp.plan;r.plan.rr2=r.plan.rr2||r.plan.rr}r.xc=X;r.tick=X.tick;r.dec=stepDec(X.tick);r.step=X.step}
+  return finalize(r)}
+function passedOf(gs){return(gs||[]).filter(function(g){return g.ok}).length}
+function noneView(b,t){var r=Object.assign({},b);r.base=b;r.plan=null;r.st="none";r.dir=0;r.why=[{t:t,k:"no"}];return r}
+/* the list of a scan seen with the rules of réglage p (bases: the trend reading of every crypto, judged with p's options) */
+function presetList(list,p){p=p||preset();var out=list.map(function(x){var b=x.base||x;
+    if(p==="sr")return b.srs?presetSetup(b,b.srs,"sr"):noneView(b,"Pas de rebond ni de rejet sur un niveau 4H avec RSI extrême");
+    if(p==="nico"&&b.rngs&&(!b.plan||b.dist>0.5))return presetSetup(b,b.rngs,"rng");
+    if(p==="nico"&&b.plan&&b.h1t)b.inv=lastSwing(b.h1t,b.dir,3);
+    return b});
+  return out.filter(function(r){return r.plan}).sort(rank).concat(out.filter(function(r){return!r.plan}))}
+/* the setups « Prêt » for réglage p, read on the same scan, for the Suivi */
+function presetReady(bases,p){var out=[],O=opts(p);O.quiet=true;
+  bases.forEach(function(b){
+    if(p==="sr"){if(b.srs&&b.srs.st==="ready")out.push(presetSetup(b,b.srs,"sr"));return}
+    if(p==="nico"&&b.rngs&&(!b.plan||b.dist>0.5)){out.push(presetSetup(b,b.rngs,"rng"));return}
+    if(!b.plan||!b.z)return;var c=Object.assign({},b);judge(c,O);c.ste=c.st;c.pr=p;finalize(c);if(c.st==="ready")out.push(c)});
+  return out}
+/* every réglage played in the Suivi: when each setup turned ready for that réglage, then a line per new trade */
+function trkAll(list){var now=Date.now(),M={},bases=[];try{M=JSON.parse(localStorage.getItem("radar-seen-p")||"{}")||{}}catch(e){}
+  list.forEach(function(x){var b=x.base||x;if(bases.indexOf(b)<0)bases.push(b)});
+  PRESETS.forEach(function(P){var p=P[0],rd=presetReady(bases,p);
+    rd.forEach(function(r){var k=p+r.sym+(r.dir>0?"L":"S"),o=M[k];if(!o||now-o.l>2*36e5)o={t:now};o.l=now;M[k]=o;r.rdy=o.t;r.pr=p;
+      if(p==="nico"&&r.kind!=="rng"&&r.h1t)r.inv=1});
+    trkAdd(rd,p)});
+  for(var k in M)if(now-M[k].l>48*36e5)delete M[k];
+  try{localStorage.setItem("radar-seen-p",JSON.stringify(M))}catch(e){}}
+/* a réglage chosen: every stored scan read again with its rules */
+function setPreset(p){if(p===preset())return;S.preset=p;saveSettings();var O=opts();
+  SCANS.forEach(function(m){var st=stores[m];if(!st)return;var bases=[];st.results.forEach(function(x){var b=x.base||x;if(bases.indexOf(b)<0)bases.push(b)});
+    bases.forEach(function(b){if(b.plan&&b.z&&b.lv){replan(b,O);verdict(b,O)}});st.results=presetList(bases,p);saveStore(m)});
+  presetSeg();if(view==="scan"){useStore(mode);openSym=vueSimple()?null:firstSetup();render()}else if(view==="trk")renderTrk();else if(view==="home"&&typeof renderHome==="function")renderHome()}
+function presetSeg(){[].forEach.call(document.querySelectorAll(".pseg [data-preset]"),function(b){b.setAttribute("aria-pressed",b.dataset.preset===preset())});
+  [].forEach.call(document.querySelectorAll(".pdesc"),function(el){var x=PRESETS.filter(function(y){return y[0]===preset()})[0];el.textContent=x?x[2]:""})}
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".pseg [data-preset]");if(b)setPreset(b.dataset.preset)});
+window.radarPreset={alt:presetSetup,card:function(r){return card(r,1,true)},list:presetList,ready:presetReady,opts:opts,set:setPreset,get:preset,results:function(){return results}};
+
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */
 var EXI={},exiP=null,btcC=null;
 function readExi(info){((info&&info.symbols)||[]).forEach(function(s){EXI[s.symbol]=contractOf(s)})}
@@ -2167,7 +2248,9 @@ function finalize(r,A){
   var X=EXI[r.full]||r.xc||null;
   /* memo 2 of 25/11/2026, point 2 (half size outside the top 20) not applied: 85 to 90 % of the trades are outside the top 20, halving
      them cut the gains by 33 to 45 % on every period of the replay (memo2.yml) */
-  r.sz=X?sizePlan(r.plan,r.dir,A||acctState(),X,r.dist<=0.5):null;
+  /* réglage Nico: half the risk before a strong announcement or outside the top 20 (Nico's memos) */
+  var A1=A||acctState();r.half=false;if((r.pr||preset())==="nico"&&nicoHalf(r)){A1=Object.assign({},A1);A1.risk=(+A1.risk||0)/2;A1.budget=(+A1.budget||0)/2;r.half=true}
+  r.sz=X?sizePlan(r.plan,r.dir,A1,X,r.dist<=0.5):null;
   var f=finalStatus({plan:r.plan,st:r.ste,blk:r.blk,miss:r.miss},r.rp,r.sz,!!X);
   r.st=f.st;r.stWhy=f.why;return r}
 /* what the account allows right now: capital, profile, risk and margin already engaged, result of the day */
@@ -2250,12 +2333,14 @@ function scan(m){
     next.sort(function(a,b){return(a.cap||9999)-(b.cap||9999)});
     return pool(next,6,function(c){
       return Promise.all([klines(c.sym,"4h",200,80),klines(c.sym,"1h",200,80),klines(c.sym,"1d",400,55).catch(function(){return c.d1})]).then(function(k){
-        var r=analyze(c.base,k[2],k[0],k[1],ctx,O);r.vol=c.vol;r.full=c.sym;if(c.cap)r.cap=c.cap;if(isFinite(c.fund))r.fund=c.fund;return verdict(r,O)})
+        var r=analyze(c.base,k[2],k[0],k[1],ctx,O);r.vol=c.vol;r.full=c.sym;if(c.cap)r.cap=c.cap;if(isFinite(c.fund))r.fund=c.fund;
+        /* réglages RSI · Volume and Nico (range mode): read on the same candles, whatever the réglage chosen, for the Suivi */
+        r.srs=srSetup(k[0],k[1]);r.rngs=rngSetup(k[0],k[1]);if(!r.h1t)r.h1t=k[1].slice(-49);return verdict(r,O)})
     },function(d,t){progress("Étape 2/3 : tendance, zones, contexte",d,t,40,80)})
   }).then(function(p2){
     if(!p2.out.length&&p2.last)throw p2.last;
     var good=p2.out.filter(function(r){return r.plan}).sort(rank);
-    if(top){none=p2.out.filter(function(r){return!r.plan});none.forEach(function(r){delete r.h4})}
+    if(top){none=p2.out.filter(function(r){return!r.plan});none.forEach(function(r){if(!r.srs&&!r.rngs)delete r.h4})}
     f.setups=good.length;f.deep=p2.out.length;f.near=good.filter(function(r){return r.dist<=0.5}).length;f.why={};
     p2.out.forEach(function(r){if(!r.plan){var k=r.why&&r.why[0]?r.why[0].t:"Aucune zone d'entrée exploitable";f.why[k]=(f.why[k]||0)+1}});
     /* the 15-minute trigger only matters near the zone: read the setups near their zone first, the largest caps first among them.
@@ -2271,8 +2356,9 @@ function scan(m){
     },function(d,t){progress("Étape 3/3 : déclencheur 15 min, carnet, squeeze",d,t,80,100)}).then(function(p3){
       return good.sort(rank).concat(none.sort(function(a,b){return(a.cap||9999)-(b.cap||9999)}))})
   }).then(function(list){
+    list=presetList(list);f.preset=preset();
     f.tiles=[[f.onFut,"sur Binance Futures"],[f.trend,"en tendance 1J"],[f.setups,"setups"],[list.filter(function(r){return r.st==="ready"}).length,"prêts"]];
-    f.shown=list.filter(function(r){return r.plan}).length;stampSeen(list);
+    f.setups=list.filter(function(r){return r.plan}).length;f.tiles[2][0]=f.setups;f.shown=f.setups;stampSeen(list);
     stores[m]={results:list,funnel:f,stamp:Date.now(),live:true};
     saveStore(m);
     try{paperRecord(list);paperResolve()}catch(e){}
@@ -2292,14 +2378,14 @@ function stampSeen(list){
     if(!o||now-o.l>2*36e5)o={t:now,rt:0,l:now};
     if(r.st==="ready"&&!o.rt)o.rt=now;if(r.st!=="ready")o.rt=0;
     o.l=now;M[k]=o;r.seen=o.t;r.rdy=o.rt||0});
-  trkAdd(list);
+  try{trkAll(list)}catch(e){}
   for(var k in M)if(now-M[k].l>48*36e5)delete M[k];
   try{localStorage.setItem("radar-seen",JSON.stringify(M))}catch(e){}}
 function saveStore(m){var st=stores[m];if(!st)return;try{localStorage.setItem(key(m),JSON.stringify({v:4,stamp:st.stamp,funnel:st.funnel,results:st.results}))}catch(e){}}
 /* a precision setting changed: re-read every stored setup with the new rules, no need to scan again */
 function rejudge(){
   var O=opts();
-  function one(r){if(r&&r.plan&&r.z&&r.lv){replan(r,O);verdict(r,O)}}
+  function one(r){if(r&&!r.kind&&r.plan&&r.z&&r.lv){replan(r,O);verdict(r,O)}}
   SCANS.forEach(function(m){var st=stores[m];if(st){st.results.forEach(one);saveStore(m)}});
   one(oneRes);precRef();
   if(view==="scan"){useStore(mode);render()}else if(view==="one")renderOne()}
@@ -2413,7 +2499,7 @@ function render(){
   fu.hidden=!funnel;
   if(funnel)fu.innerHTML=(funnel.tiles||[[funnel.total,"marchés scannés"],[funnel.liquid,"liquides"],[funnel.trend,"en tendance 1J"],[funnel.setups,"setups"]]).map(function(x){
     return"<div><b>"+fr(x[0]||0,0)+"</b><span>"+x[1]+"</span></div>"}).join("");
-  scanDetail();acctBlock();annBox();
+  scanDetail();acctBlock();annBox();presetSeg();
   if(funnel&&top&&funnel.tiles&&funnel.tiles[3]){funnel.tiles[3][0]=results.filter(function(r){return r.st==="ready"}).length;fu.lastChild.firstChild.textContent=fr(funnel.tiles[3][0],0)}
   /* simple view (22/11/2026): only the cryptos, in colour; the one tapped opens below. The lists stay behind « Vue détaillée » */
   var simple=vueSimple();$("vdet").hidden=simple;$("sgrid").hidden=!simple;$("sleg").hidden=!simple;$("spick").hidden=!simple;
@@ -2470,12 +2556,14 @@ function card(r,n,force){
    +'<span><span class="sym">'+(n?'<span class="rank">N°'+n+"</span>":"")+sy+'<small>USDT</small></span><span class="px">'+px(r.price)+"</span></span>"
    +'<span class="tags"><span class="pill '+dirL+'">'+(r.dir>0?"Long":"Short")+'</span><span class="st '+r.st+'">'+STL[r.st]+"</span>"+(r.seen?'<span class="when">'+(r.st==="ready"&&r.rdy?"prêt à "+hmd(r.rdy):"reco à "+hmd(r.seen))+"</span>":"")+"</span>"
    +'<span class="chips">'+(r.cap&&lvAt(r.cap)?'<span class="lvc">'+lvName(lvAt(r.cap))+" · n°"+r.cap+"</span>":"")+'<span class="'+(r.bd>0?"up":r.bd<0?"dn":"")+'">1J '+arrow(r.bd)+'</span><span class="'+(r.b4>0?"up":"dn")+'">4H '+arrow(r.b4)+"</span><span>RSI 1H "+Math.round(r.r1)+"</span>"
-   +(r.gates?"<span>"+dots(r)+"</span>":"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap&&!lvAt(r.cap)?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
+   +(r.gates?"<span>"+dots(r)+"</span>":"")+(r.kind==="sr"?"<span>RSI · Volume · Niveau 4H</span>":r.kind==="rng"?"<span>Mode range (Nico)</span>":"")+(r.half?'<span class="dn">Demi-taille (Nico)</span>':"")+(MKT&&MKT.side?'<span class="'+(r.dir===MKT.side?"up":"dn")+'">'+(r.dir===MKT.side?"Sens du marché":"Contre le marché")+"</span>":"")+"<span>"+(r.dist===0?"Dans la zone":"Zone à "+pct(r.distPct))+"</span><span>R:R "+fr(r.rrNet||r.plan.rr,1)+"</span>"+(r.st!=="ready"&&r.stWhy&&r.stWhy.length?'<span class="dn">'+esc(r.stWhy[0].length>48?r.stWhy[0].slice(0,46)+"…":r.stWhy[0])+"</span>":"")+(r.book?'<span class="'+((r.dir>0?r.book.bid:100-r.book.bid)>=55?"up":(r.dir>0?r.book.bid:100-r.book.bid)<45?"dn":"")+'">Carnet '+Math.round(r.book.bid)+" % ach.</span>":"")+(r.sq&&(r.dir>0?r.sq.dn:r.sq.up)>=60?'<span class="dn">Squeeze contre</span>':"")+(r.sq&&(r.dir>0?r.sq.up:r.sq.dn)>=60?'<span class="up">Squeeze pour</span>':"")+(r.flow&&r.flow.v!=="mid"?'<span class="'+(r.flow.v==="ok"?"up":"dn")+'">Flux '+(r.flow.v==="ok"?"pour":"contre")+"</span>":"")+(r.cap&&!lvAt(r.cap)?"<span>Cap. n°"+r.cap+"</span>":"")+(r.vol?"<span>Vol "+vol(r.vol)+"</span>":"")
    +"</span></button>";
   if(open){var p=r.plan;finalize(r);
     h+='<div class="detail"><canvas id="cv" aria-label="Bougies 4H avec entrée, stop et objectifs"></canvas>'+statusBox(r)
      +'<dl class="plan"><div class="e"><dt>'+(r.dist<=0.5?"Entrée au prix":"Entrée limite")+'</dt><dd>'+pp(r,p.entry)+'</dd></div><div class="s"><dt>Stop</dt><dd>'+pp(r,p.sl)+'</dd></div>'
      +'<div class="t"><dt>TP1 · '+fr(p.rr,1)+'R</dt><dd>'+pp(r,p.tp1)+'</dd></div><div class="t"><dt>TP2 · '+fr(p.rr2,1)+"R</dt><dd>"+pp(r,p.tp2)+"</dd></div></dl>"
+     +(preset()==="nico"&&!r.kind&&isFinite(r.inv)&&r.inv!==null?'<div class="hbox">Sortie Nico : si une bougie 1H clôture '+(r.dir>0?"sous ":"au-dessus de ")+pp(r,r.inv)+" (dernier "+(r.dir>0?"creux":"sommet")+" 1H), sortir avant le stop. Ce niveau suit le prix pendant le trade.</div>":"")
+     +(r.half?'<div class="hbox warn">Demi-taille (Nico) : '+(r.cap>20?"crypto hors top 20":"annonce forte dans moins de 24 h")+". La taille ci-dessous est déjà divisée par deux.</div>":"")
      +(r.rp&&r.rp.ok?'<div class="sub">Prix arrondis au pas du contrat ('+fr(r.tick,r.dec)+") : stop éloigné de l'entrée, objectifs rapprochés.</div>":"")
      +sizeView(r)+beView(r)
      +gatesView(r)+flowView(r)+gauges(r)+bookView(r)+squeezeView(r.sq)
@@ -3262,17 +3350,19 @@ function aftCard(a){
 function trkLoad(){try{var a=JSON.parse(localStorage.getItem("radar-track")||"[]");return Array.isArray(a)?trkClean(a):[]}catch(e){return[]}}
 /* lines saved before the fix of 25/11/2026: a second line on the same crypto and side, opened while the first was still running, is dropped */
 function trkClean(a){var k=[];a.slice().sort(function(x,y){return x.t-y.t}).forEach(function(x){
-  if(!k.some(function(y){return y.sym===x.sym&&y.dir===x.dir&&x.t-y.t<12*36e5&&(!y.res||y.res.k==="run"||y.res.at>x.t)}))k.push(x)});return k}
-function trkSave(a){try{localStorage.setItem("radar-track",JSON.stringify(a.slice(-400)))}catch(e){}}
-function trkAdd(list){var a=null,ch=false;
-  list.forEach(function(r){if(!r.plan||r.st!=="ready"||!r.rdy||!r.full)return;a=a||trkLoad();var id=r.sym+(r.dir>0?"L":"S")+r.rdy;
+  if(!k.some(function(y){return(y.p||"radar")===(x.p||"radar")&&y.sym===x.sym&&y.dir===x.dir&&x.t-y.t<12*36e5&&(!y.res||y.res.k==="run"||y.res.at>x.t)}))k.push(x)});return k}
+function trkSave(a){try{localStorage.setItem("radar-track",JSON.stringify(a.slice(-1200)))}catch(e){}}
+function trkAdd(list,p){p=p||"radar";var a=null,ch=false;
+  list.forEach(function(r){if(!r.plan||r.st!=="ready"||!r.rdy||!r.full)return;a=a||trkLoad();var id=(p==="radar"?"":p+":")+r.sym+(r.dir>0?"L":"S")+r.rdy;
     if(a.some(function(x){return x.id===id}))return;
     /* 25/11/2026: SKY short twice, at 00:17 and 01:02. The setup went orange for one scan and green again: the same trade, still open, so
        not a second line. A new line only once the previous one on this crypto and side has hit its stop or TP, or after 12 hours */
-    if(a.some(function(x){return x.sym===r.sym&&x.dir===r.dir&&(!x.res||x.res.k==="run")&&r.rdy-x.t<12*36e5}))return;
+    if(a.some(function(x){return(x.p||"radar")===p&&x.sym===r.sym&&x.dir===r.dir&&(!x.res||x.res.k==="run")&&r.rdy-x.t<12*36e5}))return;
     /* entry at the market price of that moment, as Amine takes them; the plan's stop and TP1 */
     var e=isFinite(r.price)&&(r.price-r.plan.sl)*r.dir>0&&(r.plan.tp1-r.price)*r.dir>0?r.price:r.plan.entry;
-    a.push({id:id,sym:r.sym,full:r.full,dir:r.dir,t:r.rdy,e:e,sl:r.plan.sl,tp:r.plan.tp1,cap:r.cap||0,b:trkBudget(r),res:null});ch=true});
+    /* réglage Nico: half size before an announcement or outside the top 20, exit at the 1H trend inversion (trend trades) */
+    var half=p==="nico"&&nicoHalf(r),b=trkBudget(r);if(half&&!r.half)b=+(b/2).toFixed(2);
+    a.push({id:id,p:p,sym:r.sym,full:r.full,dir:r.dir,t:r.rdy,e:e,sl:r.plan.sl,tp:r.plan.tp1,cap:r.cap||0,b:b,half:half?1:0,inv:p==="nico"&&r.kind!=="rng"?1:0,kind:r.kind||"",res:null});ch=true});
   if(ch)trkSave(a)}
 /* risk budget in USDT of a trade (25/11/2026): the one the app sized it with, else the account and risk of Réglages */
 function trkBudget(r){if(r&&r.sz&&r.sz.budget>0)return+r.sz.budget.toFixed(2);try{var A=acctState(),b=A.bmode==="usdt"?+A.budget||0:(+A.capital||0)*(+A.risk||0)/100;return b>0?+b.toFixed(2):0}catch(e){return 0}}
@@ -3281,33 +3371,47 @@ function trkUsd(x){var b=x.b>0?x.b:trkBudget(null);if(!(b>0))return null;var d=M
   return{b:b,n:q*x.e,pnl:x.res?x.res.r*b:null}}
 function trkMoney(v,sg){return(sg&&v>0?"+":v<0?"−":"")+Math.abs(v).toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(v)>=100?0:2})+" $"}
 /* one trade played on 15-minute candles from the moment it turned ready: stop first when a candle touches both */
-function trkPlay(x,k){var R=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||0.02))/100*x.e/R,d=x.dir;if(!(R>0))return null;
+function trkPlay(x,k,k1){var R=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||0.02))/100*x.e/R,d=x.dir;if(!(R>0))return null;
   for(var i=0;i<k.length;i++){var c=k[i];if(c.t+9e5<=x.t)continue;
     if(d>0?c.l<=x.sl:c.h>=x.sl)return{k:"sl",r:-1-cost,at:c.t};
-    if(d>0?c.h>=x.tp:c.l<=x.tp)return{k:"tp",r:Math.abs(x.tp-x.e)/R-cost,at:c.t}}
+    if(d>0?c.h>=x.tp:c.l<=x.tp)return{k:"tp",r:Math.abs(x.tp-x.e)/R-cost,at:c.t};
+    /* Nico: at each 1H close, out when the price closes beyond the last 1H swing against the trade (inside the stop), as replayed */
+    if(x.inv&&k1&&(c.t+9e5)%36e5===0&&c.t+9e5>x.t){var T=c.t+9e5,h=k1.filter(function(y){return y.t+36e5<=T}).slice(-79);h.push({t:T,o:c.c,h:c.c,l:c.c,c:c.c});
+      var lv=lastSwing(h,d,3);if(lv!==null&&(d<0?lv<x.sl&&c.c>lv:lv>x.sl&&c.c<lv))return{k:"inv",r:(c.c-x.e)*d/R-cost,at:c.t}}}
   var last=k.length?k[k.length-1].c:x.e;return{k:"run",r:(last-x.e)*d/R-cost,at:0}}
-window.radarTrk={play:trkPlay,add:trkAdd,load:trkLoad,upd:function(){return trkUpdate()}};
+window.radarTrk={play:trkPlay,add:trkAdd,all:trkAll,load:trkLoad,upd:function(){return trkUpdate()}};
 var trkBusy=false;
 function trkUpdate(){if(trkBusy)return Promise.resolve();var a=trkLoad(),open=a.filter(function(x){return!x.res||x.res.k==="run"});if(!open.length)return Promise.resolve();trkBusy=true;
   return pool(open,4,function(x){var n=Math.min(1500,Math.ceil((Date.now()-x.t)/9e5)+4);
-    return klines(x.full,"15m",n,1).then(function(k){var v=trkPlay(x,k);if(v){x.res=v;x.chk=Date.now()}}).catch(function(){})})
+    var n1=Math.min(1500,Math.ceil((Date.now()-x.t)/36e5)+90);
+    return Promise.all([klines(x.full,"15m",n,1),x.inv?klines(x.full,"1h",n1,1).catch(function(){return null}):null]).then(function(k){var v=trkPlay(x,k[0],k[1]);if(v){x.res=v;x.chk=Date.now()}}).catch(function(){})})
     .then(function(){var b=trkLoad();b.forEach(function(y){var z=a.filter(function(x){return x.id===y.id})[0];if(z&&z.res)y.res=z.res});trkSave(b);trkBusy=false},function(){trkBusy=false})}
-function renderTrk(){var el=$("view-trk");if(!el)return;var a=trkLoad().slice().reverse();
-  var h='<div class="lvh"><h2>Suivi des trades proposés</h2><span class="sub">chaque trade passé « Prêt », joué avec son entrée, son stop et son TP1, frais compris</span></div>';
-  if(!a.length){el.innerHTML=h+'<div class="empty">Rien encore. Chaque trade que l\'appli met en vert, dans un scan ou en arrière-plan, arrive ici et se joue tout seul sur les vrais prix.</div>';return}
-  var done=a.filter(function(x){return x.res&&x.res.k!=="run"}),w=done.filter(function(x){return x.res.k==="tp"}).length,tot=done.reduce(function(s,x){return s+x.res.r},0),run=a.length-done.length,
+function trkStat(a){var done=a.filter(function(x){return x.res&&x.res.k!=="run"}),w=done.filter(function(x){return x.res.r>0}).length,tot=done.reduce(function(s,x){return s+x.res.r},0),
     totU=done.reduce(function(s,x){var u=trkUsd(x);return s+(u&&u.pnl!==null?u.pnl:0)},0),hasU=done.some(function(x){return trkUsd(x)});
-  h+='<div class="funnel plain" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div><b>'+done.length+"</b><span>terminés</span></div>"
-    +'<div><b class="pos">'+w+"</b><span>gagnants"+(done.length?" · "+fr(w/done.length*100,0)+" %":"")+"</span></div>"
-    +'<div><b class="'+(tot>=0?"pos":"neg")+'">'+(hasU?trkMoney(totU,1):sgn(tot,1)+" R")+"</b><span>total"+(hasU?" · "+sgn(tot,1)+" R":"")+"</span></div>"
-    +"<div><b>"+run+"</b><span>en cours</span></div></div>";
-  if(done.length)h+='<div class="sub">'+(done.length<20?"Moins de 20 trades terminés : trop tôt pour juger. ":"")+"Sur deux ans de rejeu : 37 à 42 % de gagnants et +0,04 à +0,21 R par trade. Ici : "+sgn(tot/done.length,2)+" R par trade.</div>";
-  h+='<div class="trk">'+a.map(function(x){var v=x.res,c=!v?"":v.k==="tp"?"pos":v.k==="sl"?"neg":"",u=trkUsd(x);
+  return{done:done,n:done.length,w:w,tot:tot,totU:totU,hasU:hasU,run:a.length-done.length}}
+/* the Suivi (26/11/2026): the four réglages compared on the same days, then the lines of the one picked */
+function renderTrk(){var el=$("view-trk");if(!el)return;var all=trkLoad(),tab=S.trkTab&&PRESETS.some(function(x){return x[0]===S.trkTab})?S.trkTab:preset();
+  var h='<div class="lvh"><h2>Suivi des trades proposés</h2><span class="sub">les quatre réglages joués en même temps sur les vrais prix, entrée, stop et TP1, frais compris</span></div>';
+  var st={};PRESETS.forEach(function(P){st[P[0]]=trkStat(all.filter(function(x){return(x.p||"radar")===P[0]}))});
+  var best=null;PRESETS.forEach(function(P){var x=st[P[0]];if(x.n>=5&&(!best||x.tot>st[best].tot))best=P[0]});
+  h+='<div class="tcmp">'+PRESETS.map(function(P){var x=st[P[0]];
+    return'<button type="button" class="tcr'+(P[0]===tab?" on":"")+'" data-trktab="'+P[0]+'"><b>'+esc(P[1])+(P[0]===preset()?' <small>choisi</small>':"")+(P[0]===best?' <small class="pos">meilleur</small>':"")+"</b>"
+      +"<span>"+x.n+" terminé"+(x.n>1?"s":"")+(x.n?" · "+fr(x.w/x.n*100,0)+" % gagnants":"")+(x.run?" · "+x.run+" en cours":"")+"</span>"
+      +'<em class="'+(x.tot>0?"pos":x.tot<0?"neg":"")+'">'+(x.n?(x.hasU?trkMoney(x.totU,1)+" · ":"")+sgn(x.tot,1)+" R":"–")+"</em></button>"}).join("")+"</div>"
+    +'<div class="sub">'+(best?"Meilleur total pour l'instant : "+esc(presetName(best))+". ":"")+"Il faut au moins 20 trades terminés par réglage pour comparer sérieusement.</div>";
+  var a=all.filter(function(x){return(x.p||"radar")===tab}).reverse(),x=st[tab];
+  if(!a.length){el.innerHTML=h+'<div class="empty">Rien encore pour « '+esc(presetName(tab))+' ». Chaque trade que ce réglage met en vert, dans un scan ou en arrière-plan, arrive ici et se joue tout seul.</div>';return}
+  h+='<div class="funnel plain" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div><b>'+x.n+"</b><span>terminés</span></div>"
+    +'<div><b class="pos">'+x.w+"</b><span>gagnants"+(x.n?" · "+fr(x.w/x.n*100,0)+" %":"")+"</span></div>"
+    +'<div><b class="'+(x.tot>=0?"pos":"neg")+'">'+(x.hasU?trkMoney(x.totU,1):sgn(x.tot,1)+" R")+"</b><span>total"+(x.hasU?" · "+sgn(x.tot,1)+" R":"")+"</span></div>"
+    +"<div><b>"+x.run+"</b><span>en cours</span></div></div>";
+  h+='<div class="trk">'+a.map(function(x){var v=x.res,c=!v?"":v.k==="run"?"":v.r>0?"pos":"neg",u=trkUsd(x);
     return'<div class="trk-r"><b>'+esc(x.sym)+'</b><span class="'+(x.dir>0?"up":"dn")+'">'+(x.dir>0?"Long":"Short")+"</span><span>"+hmd(x.t)+"</span>"
-      +'<span class="'+c+'">'+(!v?"à lire":(v.k==="tp"?"TP ":v.k==="sl"?"SL ":"en cours ")+(u&&u.pnl!==null?trkMoney(u.pnl,1)+" · ":"")+sgn(v.r,2)+" R")+"</span>"
-      +(u?'<span class="trk-u">taille '+trkMoney(u.n)+" · risque "+trkMoney(u.b)+"</span>":"")+"</div>"}).join("")+"</div>"
-    +'<div class="sub">Entrée au prix du marché au moment où le setup est passé « Prêt », stop et TP1 du plan. Montants en USDT avec ton risque par trade de Réglages. Une bougie qui touche le stop et le TP compte comme stop. Gardé sur ce téléphone.</div>';
+      +'<span class="'+c+'">'+(!v?"à lire":(v.k==="tp"?"TP ":v.k==="sl"?"SL ":v.k==="inv"?"Sortie inversion ":"en cours ")+(u&&u.pnl!==null?trkMoney(u.pnl,1)+" · ":"")+sgn(v.r,2)+" R")+"</span>"
+      +(u?'<span class="trk-u">taille '+trkMoney(u.n)+" · risque "+trkMoney(u.b)+(x.half?" (demi-taille Nico)":"")+(x.kind==="rng"?" · mode range":"")+"</span>":"")+"</div>"}).join("")+"</div>"
+    +'<div class="sub">Entrée au prix du marché au moment où le setup est passé « Prêt » pour ce réglage, stop et TP1 du plan. Nico : sortie quand une bougie 1H clôture au-delà du dernier sommet ou creux contre le trade, et demi-taille avant une annonce forte ou hors top 20. Montants en USDT avec ton risque par trade de Réglages. Une bougie qui touche le stop et le TP compte comme stop. Gardé sur ce téléphone.</div>';
   el.innerHTML=h}
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-trktab]");if(b){S.trkTab=b.dataset.trktab;saveSettings();renderTrk()}});
 function renderAft(){
   var el=$("view-aft");if(!el)return;AF=aftLoad();
   var h='<div class="lvh"><h2>Après sortie</h2><span class="sub">ce que tes trades auraient fait si tu étais resté</span></div>';
@@ -3539,11 +3643,14 @@ function analyzeOne(base){
     return Promise.all([klines(x.full,"4h",200,60),klines(x.full,"1h",200,60),get("ticker/24hr?"+q,true).catch(nul),get("premiumIndex?"+q,true).catch(nul),
       klines(x.full,"1d",400,20).catch(function(){return x.d1}),btcContext().catch(nul),exInfo().catch(nul)]).then(function(k){
       var O=opts(),r=analyze(x.full.replace(/USDT$/,""),k[4],k[0],k[1],{btc:k[5]},O);r.full=x.full;
+      r.srs=srSetup(k[0],k[1]);r.rngs=rngSetup(k[0],k[1]);if(!r.h1t)r.h1t=k[1].slice(-49);
       if(k[2]&&isFinite(+k[2].quoteVolume))r.vol=+k[2].quoteVolume;
       if(k[3]&&isFinite(+k[3].lastFundingRate))r.fund=+k[3].lastFundingRate;
       if(!r.plan)return verdict(r,O);
       return Promise.all([klines(x.full,"15m",500,60).catch(nul),get("depth?"+q+"&limit=1000").catch(nul),squeezeData(x.full,r.fund).catch(nul)])
-        .then(function(e){enrich(r,e[0],e[1],e[2]);return verdict(r,O)})})
+        .then(function(e){enrich(r,e[0],e[1],e[2]);return verdict(r,O)})}).then(function(r){
+      /* réglages RSI · Volume and Nico (range): the same crypto read with their rules */
+      return presetList([r])[0]})
   }).then(function(r){oneBusy=false;oneRes=r;renderOne()},function(e){
     oneBusy=false;$("one-out").innerHTML='<div class="empty">'+(e&&e.code==="nosym"?esc(base)+" n'a pas de contrat USDT sur Binance Futures. Vérifie le symbole.":e&&e.code==="short"?"Historique trop court pour analyser "+esc(base)+".":why(e))+"</div>"})}
 /* ---------- configuration of the moment, in the Analyser: what the setup is, and how often that kind of setup reached TP1 ----------
@@ -5267,7 +5374,7 @@ var HMI={trk:'<path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>',trades:'<path
   earn:'<circle cx="12" cy="12" r="9"/><path d="M9 15l6-6M9.5 9.5h.01M14.5 14.5h.01"/>',
   set:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/>'};
 function hmTile(v,extra,wide,sub){return'<button type="button" class="hm-t'+(wide?" wide":"")+'" data-go="'+v+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+HMI[v]+"</svg><span>"+TITLES[v]+"</span>"+(sub?"<small>"+sub+"</small>":"")+(extra||"")+"</button>"}
-function renderHome(){
+function renderHome(){presetSeg();
   if(BG||!$("hm-lv"))return;
   $("hm-lv").innerHTML=MODES.map(function(m,i){var k=i+1,c=levelCounts(k),L=LEVELS[k];
     var cnt=c?'<span class="hm-c"><i class="kg">'+c.g+'</i><i class="ko">'+c.o+'</i><i class="kr">'+c.r+"</i><em>"+hmd(c.stamp)+"</em></span>":'<span class="hm-c"><em>pas encore scanné</em></span>';
