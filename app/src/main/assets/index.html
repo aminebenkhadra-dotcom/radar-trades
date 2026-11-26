@@ -2244,6 +2244,7 @@ function setPreset(p){if(p===preset())return;S.preset=p;saveSettings();var O=opt
 function presetSeg(){[].forEach.call(document.querySelectorAll(".pseg [data-preset]"),function(b){b.setAttribute("aria-pressed",b.dataset.preset===preset())});
   [].forEach.call(document.querySelectorAll(".pdesc"),function(el){var x=PRESETS.filter(function(y){return y[0]===preset()})[0];el.textContent=x?x[2]:""})}
 document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest(".pseg [data-preset]");if(b)setPreset(b.dataset.preset)});
+window.radarMemo3={mid:midRange,chip:confChip,judge:judge,state:confState};
 window.radarPreset={alt:presetSetup,card:function(r){return card(r,1,true)},list:presetList,ready:presetReady,opts:opts,set:setPreset,get:preset,results:function(){return results}};
 
 /* price and quantity steps of each contract, so the plan can be typed into Binance as it is */

@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(p\)\{p=p\|\|preset\(\);var o=\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB\};[\s\S]{0,400}?else\{o\.prof=S\.prof!==false\?1:0;o\.big=o\.prof;o\.oiTag=1;o\.volTag=1\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(p\)\{p=p\|\|preset\(\);var o=\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,midTag:1\};[\s\S]{0,400}?else\{o\.prof=S\.prof!==false\?1:0;o\.big=o\.prof;o\.oiTag=1;o\.volTag=1\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -844,6 +844,25 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(keep === 4, "même trade pour quatre réglages : quatre lignes gardées (" + keep + ")");
     ok(/^Nico/.test(t2) && h.seen > 0, "onglet Nico du Suivi ; réglages lus à chaque scan (" + h.seen + " setups prêts repérés)");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "p26-reglages.png") });
+    ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
+    await ctx.close();
+  });
+
+  await test("P27", "Mémo 3 : étiquette « Milieu de range » et « Confirmé / En formation / Non confirmé », sans rien bloquer", async ok => {
+    const { ctx, page, errors } = await open(browser);
+    await waitScan(page);
+    const m = await page.evaluate(() => { const H = 36e5, k = []; for (let i = 0; i < 90; i++) { const c = 100 + Math.sin(i / 3) * 2; k.push({ t: i * H, o: c, h: c + 0.5, l: c - 0.5, c, q: 100 }); }
+      k[89] = { t: 89 * H, o: 100, h: 100, l: 100, c: 100.1, q: 0 }; const flat = radarMemo3.mid(k);
+      const up = k.map((x, i) => ({ t: x.t, o: x.o + i * 0.3, h: x.h + i * 0.3, l: x.l + i * 0.3, c: x.c + i * 0.3, q: 100 })); return [flat, radarMemo3.mid(up)]; });
+    ok(m[0] && m[0].pos > 0.4 && m[0].pos < 0.6 && m[1] === null, "range plat, prix au milieu : repéré (" + (m[0] ? Math.round(m[0].pos * 100) + " %" : "rien") + ") ; marché qui monte : pas de range");
+    const j = await page.evaluate(() => { const r = radarPreset.results().find(x => x.plan && x.z && x.f); if (!r) return null; const a = Object.assign({}, r, { midR: { pos: 0.5, hi: r.price * 1.02, lo: r.price * 0.98 } }), b = Object.assign({}, a);
+      radarMemo3.judge(a, Object.assign(radarPreset.opts(), { midTag: 1 })); radarMemo3.judge(b, Object.assign(radarPreset.opts(), { midTag: 0 }));
+      const it = a.gates.flatMap(g => g.items).find(x => /Milieu de range/.test(x.t)); return { st: [a.st, b.st], sc: [a.score, b.score], k: it && it.k }; });
+    ok(j && j.st[0] === j.st[1] && j.sc[0] === j.sc[1] - 4 && j.k === "mid", "étiquette orange, score −4, statut inchangé (" + (j ? j.st[0] + ", " + j.sc.join(" → ") : "pas de setup") + ")");
+    const c = await page.evaluate(() => { const now = Date.now(), t15 = now - (now % 9e5); return [radarMemo3.chip({ st: "ready", conf: "ok" }), radarMemo3.chip({ st: "ready", conf: "form", t15 }), radarMemo3.chip({ st: "watch", nconf: true }), radarMemo3.chip({ st: "watch", conf: "form" })]; });
+    ok(/Confirmé/.test(c[0]) && /En formation · clôture dans \d+ min/.test(c[1]) && /Non confirmé/.test(c[2]) && c[3] === "", "étiquettes : " + c.map(x => x.replace(/<[^>]+>/g, "") || "rien").join(" | "));
+    const st = await page.evaluate(() => radarPreset.results().filter(r => r.st === "ready").map(r => r.sym + ":" + r.conf));
+    ok(st.every(x => /:(ok|form)$/.test(x)), "chaque « Prêt » de la liste porte son état (" + (st.join(", ") || "aucun prêt") + ")");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
