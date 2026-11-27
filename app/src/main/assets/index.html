@@ -2150,7 +2150,9 @@ function klines(sym,interval,limit,min){
 var SLSW_H=24;
 /* REB: no short while Bitcoin stands REB % or more above its 72-hour low, no long REB % under its 72-hour high. 0: off.
    Build 81 had 7 (study of 23/11/2026, reb.yml): +47 R in 2024-25, −18 R in 2025-26. Amine (23/11): « ne bloque rien du tout » */
-var REB=0;
+/* rebound pause, on from 27/11/2026 (Bitcoin +8.6 % in two days, every réglage lost on its shorts): no « Prêt » short while Bitcoin stands
+   7 % or more above its 72-hour low, no « Prêt » long 7 % or more under its 72-hour high (replays: +122 R instead of +86 R in November) */
+var REB=7;
 /* ANN (memo of 24/11/2026, point 7): the big US announcements, UTC, published in advance by the Fed, the BLS and the BEA (8:30 New York
    for CPI and PCE, 14:00 for the Fed). Replay of the app's trades (memo42.js, FOMC and CPI): half size on trades opened less than 24 h
    before one gave +11.5 R in 2024-25, −1.0 R in 2025-26, −6 R in November 2026: advice only, nothing is held back. To extend after 2027 */
@@ -3400,7 +3402,8 @@ function trkUsd(x){var b=x.b>0?x.b:trkBudget(null);if(!(b>0))return null;var d=M
 function trkMoney(v,sg){return(sg&&v>0?"+":v<0?"−":"")+Math.abs(v).toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(v)>=100?0:2})+" $"}
 /* one trade played on 15-minute candles from the moment it turned ready: stop first when a candle touches both */
 function trkPlay(x,k,k1){var R=Math.abs(x.e-x.sl),cost=((+S.fee||0.05)*2+(+S.slip||0.02))/100*x.e/R,d=x.dir;if(!(R>0))return null;
-  for(var i=0;i<k.length;i++){var c=k[i];if(c.t+9e5<=x.t)continue;
+  /* only the 15-minute candles opened after the entry: the one running at the entry could have touched the stop before it */
+  for(var i=0;i<k.length;i++){var c=k[i];if(c.t<x.t)continue;
     if(d>0?c.l<=x.sl:c.h>=x.sl)return{k:"sl",r:-1-cost,at:c.t};
     if(d>0?c.h>=x.tp:c.l<=x.tp)return{k:"tp",r:Math.abs(x.tp-x.e)/R-cost,at:c.t};
     /* Nico: at each 1H close, out when the price closes beyond the last 1H swing against the trade (inside the stop), as replayed */

@@ -548,7 +548,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     if (SHOTS) { await page.$eval("#hl-e1", e => e.scrollIntoView()); await page.screenshot({ path: path.join(SHOTS, "p16-stop-expose.png") }); }
     /* a setup: the same check holds back a plan whose stop sits right behind the last 1H swing */
     const src = fs.readFileSync(path.join(__dirname, "..", "..", "app", "src", "main", "assets", "index.html"), "utf8");
-    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(p\)\{p=p\|\|preset\(\);var o=\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,midTag:1\};[\s\S]{0,400}?else\{o\.prof=S\.prof!==false\?1:0;o\.big=o\.prof;o\.oiTag=1;o\.volTag=1\}/.test(src) && /var REB=0;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
+    ok(/var SLSW_H=24;[\s\S]{0,6000}?function opts\(p\)\{p=p\|\|preset\(\);var o=\{[^}]*slsw:SLSW_H,slmode:"flag",reb:REB,midTag:1\};[\s\S]{0,400}?else\{o\.prof=S\.prof!==false\?1:0;o\.big=o\.prof;o\.oiTag=1;o\.volTag=1\}/.test(src) && /var REB=7;/.test(src), "moteur de l'appli : stop exposé vérifié sur 24 h, setup retenu en « À surveiller »");
     ok(errors.length === 0, "aucune erreur JavaScript" + (errors.length ? " : " + errors.slice(0, 3).join(" / ") : ""));
     await ctx.close();
   });
@@ -614,7 +614,7 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     const x = await page.evaluate(() => { const r = JSON.parse(localStorage.getItem("radar-last-l1")).results.find(r => r.f && r.dir && r.f.btc4 !== null && r.f.btc4 !== undefined);
       const rb = r && r.f.btcReb !== null && r.f.btcReb !== undefined ? r.f.btcReb : null;
       return { b: r ? r.f.btc4 * r.dir : null, s: r && r.f.btcSh !== null ? r.f.btcSh * r.dir : null, u: rb !== null && r.dir < 0 ? rb : null, d: rb !== null && r.dir > 0 ? -rb : null, t: document.getElementById("mkt-line").textContent }; });
-    const noL = x.b < 0 || (x.s !== null && x.s <= -1.5), noS = x.b > 0 || (x.s !== null && x.s >= 1.5);
+    const noL = x.b < 0 || (x.s !== null && x.s <= -1.5) || (x.d !== null && x.d <= -7), noS = x.b > 0 || (x.s !== null && x.s >= 1.5) || (x.u !== null && x.u >= 7);
     const want = noL && noS ? /Longs et shorts en pause/ : noL ? /Longs en pause : Bitcoin (baisse sur 4H|a perdu|a reculé de \d+,\d % depuis son plus haut de 72 h)/ : noS ? /Shorts en pause : Bitcoin (monte sur 4H|a pris|a rebondi de \d+,\d % depuis son plus bas de 72 h)/ : null;
     ok(x.b !== null && (want ? want.test(x.t) : !/en pause/.test(x.t)), "Bitcoin 4H " + x.b + ", " + (x.s === null ? "?" : x.s.toFixed(2)) + " % en 4 h : « " + ((x.t.match(/(Longs|Shorts)[^›]*/) || ["rien en pause"])[0]).trim() + " »");
     await ctx.close();
@@ -627,12 +627,12 @@ async function waitScan(page) { await page.waitForFunction(() => !document.getEl
     ok(y.b === -1 && /Longs en pause : Bitcoin baisse sur 4H/.test(y.t), "Bitcoin en baisse sur 4H : « " + ((y.t.match(/(Longs|Shorts)[^›]*/) || ["rien"])[0]).trim() + " »");
     ok(y.longsReady === 0 && y.longsMkt.length > 0 && y.longsMkt.every(x => /:false$/.test(x)), "réglage par défaut : aucun long prêt tant que Bitcoin baisse, contrôle « Marché » raté par chaque long (" + y.longsMkt.join(", ") + ")");
     if (SHOTS) { await o2.page.$eval("#mkt-line", e => e.scrollIntoView()); await o2.page.screenshot({ path: path.join(SHOTS, "p20-longs-en-pause.png") }); }
-    /* Bitcoin rebounding 15 % in a day: no pause any more (« ne bloque rien du tout », 23/11/2026), no short holds the rebound reason */
+    /* Bitcoin rebounding 15 % in a day: rebound pause on since 27/11/2026, every short holds the rebound reason */
     const o3 = await open(browser, { btcReb: true, init: `if(!sessionStorage.getItem("s")){sessionStorage.setItem("s","1");localStorage.setItem("radar-settings",JSON.stringify({alv:"12",strict:0,nt43:1,nt44:1,nt45:1,nt46:1,profOk:true,account:1000}))}` });
     await waitScan(o3.page);
     const z = await o3.page.evaluate(() => { const R = JSON.parse(localStorage.getItem("radar-last-l1")).results, sh = R.filter(r => r.dir < 0 && r.plan && r.sym !== "BTC");
       return { n: sh.length, why: sh.filter(r => (r.gates || []).some(g => (g.items || []).some(i => /a rebondi de/.test(i.t)))).length, t: document.getElementById("mkt-line").textContent }; });
-    ok(z.n > 0 && z.why === 0 && !/a rebondi de/.test(z.t), "Bitcoin +15 % en un jour : " + z.n + " short(s) analysés, aucun mis en pause pour le rebond");
+    ok(z.n > 0 && z.why === z.n && /Shorts en pause/.test(z.t), "Bitcoin +15 % en un jour : " + z.n + " short(s) analysés, " + z.why + " en pause pour le rebond ; ligne du marché : « " + ((z.t.match(/(Longs|Shorts)[^›]*/) || ["rien"])[0]).trim() + " »");
     await o3.ctx.close();
     ok(errors.length === 0 && o2.errors.length === 0, "aucune erreur JavaScript" + (errors.concat(o2.errors).length ? " : " + errors.concat(o2.errors).slice(0, 3).join(" / ") : ""));
     await o2.ctx.close();

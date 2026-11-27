@@ -534,3 +534,11 @@ Moteur : options `big2`, `dz`, `nicoPts`, `sr` (fonction `srSetup`) ; rejeu : wo
 - « Confirmé » / « En formation · clôture dans X min » sur chaque « Prêt » : le setup relu sur les bougies 15 min clôturées seulement.
   Un « Prêt » vu en formation qui disparaît à la clôture affiche « Non confirmé » pendant 45 minutes. Rien ne change dans le statut ni le score.
 Moteur : `midRange`, option `midTag`, `r.trigC` dans `enrich` ; workflow `mid.yml`, script `tools/backtest/mid42.js`.
+
+## Mise à jour du 27/11/2026 : pause rebond activée
+
+Bitcoin a pris +8,6 % en deux jours (57 250 → 62 200) : les quatre réglages, tous en short, ont perdu dans le Suivi (Radar 15 trades, 0 gagnant,
+−15,8 R). Pause rebond activée (`REB=7`, tous les réglages) : pas de short « Prêt » quand Bitcoin est 7 % ou plus au-dessus de son plus bas de 72 h,
+pas de long « Prêt » 7 % ou plus sous son plus haut de 72 h ; le setup reste visible en « À surveiller ». Rejeu (24/11) : novembre +86,4 → +121,7 R
+(pire série 36 → 4), oct.-nov. +42,2 → +55,8 R, 2024-25 +27,8 → +67,0 R, 2025-26 +137,3 → +115,9 R.
+Suivi : seules les bougies 15 min ouvertes après l'entrée comptent (celle en cours à l'entrée pouvait toucher le stop avant).
